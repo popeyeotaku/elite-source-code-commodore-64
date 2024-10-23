@@ -1,5 +1,6 @@
 BEEBASM?=beebasm
 PYTHON?=python
+C1541?=c1541
 
 # A make command with no arguments will build the GMA85 variant with
 # encrypted binaries, checksums enabled, the standard commander and
@@ -12,7 +13,7 @@ PYTHON?=python
 #                         gma85-ntsc (default)
 #                         gma86-pal
 #                         source-disk-build (the binaries we get from running a build)
-#                         source-disk-files (the binaries already on the source disc)
+#                         source-disk-files (the binaries already on the source disk)
 #
 #   commander=max       Start with a maxed-out commander
 #
@@ -39,8 +40,8 @@ PYTHON?=python
 # _VARIANT
 #   1 = GMA85 NTSC (default)
 #   2 = GMA85 PAL
-#   3 = source disc build (the binaries from running a build of the source disc)
-#   4 = source disc files (the binaries already on the source disc)
+#   3 = source disk build (the binaries from running a build of the source disk)
+#   4 = source disk files (the binaries already on the source disk)
 #
 # _MAX_COMMANDER
 #   TRUE  = Maxed-out commander
@@ -119,11 +120,11 @@ endif
 
 c64-disk:
 ifeq ($(variant-number), 1)
-	@c1541 \
+	@$(C1541) \
     -format "elite,1" \
             d64 \
-            5-compiled-game-discs/elite-commodore-64$(suffix).d64 \
-    -attach 5-compiled-game-discs/elite-commodore-64$(suffix).d64 \
+            5-compiled-game-disks/elite-commodore-64$(suffix).d64 \
+    -attach 5-compiled-game-disks/elite-commodore-64$(suffix).d64 \
     -write 3-assembled-output/firebird.bin firebird \
     -write 3-assembled-output/gma1.unprot.bin gma1 \
     -write 3-assembled-output/gma3.bin gma3 \
@@ -132,11 +133,11 @@ ifeq ($(variant-number), 1)
     -write 3-assembled-output/gma6.bin gma6 \
     -write 3-assembled-output/readme.txt "readme,s"
 else ifeq ($(variant-number), 2)
-	@c1541 \
+	@$(C1541) \
     -format "elite,1" \
             d64 \
-            5-compiled-game-discs/elite-commodore-64$(suffix).d64 \
-    -attach 5-compiled-game-discs/elite-commodore-64$(suffix).d64 \
+            5-compiled-game-disks/elite-commodore-64$(suffix).d64 \
+    -attach 5-compiled-game-disks/elite-commodore-64$(suffix).d64 \
     -write 3-assembled-output/firebird.bin firebird \
     -write 3-assembled-output/byebyejulie.bin byebyejulie \
     -write 3-assembled-output/gma1.unprot.bin gma1 \
