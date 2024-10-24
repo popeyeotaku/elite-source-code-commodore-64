@@ -681,7 +681,7 @@ ENDIF
 
 .spritp
 
- INCBIN "1-source-files/images/C.SPRITE.bin"
+ INCBIN "3-assembled-output/SPRITE.bin"
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
@@ -790,7 +790,7 @@ ENDIF
 ; ******************************************************************************
 
  PRINT "P% = ", ~P%
- PRINT "S.C.COMLOD ", ~LOAD%, ~P%, " ", ~LOAD%, ~LOAD%
+ PRINT "S.C.COMLOD ", ~CODE%, " ", ~P%, " ", ~LOAD%, " ", ~LOAD%
  SAVE "3-assembled-output/COMLOD.unprot.bin", CODE%, P%, LOAD%
 
  PRINT "Addresses for the scramble routines in elite-checksum.py"
