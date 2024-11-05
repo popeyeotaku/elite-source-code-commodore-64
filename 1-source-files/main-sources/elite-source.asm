@@ -192,8 +192,6 @@ ENDIF
  OSWORD = $FFF1
  OSFILE = $FFDD
  SCLI = $FFF7
- SETXC = $85
- SETYC = $86
  clyns = $87
  DODIALS = $8A
  RDPARAMS = $88
@@ -239,6 +237,12 @@ ENDIF
  f32 = $3D
 
  XX3 = $100
+
+; Elite J vars
+ BULBCOL = $E0
+ ECELL = SCBASE+$2400+23*40+11
+ SCELL = SCBASE+$2400+23*40+28
+ MCELL = SCBASE+$2400+24*40+6
 
 ; ******************************************
 
@@ -550,6 +554,13 @@ ENDIF
  SKIP 1
 
 ; Zero page locations...
+
+; Elite J vars
+ P2 = T+1
+ Q2 = T+2
+ R2 = T+3
+ S2 = T+4
+ T2 = T+5
 
  SKIP 6
 
@@ -2940,13 +2951,13 @@ ENDIF
 
  NEXT
 
-.TWOS
+;.TWOS
 
  EQUD &10204080
  EQUD &01020408
  EQUW $4080
 
-.DTWOS
+;.DTWOS
 
  EQUD &030C30C0
 
@@ -17006,138 +17017,281 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
 ENDIF
 
+; ******************************************************************************
+;
+;       Name: DOEXP
+;       Type: Subroutine
+;   Category: Drawing ships
+;    Summary: Draw an exploding ship
+;  Deep dive: Drawing explosion clouds
+;             Generating random numbers
+;
+; ******************************************************************************
+
 .EX2
 
- LDA INWK+31
- ORA #$A0
+ LDA INWK+31            ; Set bits 5 and 7 of the ship's byte #31 to denote that
+ ORA #%10100000         ; the ship is exploding and has been killed
  STA INWK+31
- RTS
+
+ RTS                    ; Return from the subroutine
 
 .DOEXP
 
- LDA INWK+31
- AND #64
- BEQ P%+5
- JSR PTCLS
- LDA INWK+6
+ LDA INWK+31            ; If bit 6 of the ship's byte #31 is clear, then the
+ AND #%01000000         ; ship is not already exploding so there is no existing
+ BEQ P%+5               ; explosion cloud to remove, so skip the following
+                        ; instruction
+
+ JSR PTCLS              ; Call PTCLS to remove the existing cloud by drawing it
+                        ; again
+
+ LDA INWK+6             ; Set T = z_lo
  STA T
- LDA INWK+7
- CMP #$20
+
+ LDA INWK+7             ; Set A = z_hi, so (A T) = z
+
+ CMP #32                ; If z_hi < 32, skip the next two instructions
  BCC P%+6
- LDA #$FE
- BNE yy
- ASL T
+
+ LDA #$FE               ; Set A = 254 and jump to yy (this BNE is effectively a
+ BNE yy                 ; JMP, as A is never zero)
+
+ ASL T                  ; Shift (A T) left twice
  ROL A
  ASL T
  ROL A
- SEC
- ROL A
+
+ SEC                    ; And then shift A left once more, inserting a 1 into
+ ROL A                  ; bit 0
+
+                        ; Overall, the above multiplies A by 8 and makes sure it
+                        ; is at least 1, to leave a one-byte distance in A. We
+                        ; can use this as the distance for our cloud, to ensure
+                        ; that the explosion cloud is visible even for ships
+                        ; that blow up a long way away
 
 .yy
 
- STA Q
- LDY #1
- LDA (XX19),Y
- STA frump
- ADC #4
- BCS EX2
- STA (XX19),Y
- JSR DVID4
- LDA P
- CMP #$1C
+ STA Q                  ; Store the distance to the explosion in Q
+
+ LDY #1                 ; Fetch byte #1 of the ship line heap, which contains
+ LDA (XX19),Y           ; the cloud counter
+
+ STA frump              ; Store the cloud counter in frump, so we can retrieve
+                        ; it below
+
+ ADC #4                 ; Add 4 to the cloud counter, so it ticks onwards every
+                        ; we redraw it
+
+ BCS EX2                ; If the addition overflowed, jump up to EX2 to update
+                        ; the explosion flags and return from the subroutine
+
+ STA (XX19),Y           ; Store the updated cloud counter in byte #1 of the ship
+                        ; line heap
+
+ JSR DVID4              ; Calculate the following:
+                        ;
+                        ;   (P R) = 256 * A / Q
+                        ;         = 256 * cloud counter / distance
+                        ;
+                        ; We are going to use this as our cloud size, so the
+                        ; further away the cloud, the smaller it is, and as the
+                        ; cloud counter ticks onward, the cloud expands
+
+ LDA P                  ; Set A = P, so we now have:
+                        ;
+                        ;   (A R) = 256 * cloud counter / distance
+
+ CMP #$1C               ; If A < 28, skip the next two instructions
  BCC P%+6
- LDA #$FE
- BNE LABEL_1
- ASL R
+
+ LDA #$FE               ; Set A = 254 and skip the following (this BNE is
+ BNE LABEL_1            ; effectively a JMP as A is never zero)
+
+ ASL R                  ; Shift (A R) left three times to multiply by 8
  ROL A
  ASL R
  ROL A
  ASL R
  ROL A
+
+                        ; Overall, the above multiplies (A R) by 8 to leave a
+                        ; one-byte cloud size in A, given by the following:
+                        ;
+                        ;   A = 8 * cloud counter / distance
 
 .LABEL_1
 
- DEY
- STA (XX19),Y
- LDA INWK+31
- AND #$BF
+ DEY                    ; Decrement Y to 0
+
+ STA (XX19),Y           ; Store the cloud size in byte #0 of the ship line heap
+
+ LDA INWK+31            ; Clear bit 6 of the ship's byte #31 to denote that the
+ AND #%10111111         ; explosion has not yet been drawn
  STA INWK+31
- AND #8
- BEQ TT48
- LDY #2
- LDA (XX19),Y
- TAY
+
+ AND #%00001000         ; If bit 3 of the ship's byte #31 is clear, then nothing
+ BEQ TT48               ; is being drawn on-screen for this ship anyway, so
+                        ; return from the subroutine (as TT48 contains an RTS)
+
+ LDY #2                 ; Otherwise it's time to draw an explosion cloud, so
+ LDA (XX19),Y           ; fetch byte #2 of the ship line heap into Y, which we
+ TAY                    ; set to the explosion count for this ship (i.e. the
+                        ; number of vertices used as origins for explosion
+                        ; clouds)
+                        ;
+                        ; The explosion count is stored as 4 * n + 6, where n is
+                        ; the number of vertices, so the following loop copies
+                        ; the coordinates of the first n vertices from the heap
+                        ; at XX3, which is where we stored all the visible
+                        ; vertex coordinates in part 8 of the LL9 routine, and
+                        ; sticks them in the ship line heap pointed to by XX19,
+                        ; starting at byte #7 (so it leaves the first 6 bytes of
+                        ; the ship line heap alone)
 
 .EXL1
 
- LDA XX3-7,Y
- STA (XX19),Y
- DEY
- CPY #6
- BNE EXL1
- LDA INWK+31
- ORA #64
+ LDA XX3-7,Y            ; Copy byte Y-7 from the XX3 heap, into the Y-th byte of
+ STA (XX19),Y           ; the ship line heap
+
+ DEY                    ; Decrement the loop counter
+
+ CPY #6                 ; Keep copying vertex coordinates into the ship line
+ BNE EXL1               ; heap until Y = 6 (which will copy n vertices, where n
+                        ; is the number of vertices we should be exploding)
+
+ LDA INWK+31            ; Set bit 6 of the ship's byte #31 to denote that the
+ ORA #%01000000         ; explosion has been drawn (as it's about to be)
  STA INWK+31
- LDY frump
+
+ LDY frump              ; ???
  CPY #18
  BNE P%+5
  JMP PTCLS2S
 
 .PTCLS
 
- LDY #0
- LDA (XX19),Y
+                        ; This part of the routine actually draws the explosion
+                        ; cloud
+
+ LDY #0                 ; Fetch byte #0 of the ship line heap, which contains
+ LDA (XX19),Y           ; the cloud size we stored above, and store it in Q
  STA Q
- INY
- LDA (XX19),Y
- BPL P%+4
- EOR #$FF
+
+ INY                    ; Increment the index in Y to point to byte #1
+
+ LDA (XX19),Y           ; Fetch byte #1 of the ship line heap, which contains
+                        ; the cloud counter. We are now going to process this
+                        ; into the number of particles in each vertex's cloud
+
+ BPL P%+4               ; If the cloud counter < 128, then we are in the first
+                        ; half of the cloud's existence, so skip the next
+                        ; instruction
+
+ EOR #$FF               ; Flip the value of A so that in the second half of the
+                        ; cloud's existence, A counts down instead of up
+
+ LSR A                  ; Divide A by 16 so that is has a maximum value of 7
  LSR A
  LSR A
  LSR A
- LSR A
- ORA #1
- STA U
- INY
- LDA (XX19),Y
- STA TGT
- LDA RAND+1
- PHA
- LDY #6
+
+ ORA #1                 ; Make sure A is at least 1 and store it in U, to
+ STA U                  ; give us the number of particles in the explosion for
+                        ; each vertex
+
+ INY                    ; Increment the index in Y to point to byte #2
+
+ LDA (XX19),Y           ; Fetch byte #2 of the ship line heap, which contains
+ STA TGT                ; the explosion count for this ship (i.e. the number of
+                        ; vertices used as origins for explosion clouds) and
+                        ; store it in TGT
+
+ LDA RAND+1             ; Fetch the current random number seed in RAND+1 and
+ PHA                    ; store it on the stack, so we can re-randomise the
+                        ; seeds when we are done
+
+ LDY #6                 ; Set Y = 6 to point to the byte before the first vertex
+                        ; coordinate we stored on the ship line heap above (we
+                        ; increment it below so it points to the first vertex)
 
 .EXL5
 
- LDX #3
+ LDX #3                 ; We are about to fetch a pair of coordinates from the
+                        ; ship line heap, so set a counter in X for 4 bytes
 
 .EXL3
 
- INY
- LDA (XX19),Y
- STA K3,X
- DEX
- BPL EXL3
- STY CNT
- LDY #2
+ INY                    ; Increment the index in Y so it points to the next byte
+                        ; from the coordinate we are copying
+
+ LDA (XX19),Y           ; Copy the Y-th byte from the ship line heap to the X-th
+ STA K3,X               ; byte of K3
+
+ DEX                    ; Decrement the X index
+
+ BPL EXL3               ; Loop back to EXL3 until we have copied all four bytes
+
+                        ; The above loop copies the vertex coordinates from the
+                        ; ship line heap to K3, reversing them as we go, so it
+                        ; sets the following:
+                        ;
+                        ;   K3+3 = x_lo
+                        ;   K3+2 = x_hi
+                        ;   K3+1 = y_lo
+                        ;   K3+0 = y_hi
+
+ STY CNT                ; Set CNT to the index that points to the next vertex on
+                        ; the ship line heap
+
+ LDY #2                 ; Set Y = 2, which we will use to point to bytes #3 to
+                        ; #6, after incrementing it
+
+                        ; This next loop copies bytes #3 to #6 from the ship
+                        ; line heap into the four random number seeds in RAND to
+                        ; RAND+3, EOR'ing them with the vertex index so they are
+                        ; different for every vertex. This enables us to
+                        ; generate random numbers for drawing each vertex that
+                        ; are random but repeatable, which we need when we
+                        ; redraw the cloud to remove it
+                        ;
+                        ; Note that we haven't actually set the values of bytes
+                        ; #3 to #6 in the ship line heap, so we have no idea
+                        ; what they are, we just use what's already there. But
+                        ; the fact that those bytes are stored for this ship
+                        ; means we can repeat the random generation of the
+                        ; cloud, which is the important bit
 
 .EXL2
 
- INY
- LDA (XX19),Y
- EOR CNT
- STA $FFFF,Y
- CPY #6
- BNE EXL2
- LDY U
+ INY                    ; Increment the index in Y so it points to the next
+                        ; random number seed to copy
 
-.EXL4 
+ LDA (XX19),Y           ; Fetch the Y-th byte from the ship line heap
 
-; OPT  FNdornd2
+ EOR CNT                ; EOR with the vertex index, so the seeds are different
+                        ; for each vertex
 
- CLC
- LDA RAND
- ROL A
- TAX
- ADC RAND+2
+ STA $FFFF,Y            ; Y is going from 3 to 6, so this stores the four bytes
+                        ; in memory locations $02, $03, $04 and $05, which are
+                        ; the memory locations of RAND through RAND+3
+
+ CPY #6                 ; Loop back to EXL2 until Y = 6, which means we have
+ BNE EXL2               ; copied four bytes
+
+ LDY U                  ; Set Y to the number of particles in the explosion for
+                        ; each vertex, which we stored in U above. We will now
+                        ; use this as a loop counter to iterate through all the
+                        ; particles in the explosion
+
+.EXL4
+
+ CLC                    ; This contains the code from the DORND2 routine, so
+ LDA RAND               ; this section is exactly equivalent to a JSR DORND2
+ ROL A                  ; call, but is slightly faster as it's been inlined
+ TAX                    ; (so it sets A and X to random values, making sure
+ ADC RAND+2             ; the C flag doesn't affect the outcome)
  STA RAND
  STX RAND+2
  LDA RAND+1
@@ -17146,51 +17300,81 @@ ENDIF
  STA RAND+1
  STX RAND+3
 
-;end
+ STA ZZ                 ; Set ZZ to a random number
 
- STA ZZ
- LDA K3+1
- STA R
+ LDA K3+1               ; Set (A R) = (y_hi y_lo)
+ STA R                  ;           = y
  LDA K3
- JSR EXS1
- BNE EX11
- CPX #2*Y-1
- BCS EX11
- STX Y1
- LDA K3+3
+
+ JSR EXS1               ; Set (A X) = (A R) +/- random * cloud size
+                        ;           = y +/- random * cloud size
+
+ BNE EX11               ; If A is non-zero, the particle is off-screen as the
+                        ; coordinate is bigger than 255), so jump to EX11 to do
+                        ; the next particle
+
+ CPX #2*Y-1             ; If X > the y-coordinate of the bottom of the screen,
+ BCS EX11               ; the particle is off the bottom of the screen, so jump
+                        ; to EX11 to do the next particle
+
+                        ; Otherwise X contains a random y-coordinate within the
+                        ; cloud
+
+ STX Y1                 ; Set Y1 = our random y-coordinate within the cloud
+
+ LDA K3+3               ; Set (A R) = (x_hi x_lo)
  STA R
  LDA K3+2
- JSR EXS1
- BNE EX4
- LDA Y1
- JSR PIXEL
+
+ JSR EXS1               ; Set (A X) = (A R) +/- random * cloud size
+                        ;           = x +/- random * cloud size
+
+ BNE EX4                ; If A is non-zero, the particle is off-screen as the
+                        ; coordinate is bigger than 255), so jump to EX11 to do
+                        ; the next particle
+
+                        ; Otherwise X contains a random x-coordinate within the
+                        ; cloud
+
+ LDA Y1                 ; Set A = our random y-coordinate within the cloud
+
+ JSR PIXEL              ; Draw a point at screen coordinate (X, A) with the
+                        ; point size determined by the distance in ZZ
 
 .EX4
 
- DEY
- BPL EXL4
- LDY CNT
- CPY TGT
- BCC EXL5
- PLA
- STA RAND+1
- LDA K%+6
- STA RAND+3
- RTS
+ DEY                    ; Decrement the loop counter for the next particle
+
+ BPL EXL4               ; Loop back to EXL4 until we have done all the particles
+                        ; in the cloud
+
+ LDY CNT                ; Set Y to the index that points to the next vertex on
+                        ; the ship line heap
+
+ CPY TGT                ; If Y < TGT, which we set to the explosion count for
+ BCC EXL5               ; this ship (i.e. the number of vertices used as origins
+                        ; for explosion clouds), loop back to EXL5 to do a cloud
+                        ; for the next vertex
+
+ PLA                    ; Restore the current random number seed to RAND+1 that
+ STA RAND+1             ; we stored at the start of the routine
+
+ LDA K%+6               ; Store the z_lo coordinate for the planet (which will
+ STA RAND+3             ; be pretty random) in the RAND+3 seed
+
+ RTS                    ; Return from the subroutine
 
 .PTCLS2S
 
- JMP PTCLS2
+ JMP PTCLS2             ; ???
 
 .EX11
 
-;OPT  FNdornd2
-
- CLC
- LDA RAND
- ROL A
- TAX
- ADC RAND+2
+ CLC                    ; This contains the code from the DORND2 routine, so
+ LDA RAND               ; this section is exactly equivalent to a JSR DORND2
+ ROL A                  ; call, but is slightly faster as it's been inlined
+ TAX                    ; (so it sets A and X to random values, making sure
+ ADC RAND+2             ; the C flag doesn't affect the outcome)
  STA RAND
  STX RAND+2
  LDA RAND+1
@@ -17199,21 +17383,24 @@ ENDIF
  STA RAND+1
  STX RAND+3
 
-;end
-
- \<BS>
- JMP EX4
+ JMP EX4                ; We just skipped a particle, so jump up to EX4 to do
+                        ; the next one
 
 .EXS1
 
- STA S
-; OPT  FNdornd2
+                        ; This routine calculates the following:
+                        ;
+                        ;   (A X) = (A R) +/- random * cloud size
+                        ;
+                        ; returning with the flags set for the high byte in A
 
- CLC
- LDA RAND
- ROL A
- TAX
- ADC RAND+2
+ STA S                  ; Store A in S so we can use it later
+
+ CLC                    ; This contains the code from the DORND2 routine, so
+ LDA RAND               ; this section is exactly equivalent to a JSR DORND2
+ ROL A                  ; call, but is slightly faster as it's been inlined
+ TAX                    ; (so it sets A and X to random values, making sure
+ ADC RAND+2             ; the C flag doesn't affect the outcome)
  STA RAND
  STX RAND+2
  LDA RAND+1
@@ -17222,36 +17409,65 @@ ENDIF
  STA RAND+1
  STX RAND+3
 
-;end
+ ROL A                  ; Set A = A * 2
 
- ROL A
- BCS EX5
- JSR FMLTU
- ADC R
- TAX
- LDA S
+ BCS EX5                ; If bit 7 of A was set (50% chance), jump to EX5
+
+ JSR FMLTU              ; Set A = A * Q / 256
+                        ;       = random << 1 * projected cloud size / 256
+
+ ADC R                  ; Set (A X) = (S R) + A
+ TAX                    ;           = (S R) + random * projected cloud size
+                        ;
+                        ; where S contains the argument A, starting with the low
+                        ; bytes
+
+ LDA S                  ; And then the high bytes
  ADC #0
- RTS
+
+ RTS                    ; Return from the subroutine
 
 .EX5
 
- JSR FMLTU
- STA T
- LDA R
- SBC T
- TAX
- LDA S
+ JSR FMLTU              ; Set T = A * Q / 256
+ STA T                  ;       = random << 1 * projected cloud size / 256
+
+ LDA R                  ; Set (A X) = (S R) - T
+ SBC T                  ;
+ TAX                    ; where S contains the argument A, starting with the low
+                        ; bytes
+
+ LDA S                  ; And then the high bytes
  SBC #0
- RTS
+
+ RTS                    ; Return from the subroutine
+
+; ******************************************************************************
+;
+;       Name: exlook
+;       Type: Variable
+;   Category: Drawing ships
+;    Summary: ???
+;
+; ******************************************************************************
 
 .exlook
 
- EQUB 0
+ EQUB 0                 ; ???
  EQUB 2
+
+; ******************************************************************************
+;
+;       Name: PTCLS2
+;       Type: Subroutine
+;   Category: Drawing ships
+;    Summary: Draw explosion sprite ???
+;
+; ******************************************************************************
 
 .PTCLS2
 
- LDA #5
+ LDA #5                 ; ???
  JSR SETL1
  LDA INWK+7
  CMP #7
@@ -17386,272 +17602,727 @@ ENDIF
  JSR DORND2
  JMP EX42
 
+; ******************************************************************************
+;
+;       Name: SOS1
+;       Type: Subroutine
+;   Category: Universe
+;    Summary: Update the missile indicators, set up the planet data block
+;
+; ------------------------------------------------------------------------------
+;
+; Update the missile indicators, and set up a data block for the planet, but
+; only setting the pitch and roll counters to 127 (no damping).
+;
+; ******************************************************************************
+
 .SOS1
 
- JSR msblob
- LDA #127
- STA INWK+29
- STA INWK+30
- LDA tek
- AND #2
- ORA #128
- JMP NWSHP
+ JSR msblob             ; Reset the dashboard's missile indicators so none of
+                        ; them are targeted
+
+ LDA #127               ; Set the pitch and roll counters to 127, so that's a
+ STA INWK+29            ; clockwise roll and a diving pitch with no damping, so
+ STA INWK+30            ; the planet's rotation doesn't slow down
+
+ LDA tek                ; Set A = 128 or 130 depending on bit 1 of the system's
+ AND #%00000010         ; tech level in tek
+ ORA #%10000000
+
+ JMP NWSHP              ; Add a new planet to our local bubble of universe,
+                        ; with the planet type defined by A (128 is a planet
+                        ; with an equator and meridian, 130 is a planet with
+                        ; a crater)
+
+; ******************************************************************************
+;
+;       Name: SOLAR
+;       Type: Subroutine
+;   Category: Universe
+;    Summary: Set up various aspects of arriving in a new system
+;
+; ------------------------------------------------------------------------------
+;
+; Halve our legal status, update the missile indicators, and set up data blocks
+; and slots for the planet and sun.
+;
+; ******************************************************************************
 
 .SOLAR
 
- LDA TRIBBLE
+ LDA TRIBBLE            ; If we have no Trumbles in the hold, skip to nobirths
  BEQ nobirths
- LDA #0
- STA QQ20
- STA QQ20+6 ;Eat food & Narc
- JSR DORND
- AND #15
- ADC TRIBBLE
- ORA #4
- ROL A
+
+                        ; If we get here then we have Trumbles in the hold, so
+                        ; this is where they breed (though we never get here in
+                        ; the Master version as the number of Trumbles is always
+                        ; zero)
+
+ LDA #0                 ; Trumbles eat food and narcotics during the hyperspace
+ STA QQ20               ; journey, so zero the amount of food and narcotics in
+ STA QQ20+6             ; the hold
+
+ JSR DORND              ; Take the number of Trumbles from TRIBBLE(1 0), add a
+ AND #15                ; random number between 4 and 15, and double the result,
+ ADC TRIBBLE            ; storing the resulting number in TRIBBLE(1 0)
+ ORA #4                 ;
+ ROL A                  ; We start with the low byte
  STA TRIBBLE
- ROL TRIBBLE+1
- BPL nobirths
- ROR TRIBBLE+1
+
+ ROL TRIBBLE+1          ; And then do the high byte
+
+ BPL P%+5               ; If bit 7 of the high byte is set, then rotate the high
+ ROR TRIBBLE+1          ; byte back to the right, so the number of Trumbles is
+                        ; always positive
 
 .nobirths
 
- LSR FIST
- JSR ZINF
- LDA QQ15+1
- AND #3
- ADC #3
+ LSR FIST               ; Halve our legal status in FIST, making us less bad,
+                        ; and moving bit 0 into the C flag (so every time we
+                        ; arrive in a new system, our legal status improves a
+                        ; bit)
+
+ JSR ZINF               ; Call ZINF to reset the INWK ship workspace, which
+                        ; doesn't affect the C flag
+
+ LDA QQ15+1             ; Fetch s0_hi
+
+ AND #%00000011         ; Extract bits 0-1 (which also help to determine the
+                        ; economy), which will be between 0 and 3
+
+ ADC #3                 ; Add 3 + C, to get a result between 3 and 7, clearing
+                        ; the C flag in the process
+
+ STA INWK+8             ; Store the result in z_sign in byte #6
+
+ ROR A                  ; Halve A, rotating in the C flag (which is clear) and
+ STA INWK+2             ; store in both x_sign and y_sign, moving the planet to
+ STA INWK+5             ; the upper right
+
+ JSR SOS1               ; Call SOS1 to set up the planet's data block and add it
+                        ; to FRIN, where it will get put in the first slot as
+                        ; it's the first one to be added to our local bubble of
+                        ; this new system's universe
+
+ LDA QQ15+3             ; Fetch s1_hi, extract bits 0-2, set bits 0 and 7 and
+ AND #%00000111         ; store in z_sign, so the sun is behind us at a distance
+ ORA #%10000001         ; of 1 to 7
  STA INWK+8
- ROR A
- STA INWK+2
- STA INWK+5
- JSR SOS1
- LDA QQ15+3
- AND #7
- ORA #129
- STA INWK+8
- LDA QQ15+5
- AND #3
- STA INWK+2
- STA INWK+1
- LDA #0
+
+ LDA QQ15+5             ; Fetch s2_hi, extract bits 0-1 and store in x_sign and
+ AND #%00000011         ; y_sign, so the sun is either dead centre in our rear
+ STA INWK+2             ; laser crosshairs, or off to the top left by a distance
+ STA INWK+1             ; of 1 or 2 when we look out the back
+
+ LDA #0                 ; Set the pitch and roll counters to 0 (no rotation)
  STA INWK+29
  STA INWK+30
- LDA #$81
- JSR NWSHP
+
+ LDA #129               ; Set A = 129, the ship type for the sun
+
+ JSR NWSHP              ; Call NWSHP to set up the sun's data block and add it
+                        ; to FRIN, where it will get put in the second slot as
+                        ; it's the second one to be added to our local bubble
+                        ; of this new system's universe
+
+; ******************************************************************************
+;
+;       Name: NWSTARS
+;       Type: Subroutine
+;   Category: Stardust
+;    Summary: Initialise the stardust field
+;
+; ------------------------------------------------------------------------------
+;
+; This routine is called when the space view is initialised in routine LOOK1.
+;
+; ******************************************************************************
 
 .NWSTARS
 
- LDA QQ11
-;ORA MJ
- BNE WPSHPS
+ LDA QQ11               ; If this is not a space view, jump to WPSHPS to skip
+;ORA MJ                 ; the initialisation of the SX, SY and SZ tables. The OR
+ BNE WPSHPS             ; instruction is commented out in the original source,
+                        ; but it would have the effect of also skipping the
+                        ; initialisation if we had mis-jumped into witchspace
+
+; ******************************************************************************
+;
+;       Name: nWq
+;       Type: Subroutine
+;   Category: Stardust
+;    Summary: Create a random cloud of stardust
+;
+; ------------------------------------------------------------------------------
+;
+; Create a random cloud of stardust containing the correct number of dust
+; particles, i.e. NOSTM of them, which is 3 in witchspace and 18 (#NOST) in
+; normal space. Also clears the scanner and initialises the LSO block.
+;
+; This is called by the DEATH routine when it displays our untimely demise.
+;
+; ******************************************************************************
 
 .nWq
 
- LDY NOSTM
+ LDY NOSTM              ; Set Y to the current number of stardust particles, so
+                        ; we can use it as a counter through all the stardust
 
 .SAL4
 
- JSR DORND
- ORA #8
- STA SZ,Y
- STA ZZ
- JSR DORND
- STA SX,Y
- STA X1
- JSR DORND
- STA SY,Y
- STA Y1
- JSR PIXEL2
- DEY
- BNE SAL4
- \\JSRPBFL
+ JSR DORND              ; Set A and X to random numbers
+
+ ORA #8                 ; Set A so that it's at least 8
+
+ STA SZ,Y               ; Store A in the Y-th particle's z_hi coordinate at
+                        ; SZ+Y, so the particle appears in front of us
+
+ STA ZZ                 ; Set ZZ to the particle's z_hi coordinate
+
+ JSR DORND              ; Set A and X to random numbers
+
+ STA SX,Y               ; Store A in the Y-th particle's x_hi coordinate at
+                        ; SX+Y, so the particle appears in front of us
+
+ STA X1                 ; Set X1 to the particle's x_hi coordinate
+
+ JSR DORND              ; Set A and X to random numbers
+
+ STA SY,Y               ; Store A in the Y-th particle's y_hi coordinate at
+                        ; SY+Y, so the particle appears in front of us
+
+ STA Y1                 ; Set Y1 to the particle's y_hi coordinate
+
+ JSR PIXEL2             ; Draw a stardust particle at (X1,Y1) with distance ZZ
+
+ DEY                    ; Decrement the counter to point to the next particle of
+                        ; stardust
+
+ BNE SAL4               ; Loop back to SAL4 until we have randomised all the
+                        ; stardust particles
+
+;JSR PBFL               ; This instruction is commented out in the original
+                        ; source
+
+                        ; Fall through into WPSHPS to clear the scanner and
+                        ; reset the LSO block
+
+; ******************************************************************************
+;
+;       Name: WPSHPS
+;       Type: Subroutine
+;   Category: Dashboard
+;    Summary: Clear the scanner, reset the ball line and sun line heaps
+;
+; ------------------------------------------------------------------------------
+;
+; Remove all ships from the scanner, reset the sun line heap at LSO, and reset
+; the ball line heap at LSX2 and LSY2.
+;
+; ******************************************************************************
 
 .WPSHPS
 
- LDX #0
+ LDX #0                 ; Set up a counter in X to work our way through all the
+                        ; ship slots in FRIN
 
 .WSL1
 
- LDA FRIN,X
- BEQ WS2
- BMI WS1
- STA TYPE
- JSR GINF
- LDY #31
+ LDA FRIN,X             ; Fetch the ship type in slot X
+
+ BEQ WS2                ; If the slot contains 0 then it is empty and we have
+                        ; checked all the slots (as they are always shuffled
+                        ; down in the main loop to close up and gaps), so jump
+                        ; to WS2 as we are done
+
+ BMI WS1                ; If the slot contains a ship type with bit 7 set, then
+                        ; it contains the planet or the sun, so jump down to WS1
+                        ; to skip this slot, as the planet and sun don't appear
+                        ; on the scanner
+
+ STA TYPE               ; Store the ship type in TYPE
+
+ JSR GINF               ; Call GINF to get the address of the data block for
+                        ; ship slot X and store it in INF
+
+ LDY #31                ; We now want to copy the first 32 bytes from the ship's
+                        ; data block into INWK, so set a counter in Y
 
 .WSL2
 
- LDA (INF),Y
- STA INWK,Y
- DEY
- BPL WSL2
- STX XSAV
- JSR SCAN
- LDX XSAV
- LDY #31
- LDA (INF),Y
- AND #$A7
- STA (INF),Y
+ LDA (INF),Y            ; Copy the Y-th byte from the data block pointed to by
+ STA INWK,Y             ; INF into the Y-th byte of INWK workspace
+
+ DEY                    ; Decrement the counter to point at the next byte
+
+ BPL WSL2               ; Loop back to WSL2 until we have copied all 32 bytes
+
+ STX XSAV               ; Store the ship slot number in XSAV while we call SCAN
+
+ JSR SCAN               ; Call SCAN to plot this ship on the scanner, which will
+                        ; remove it as it's plotted with EOR logic
+
+ LDX XSAV               ; Restore the ship slot number from XSAV into X
+
+ LDY #31                ; Clear bits 3, 4 and 6 in the ship's byte #31, which
+ LDA (INF),Y            ; stops drawing the ship on-screen (bit 3), hides it
+ AND #%10100111         ; from the scanner (bit 4) and stops any lasers firing
+ STA (INF),Y            ; (bit 6)
 
 .WS1
 
- INX
- BNE WSL1
+ INX                    ; Increment X to point to the next ship slot
+
+ BNE WSL1               ; Loop back up to process the next slot (this BNE is
+                        ; effectively a JMP as X will never be zero)
 
 .WS2
 
- LDX #0
- STX LSP
- DEX
- STX LSX2
+ LDX #0                 ; Reset the ball line heap by setting the ball line heap
+ STX LSP                ; pointer to 0
+
+ DEX                    ; Set X = $FF
+
+ STX LSX2               ; Set LSX2 = LSY2 = $FF to clear the ball line heap
  STX LSY2
+
+                        ; Fall through into FLFLLS to reset the LSO block
+
+; ******************************************************************************
+;
+;       Name: FLFLLS
+;       Type: Subroutine
+;   Category: Drawing suns
+;    Summary: Reset the sun line heap
+;
+; ------------------------------------------------------------------------------
+;
+; Reset the sun line heap at LSO by zero-filling it and setting the first byte
+; to $FF.
+;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   A                   A is set to 0
+;
+; ******************************************************************************
 
 .FLFLLS
 
- LDY #199
- LDA #0
+ LDY #199               ; ???
+
+ LDA #0                 ; Set A to 0 so we can zero-fill the LSO block
 
 .SAL6
 
- STA LSO,Y
- DEY
- BNE SAL6
- DEY
- STY LSX
- RTS
+ STA LSO,Y              ; Set the Y-th byte of the LSO block to 0
+
+ DEY                    ; Decrement the counter
+
+ BNE SAL6               ; Loop back until we have filled all the way to LSO+1
+
+ DEY                    ; Decrement Y to value of $FF (as we exit the above loop
+                        ; with Y = 0)
+
+ STY LSX                ; Set the first byte of the LSO block, which has its own
+                        ; label LSX, to $FF, to indicate that the sun line heap
+                        ; is empty
+
+ RTS                    ; Return from the subroutine
+
+; ******************************************************************************
+;
+;       Name: DET1
+;       Type: Subroutine
+;   Category: Drawing the screen
+;    Summary: Show or hide the dashboard (for when we die)
+;
+; ------------------------------------------------------------------------------
+;
+; This subroutine does nothing in the Commodore 64 and Apple II versions of
+; Elite, as the dashboard is not hidden when we die.
+;
+; ******************************************************************************
 
 .DET1
 
- RTS ;X is input-undraw dials
- DEX
- RTS
+ RTS                    ; Return from the subroutine
+
+; ******************************************************************************
+;
+;       Name: SHD
+;       Type: Subroutine
+;   Category: Flight
+;    Summary: Charge a shield and drain some energy from the energy banks
+;
+; ------------------------------------------------------------------------------
+;
+; Charge up a shield, and if it needs charging, drain some energy from the
+; energy banks.
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   X                   The value of the shield to recharge
+;
+; ******************************************************************************
+
+ DEX                    ; Increment the shield value so that it doesn't go past
+                        ; a maximum of 255
+
+ RTS                    ; Return from the subroutine
 
 .SHD
 
- INX
- BEQ SHD-2
+ INX                    ; Increment the shield value
+
+ BEQ SHD-2              ; If the shield value is 0 then this means it was 255
+                        ; before, which is the maximum value, so jump to SHD-2
+                        ; to bring it back down to 258 and return
+
+                        ; Otherwise fall through into DENGY to drain our energy
+                        ; to pay for all this shield charging
+
+; ******************************************************************************
+;
+;       Name: DENGY
+;       Type: Subroutine
+;   Category: Flight
+;    Summary: Drain some energy from the energy banks
+;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   Z flag              Set if we have no energy left, clear otherwise
+;
+; ******************************************************************************
 
 .DENGY
 
- DEC ENERGY
- PHP
- BNE P%+5
- INC ENERGY
- PLP
- RTS
+ DEC ENERGY             ; Decrement the energy banks in ENERGY
+
+ PHP                    ; Save the flags on the stack
+
+ BNE P%+5               ; If the energy levels are not yet zero, skip the
+                        ; following instruction
+
+ INC ENERGY             ; The minimum allowed energy level is 1, and we just
+                        ; reached 0, so increment ENERGY back to 1
+
+ PLP                    ; Restore the flags from the stack, so we return with
+                        ; the Z flag from the DEC instruction above
+
+ RTS                    ; Return from the subroutine
+
+; ******************************************************************************
+;
+;       Name: COMPAS
+;       Type: Subroutine
+;   Category: Dashboard
+;    Summary: Update the compass
+;
+; ******************************************************************************
 
 .COMPAS
 
- JSR DOT
- LDA SSPR
- BNE SP1
- JSR SPS1
- JMP SP2
+ JSR DOT                ; Call DOT to redraw (i.e. remove) the current compass
+                        ; dot
+
+ LDA SSPR               ; If we are inside the space station safe zone, jump to
+ BNE SP1                ; SP1 to draw the space station on the compass
+
+ JSR SPS1               ; Otherwise we need to draw the planet on the compass,
+                        ; so first call SPS1 to calculate the vector to the
+                        ; planet and store it in XX15
+
+ JMP SP2                ; Jump to SP2 to draw XX15 on the compass, returning
+                        ; from the subroutine using a tail call
+
+; ******************************************************************************
+;
+;       Name: SPS2
+;       Type: Subroutine
+;   Category: Maths (Arithmetic)
+;    Summary: Calculate (Y X) = A / 10
+;
+; ------------------------------------------------------------------------------
+;
+; Calculate the following, where A is a sign-magnitude 8-bit integer and the
+; result is a signed 16-bit integer:
+;
+;   (Y X) = A / 10
+;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   C flag              The C flag is cleared
+;
+; ******************************************************************************
 
 .SPS2
 
- ASL A
- TAX
- LDA #0
- ROR A
- TAY
- LDA #20 ;14
+ ASL A                  ; Set X = |A| * 2, and set the C flag to the sign bit of
+ TAX                    ; A
+
+ LDA #0                 ; Set Y to have the sign bit from A in bit 7, with the
+ ROR A                  ; rest of its bits zeroed, so Y now contains the sign of
+ TAY                    ; the original argument
+
+ LDA #20                ; Set Q = 20
  STA Q
- TXA
- JSR DVID4
- LDX P
- TYA
- BMI LL163
- LDY #0
- RTS
+
+ TXA                    ; Copy X into A, so A now contains the argument A * 2
+
+ JSR DVID4              ; Calculate the following:
+                        ;
+                        ;   P = A / Q
+                        ;     = |argument A| * 2 / 20
+                        ;     = |argument A| / 10
+
+ LDX P                  ; Set X to the result
+
+ TYA                    ; If the sign of the original argument A is negative,
+ BMI LL163              ; jump to LL163 to flip the sign of the result
+
+ LDY #0                 ; Set the high byte of the result to 0, as the result is
+                        ; positive
+
+ RTS                    ; Return from the subroutine
 
 .LL163
 
- LDY #$FF
- TXA
- EOR #$FF
+ LDY #$FF               ; The result is negative, so set the high byte to $FF
+
+ TXA                    ; Flip the low byte and add 1 to get the negated low
+ EOR #$FF               ; byte, using two's complement
  TAX
  INX
- RTS
+
+ RTS                    ; Return from the subroutine
+
+; ******************************************************************************
+;
+;       Name: SPS4
+;       Type: Subroutine
+;   Category: Maths (Geometry)
+;    Summary: Calculate the vector to the space station
+;
+; ------------------------------------------------------------------------------
+;
+; Calculate the vector between our ship and the space station and store it in
+; XX15.
+;
+; ******************************************************************************
 
 .SPS4
 
- LDX #8
+ LDX #8                 ; First we need to copy the space station's coordinates
+                        ; into K3, so set a counter to copy the first 9 bytes
+                        ; (the 3-byte x, y and z coordinates) from the station's
+                        ; data block at K% + NI% into K3
 
 .SPL1
 
- LDA K%+NI%,X
- STA K3,X
- DEX
- BPL SPL1
- JMP TAS2
+ LDA K%+NI%,X           ; Copy the X-th byte from the station's data block at
+ STA K3,X               ; K% + NI% to the X-th byte of K3
+
+ DEX                    ; Decrement the loop counter
+
+ BPL SPL1               ; Loop back to SPL1 until we have copied all 9 bytes
+
+ JMP TAS2               ; Call TAS2 to build XX15 from K3, returning from the
+                        ; subroutine using a tail call
+
+; ******************************************************************************
+;
+;       Name: SP1
+;       Type: Subroutine
+;   Category: Dashboard
+;    Summary: Draw the space station on the compass
+;
+; ******************************************************************************
 
 .SP1
 
- JSR SPS4
+ JSR SPS4               ; Call SPS4 to calculate the vector to the space station
+                        ; and store it in XX15
+
+                        ; Fall through into SP2 to draw XX15 on the compass
+
+; ******************************************************************************
+;
+;       Name: SP2
+;       Type: Subroutine
+;   Category: Dashboard
+;    Summary: Draw a dot on the compass, given the planet/station vector
+;
+; ------------------------------------------------------------------------------
+;
+; Draw a dot on the compass to represent the planet or station, whose normalised
+; vector is in XX15.
+;
+;   XX15 to XX15+2      The normalised vector to the planet or space station,
+;                       stored as x in XX15, y in XX15+1 and z in XX15+2
+;
+; ******************************************************************************
 
 .SP2
 
- LDA XX15
- JSR SPS2
- TXA
- ADC #195 ; X-1
- STA COMX
- LDA XX15+1
- JSR SPS2
- STX T
- LDA #156 ;204
- SBC T
- STA COMY
- LDA #YELLOW
- LDX XX15+2
- BPL P%+4
- LDA #GREEN
- STA COMC
- JMP DOT
+ LDA XX15               ; Set A to the x-coordinate of the planet or station to
+                        ; show on the compass, which will be in the range -96 to
+                        ; +96 as the vector has been normalised
+
+ JSR SPS2               ; Set (Y X) = A / 10, so X will be from -9 to +9, which
+                        ; is the x-offset from the centre of the compass of the
+                        ; dot we want to draw. Returns with the C flag clear
+
+ TXA                    ; Set COMX = 195 + X, as 186 is the pixel x-coordinate
+ ADC #195               ; of the leftmost dot possible on the compass, and X can
+ STA COMX               ; be -9, which would be 195 - 9 = 186. This also means
+                        ; that the highest value for COMX is 195 + 9 = 204,
+                        ; which is the pixel x-coordinate of the rightmost dot
+                        ; in the compass... but the compass dot is actually two
+                        ; pixels wide, so the compass dot can overlap the right
+                        ; edge of the compass, but not the left edge
+
+ LDA XX15+1             ; Set A to the y-coordinate of the planet or station to
+                        ; show on the compass, which will be in the range -96 to
+                        ; +96 as the vector has been normalised
+
+ JSR SPS2               ; Set (Y X) = A / 10, so X will be from -9 to +9, which
+                        ; is the x-offset from the centre of the compass of the
+                        ; dot we want to draw. Returns with the C flag clear
+
+ STX T                  ; Set COMY = 156 - X, as 155 is the pixel y-coordinate
+ LDA #156               ; of the centre of the compass, the C flag is clear,
+ SBC T                  ; and the y-axis needs to be flipped around (because
+ STA COMY               ; when the planet or station is above us, and the
+                        ; vector is therefore positive, we want to show the dot
+                        ; higher up on the compass, which has a smaller pixel
+                        ; y-coordinate). So this calculation does this:
+                        ;
+                        ;   COMY = 156 - X - (1 - 0) = 155 - X
+
+ LDA #YELLOW            ; Set A to yellow, the colour for when the planet or
+                        ; station in the compass is in front of us
+
+ LDX XX15+2             ; If the z-coordinate of the XX15 vector is positive,
+ BPL P%+4               ; skip the following instruction
+
+ LDA #GREEN             ; The z-coordinate of XX15 is negative, so the planet or
+                        ; station is behind us and the compass dot should be in
+                        ; green, so set A accordingly
+
+ STA COMC               ; Store the compass colour in COMC
+
+ JMP DOT                ; Jump to DOT to draw the dot on the compass and return
+                        ; from the subroutine using a tail call
+
+; ******************************************************************************
+;
+;       Name: OOPS
+;       Type: Subroutine
+;   Category: Flight
+;    Summary: Take some damage
+;
+; ------------------------------------------------------------------------------
+;
+; We just took some damage, so reduce the shields if we have any, or reduce the
+; energy levels and potentially take some damage to the cargo if we don't.
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   A                   The amount of damage to take
+;
+;   INF                 The address of the ship block for the ship that attacked
+;                       us, or the ship that we just ran into
+;
+; ******************************************************************************
 
 .OOPS
 
- STA T
- LDX #0
- LDY #8
+ STA T                  ; Store the amount of damage in T
+
+ LDX #0                 ; Fetch byte #8 (z_sign) for the ship attacking us, and
+ LDY #8                 ; set X = 0
  LDA (INF),Y
- BMI OO1
- LDA FSH
- SBC T
- BCC OO2
- STA FSH
- RTS
+
+ BMI OO1                ; If A is negative, then we got hit in the rear, so jump
+                        ; to OO1 to process damage to the aft shield
+
+ LDA FSH                ; Otherwise the forward shield was damaged, so fetch the
+ SBC T                  ; shield strength from FSH and subtract the damage in T
+
+ BCC OO2                ; If the C flag is clear then this amount of damage was
+                        ; too much for the shields, so jump to OO2 to set the
+                        ; shield level to 0 and start taking damage directly
+                        ; from the energy banks
+
+ STA FSH                ; Store the new value of the forward shield in FSH
+
+ RTS                    ; Return from the subroutine
 
 .OO2
 
- LDX #0
+ LDX #0                 ; Set the forward shield to 0
  STX FSH
- BCC OO3
+
+ BCC OO3                ; Jump to OO3 to start taking damage directly from the
+                        ; energy banks (this BCC is effectively a JMP as the C
+                        ; flag is clear, as we jumped to OO2 with a BCC)
 
 .OO1
 
- LDA ASH
- SBC T
- BCC OO5
- STA ASH
- RTS
+ LDA ASH                ; The aft shield was damaged, so fetch the shield
+ SBC T                  ; strength from ASH and subtract the damage in T
+
+ BCC OO5                ; If the C flag is clear then this amount of damage was
+                        ; too much for the shields, so jump to OO5 to set the
+                        ; shield level to 0 and start taking damage directly
+                        ; from the energy banks
+
+ STA ASH                ; Store the new value of the aft shield in ASH
+
+ RTS                    ; Return from the subroutine
 
 .OO5
 
- LDX #0
+ LDX #0                 ; Set the forward shield to 0
  STX ASH
 
 .OO3
 
- ADC ENERGY
- STA ENERGY
- BEQ P%+4
- BCS P%+5
- JMP DEATH
- JSR EXNO3
- JMP OUCH
+ ADC ENERGY             ; A is negative and contains the amount by which the
+ STA ENERGY             ; damage overwhelmed the shields, so this drains the
+                        ; energy banks by that amount (and because the energy
+                        ; banks are shown over four indicators rather than one,
+                        ; but with the same value range of 0-255, energy will
+                        ; appear to drain away four times faster than the
+                        ; shields did)
+
+ BEQ P%+4               ; If we have just run out of energy, skip the next
+                        ; instruction to jump straight to our death
+
+ BCS P%+5               ; If the C flag is set, then subtracting the damage from
+                        ; the energy banks didn't underflow, so we had enough
+                        ; energy to survive, and we can skip the next
+                        ; instruction to make a sound and take some damage
+
+ JMP DEATH              ; Otherwise our energy levels are either 0 or negative,
+                        ; and in either case that means we jump to our DEATH,
+                        ; returning from the subroutine using a tail call
+
+ JSR EXNO3              ; We didn't die, so call EXNO3 to make the sound of a
+                        ; collision
+
+ JMP OUCH               ; And jump to OUCH to take damage and return from the
+                        ; subroutine using a tail call
 
 .SPS3
 
@@ -25063,36 +25734,6 @@ ENDIF
 
  LOAD_J% = LOAD% + P% - CODE%
 
-{
- Pa = P
- P = T+1
- Q = T+2
- R = T+3
- S = T+4
- T = T+5
- T1 = T+6
-; SC = FNZTZT(2)
-; SCH = SC+1
-; FF = $FF
- OSWRCH = $FFEE
- OSBYTE = $FFF4
- OSWORD = $FFF1
- OSFILE = $FFDD
- SCLI = $FFF7
- VIA = $FE40
- USVIA = VIA
- IRQ1V = $204
- VSCAN = 57
- XX21 = D%
- WRCHV = $20E
- WORDV = $20C
- RDCHV = $210
- protlen = 0
- BULBCOL = $E0
- ECELL = SCBASE+$2400+23*40+11
- SCELL = SCBASE+$2400+23*40+28
- MCELL = SCBASE+$2400+24*40+6
-
 .STARTUP
 
  LDA #$FF
@@ -25129,7 +25770,7 @@ ENDIF
 
  EQUD &030C30C0
 
-.TWOS2
+;.TWOS2
 
  EQUD &3060C0C0
  EQUD &03060C18
@@ -25231,13 +25872,13 @@ ENDIF
 
  \............. Line Draw .............. 
 
-.^LL30 
+.LL30 
 
-.^LOIN
+.LOIN
 
  STY YSAV
  LDA #128
- STA S
+ STA S2
  ASL A
  STA SWAP
  LDA X2
@@ -25248,7 +25889,7 @@ ENDIF
 
 .LI1
 
- STA P
+ STA P2
  SEC
  LDA Y2
  SBC Y1
@@ -25258,8 +25899,8 @@ ENDIF
 
 .LI2
 
- STA Q
- CMP P
+ STA Q2
+ CMP P2
  BCC STPX
  JMP STPY
 
@@ -25280,16 +25921,16 @@ ENDIF
 
 .LI3
 
- LDX Q
+ LDX Q2
  BEQ LIlog7
  LDA logL,X
- LDX P
+ LDX P2
  SEC
  SBC logL,X
  BMI LIlog4
- LDX Q
+ LDX Q2
  LDA log,X
- LDX P
+ LDX P2
  SBC log,X
  BCS LIlog5
  TAX
@@ -25308,9 +25949,9 @@ ENDIF
 
 .LIlog4
 
- LDX Q
+ LDX Q2
  LDA log,X
- LDX P
+ LDX P2
  SBC log,X
  BCS LIlog5
  TAX
@@ -25318,7 +25959,7 @@ ENDIF
 
 .LIlog6
 
- STA Q
+ STA Q2
  CLC
  LDY Y1
  CPY Y2
@@ -25344,7 +25985,7 @@ ENDIF
  STA LI71+1
  LDA LIJT2,X
  STA LI71+2
- LDX P
+ LDX P2
 
 .LI71
 
@@ -25356,7 +25997,7 @@ ENDIF
  STA LI72+1
  LDA LIJT4,X
  STA LI72+2
- LDX P
+ LDX P2
  INX
  BEQ LIE1 ; **
 
@@ -25376,9 +26017,9 @@ ENDIF
  STA (SC),Y
  DEX
  BEQ LIE1
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI82
  DEY
  BPL LI82-1
@@ -25398,9 +26039,9 @@ ENDIF
  STA (SC),Y
  DEX
  BEQ LIE1
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI83
  DEY
  BPL LI83-1
@@ -25420,9 +26061,9 @@ ENDIF
  STA (SC),Y
  DEX
  BEQ LIE1
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI84
  DEY
  BPL LI84-1
@@ -25442,9 +26083,9 @@ ENDIF
  STA (SC),Y
  DEX
  BEQ LIE1
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI85
  DEY
  BPL LI85-1
@@ -25464,9 +26105,9 @@ ENDIF
  STA (SC),Y
  DEX
  BEQ LIE0S
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI86
  DEY
  BPL LI86-1
@@ -25486,9 +26127,9 @@ ENDIF
  STA (SC),Y
  DEX
  BEQ LIE0
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI87
  DEY
  BPL LI87-1
@@ -25511,9 +26152,9 @@ ENDIF
 .LIE0S
 
  BEQ LIE0
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI88
  DEY
  BPL LI88-1
@@ -25533,9 +26174,9 @@ ENDIF
  STA (SC),Y
  DEX
  BEQ LIE0
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI89
  DEY
  BPL LI89-1
@@ -25592,7 +26233,7 @@ ENDIF
  STA LI91+1
  LDA LIJT6,X
  STA LI91+2
- LDX P
+ LDX P2
  BEQ LIE0
 
 .LI91
@@ -25605,7 +26246,7 @@ ENDIF
  STA LI92+1
  LDA LIJT8,X
  STA LI92+2
- LDX P
+ LDX P2
  INX
  BEQ LIE0 ; **
 
@@ -25625,9 +26266,9 @@ ENDIF
  STA (SC),Y
  DEX
  BEQ LIE3
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI22
  INY
  BNE LI22-1
@@ -25647,9 +26288,9 @@ ENDIF
  STA (SC),Y
  DEX
  BEQ LIE3
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI23
  INY
  BNE LI23-1
@@ -25669,9 +26310,9 @@ ENDIF
  STA (SC),Y
  DEX
  BEQ LIE3
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI24
  INY
  BNE LI24-1
@@ -25691,9 +26332,9 @@ ENDIF
  STA (SC),Y
  DEX
  BEQ LIE2S
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI25
  INY
  BNE LI25-1
@@ -25713,9 +26354,9 @@ ENDIF
  STA (SC),Y
  DEX
  BEQ LIE2S
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI26
  INY
  BNE LI26-1
@@ -25735,9 +26376,9 @@ ENDIF
  STA (SC),Y
  DEX
  BEQ LIE2
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI27
  INY
  BNE LI27-1
@@ -25760,9 +26401,9 @@ ENDIF
 .LIE2S
 
  BEQ LIE2
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI28
  INY
  BNE LI28-1
@@ -25782,9 +26423,9 @@ ENDIF
  STA (SC),Y
  DEX
  BEQ LIE2
- LDA S
- ADC Q
- STA S
+ LDA S2
+ ADC Q2
+ STA S2
  BCC LI29
  INY
  BNE LI29-1
@@ -25847,17 +26488,17 @@ ENDIF
  AND #7
  TAX
  LDA TWOS,X
- STA R
- LDX P
+ STA R2
+ LDX P2
  BEQ LIfudge
  LDA logL,X
- LDX Q
+ LDX Q2
  SEC
  SBC logL,X
  BMI LIloG
- LDX P
+ LDX P2
  LDA log,X
- LDX Q
+ LDX Q2
  SBC log,X
  BCS LIlog3
  TAX
@@ -25871,9 +26512,9 @@ ENDIF
 
 .LIloG
 
- LDX P
+ LDX P2
  LDA log,X
- LDX Q
+ LDX Q2
  SBC log,X
  BCS LIlog3
  TAX
@@ -25881,12 +26522,12 @@ ENDIF
 
 .LIlog2
 
- STA P
+ STA P2
 
 .LIfudge
 
  SEC
- LDX Q
+ LDX Q2
  INX
  LDA X2
  SBC X1
@@ -25898,7 +26539,7 @@ ENDIF
 
 .LIL5
 
- LDA R
+ LDA R2
  EOR (SC),Y
  STA (SC),Y
 
@@ -25916,13 +26557,13 @@ ENDIF
 
 .LI16
 
- LDA S
- ADC P
- STA S
+ LDA S2
+ ADC P2
+ STA S2
  BCC LIC5
- LSR R
+ LSR R2
  BCC LIC5
- ROR R
+ ROR R2
  LDA SC
  ADC #8
  STA SC
@@ -25945,7 +26586,7 @@ ENDIF
 
 .LIL6
 
- LDA R
+ LDA R2
  EOR (SC),Y
  STA (SC),Y
 
@@ -25963,13 +26604,13 @@ ENDIF
 
 .LI19
 
- LDA S
- ADC P
- STA S
+ LDA S2
+ ADC P2
+ STA S2
  BCC LIC6
- ASL R
+ ASL R2
  BCC LIC6
- ROL R
+ ROL R2
  LDA SC
  SBC #7
  STA SC
@@ -25988,7 +26629,7 @@ ENDIF
  RTS
  \ ............HLOIN.......... 
 
-.^HLOIN
+.HLOIN
 
  STY YSAV
  LDX X1
@@ -26021,16 +26662,18 @@ ENDIF
 
  TXA
  AND #$F8
- STA T
+ STA T2
  LDA X2
  AND #$F8
  SEC
- SBC T
+ SBC T2
+
  BEQ HL2
  LSR A
  LSR A
  LSR A
- STA R
+
+ STA R2
  LDA X1
  AND #7
  TAX
@@ -26042,7 +26685,8 @@ ENDIF
  TAY
  BCC P%+4
  INC SC+1
- LDX R
+ LDX R2
+
  DEX
  BEQ HL3
  CLC
@@ -26077,15 +26721,17 @@ ENDIF
  LDA X1
  AND #7
  TAX
+
  LDA TWFR,X
- STA T
+ STA T2
  LDA X2
  AND #7
  TAX
  LDA TWFL,X
- AND T
+ AND T2
  EOR (SC),Y
  STA (SC),Y
+
  LDY YSAV
  RTS
 
@@ -26101,16 +26747,49 @@ ENDIF
  EQUD &0103070F
  \................... 
 
+; ******************************************************************************
+;
+;       Name: DOT
+;       Type: Subroutine
+;   Category: Dashboard
+;    Summary: Draw a dash on the compass
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   COMX                The screen pixel x-coordinate of the dash
+;
+;   COMY                The screen pixel y-coordinate of the dash
+;
+;   COMC                The colour and thickness of the dash: ???
+;
+;                         * $F0 = a double-height dash in yellow/white, for when
+;                           the object in the compass is in front of us
+;
+;                         * $FF = a single-height dash in green/cyan, for when
+;                           the object in the compass is behind us
+;
+; ******************************************************************************
+
 .^DOT
 
- LDA COMY
+ LDA COMY               ; Set Y1 = COMY, the y-coordinate of the dash
  STA Y1
- LDA COMX
+
+ LDA COMX               ; Set X1 = COMX, the x-coordinate of the dash
  STA X1
- LDA COMC
+
+ LDA COMC               ; Set COL = COMC, the mode 5 colour byte for the dash
  STA COL
- CMP #YELLOW
- BNE CPIX2
+
+ CMP #YELLOW            ; If the dash's colour is not yellow, jump to CPIX2 to
+ BNE CPIX2              ; draw a single-height dash in the compass, as it is
+                        ; showing that the planet or station is behind us
+
+                        ; Otherwise the dash is yellow, which is in front of us,
+                        ; so fall through into CPIX4 to draw a double-height
+                        ; dash in the compass
 
 .CPIX4
 
@@ -26158,14 +26837,14 @@ ENDIF
  RTS
  \...........
 
-.^ECBLB2
+.ECBLB2
 
  LDA #32
  STA ECMA
  LDY #sfxecm
  JSR NOISE
 
-.^ECBLB
+.ECBLB
 
  LDA ECELL
  EOR #BULBCOL
@@ -26175,7 +26854,7 @@ ENDIF
  STA ECELL+40
  RTS
 
-.^SPBLB
+.SPBLB
 
  LDA SCELL
  EOR #BULBCOL
@@ -26185,7 +26864,7 @@ ENDIF
  STA SCELL+40
  RTS
 
-.^MSBAR
+.MSBAR
 
  DEX
  TXA
@@ -26224,7 +26903,7 @@ ENDIF
 
  \..........Bay View.......... 
 
-.^WSCAN
+.WSCAN
 
  PHA
 
@@ -26242,7 +26921,7 @@ ENDIF
 
  \ ............. Character Print ..................... 
 
-.^CHPR2
+.CHPR2
 
  CMP #123
  BCS whosentthisshit
@@ -26273,12 +26952,12 @@ ENDIF
 
  JMP RR4
 
-.TT67
-.^TT67_copy
+;.TT67
+.TT67_copy
 
  LDA #12
 
-.^CHPR
+.CHPR
 
  \PRINT   Rewrite for Mode 4 Map
  STA K3
@@ -26320,8 +26999,8 @@ ENDIF
  ASL A
  BCC P%+3
  INX
- STA Pa+1
- STX Pa+2
+ STA P+1
+ STX P+2
  LDA XC
  CMP #31
  BCS RRX2
@@ -26366,7 +27045,7 @@ ENDIF
 
 .RRL1
 
- LDA (Pa+1),Y
+ LDA (P+1),Y
  EOR (SC),Y
  STA (SC),Y
  DEY
@@ -26391,7 +27070,7 @@ ENDIF
  \.....TTX66K......
  \
 
-.^TTX66K
+.TTX66K
 
  LDA #4
  STA SC
@@ -26482,7 +27161,7 @@ ENDIF
  DEY
  BPL BOL6 ;Third Row Yellow
 
-.^BOX
+.BOX
 
  LDX #199
  JSR BOXS
@@ -26494,7 +27173,7 @@ ENDIF
 .BOX2
 
  LDX #18
- STX T
+ STX T2
  LDY #((SCBASE+$18)MOD 256)
  STY SC
  LDY #((SCBASE+$18)DIV 256)
@@ -26504,7 +27183,8 @@ ENDIF
  STY SC
  LDY #((SCBASE+$120)DIV 256)
  LDA #$C0
- LDX T
+ LDX T2
+
  JSR BOXS2
  LDA #1
  STA SCBASE+$118 ; <<
@@ -26522,7 +27202,7 @@ ENDIF
 
 .BOXS2
 
- STA R
+ STA R2
  STY SC+1
 
 .BOXL2
@@ -26531,7 +27211,7 @@ ENDIF
 
 .BOXL3
 
- LDA R
+ LDA R2
  EOR (SC),Y
  STA (SC),Y
  DEY
@@ -26545,6 +27225,7 @@ ENDIF
  STA SC+1
  DEX
  BNE BOXL2
+
  RTS
  \....
 
@@ -26726,7 +27407,7 @@ ENDIF
  BNE mvbllop
  RTS  ;remember ELITEK has different SC! 
 
-.^CLYNS
+.CLYNS
 
  LDA #0
  STA DLY
@@ -26772,7 +27453,7 @@ ENDIF
 
  RTS 
 
-.^SCAN
+.SCAN
 
  LDA QQ11
  BNE SCR1
@@ -26914,8 +27595,6 @@ ENDIF
  INX
  BNE VLL2
  RTS
-
-}
 
 ; ******************************************************************************
 ;
