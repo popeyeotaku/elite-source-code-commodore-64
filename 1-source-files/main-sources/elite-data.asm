@@ -1803,24 +1803,24 @@ ENDMACRO
  EJMP 9                 ; Token 1:      "{clear screen}
  EJMP 11                ;                {draw box around title}
  EJMP 1                 ;                {all caps}
- EJMP 8                 ;                {tab 6} {media} ACCESS MENU{crlf}
- ECHR ' '               ;                {lf}
- EJMP 30                ;                {sentence case}
- ECHR ' '               ;                1. LOAD NEW {single cap}COMMANDER{crlf}
- ECHR 'A'               ;                2. SAVE {single cap}COMMANDER
- ECHR 'C'               ;                   {commander name}{crlf}
- ETWO 'C', 'E'          ;                3. CHANGE TO {other media}{crlf}
+ EJMP 8                 ;                {tab 6} {currently selected media}
+ ECHR ' '               ;                 ACCESS MENU{crlf}
+ EJMP 30                ;                {lf}
+ ECHR ' '               ;                {sentence case}
+ ECHR 'A'               ;                1. LOAD NEW {single cap}COMMANDER{crlf}
+ ECHR 'C'               ;                2. SAVE {single cap}COMMANDER
+ ETWO 'C', 'E'          ;                   {commander name}{crlf}
+ ECHR 'S'               ;                3. CHANGE TO {other media}{crlf}
  ECHR 'S'               ;                4. DEFAULT {all caps}JAMESON{sentence
- ECHR 'S'               ;                   case}{crlf}
- ECHR ' '               ;                5. EXIT{crlf}                
- ECHR 'M'               ;               "
- ECHR 'E'               ;
- ETWO 'N', 'U'          ; Encoded as:   "{9}{11}{1}{8} {30} AC<233>SS ME
- ETWO '-', '-'          ;                <225><215>{10}{2}1. [149]<215>2. SA
- EJMP 10                ;                <250> [154] {4}<215>3. CH<255><231>
- EJMP 2                 ;                [201]{31}<215>4. DEFAULT {1}JAMESON{2}
- ECHR '1'               ;                <215>5. EX<219><215>"
- ECHR '.'
+ ECHR ' '               ;                   case}{crlf}
+ ECHR 'M'               ;                5. EXIT{crlf}
+ ECHR 'E'               ;               "
+ ETWO 'N', 'U'          ;
+ ETWO '-', '-'          ; Encoded as:   "{9}{11}{1}{8} {30} AC<233>SS ME
+ EJMP 10                ;                <225><215>{10}{2}1. [149]<215>2. SA
+ EJMP 2                 ;                <250> [154] {4}<215>3. CH<255><231>
+ ECHR '1'               ;                [201]{31}<215>4. DEFAULT {1}JAMESON{2}
+ ECHR '.'               ;                <215>5. EX<219><215>"
  ECHR ' '
  ETOK 149
  ETWO '-', '-'

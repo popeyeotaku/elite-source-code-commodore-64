@@ -23287,7 +23287,7 @@ ENDIF
  CMP #224               ; two LSR A instructions and leave the value of A as a
  BCS P%+4               ; high value, so the chances of the Trumbles making a
                         ; noise in hot temperature is greater (specifically,
-                        ; this is the temperature at which the fuel scoop start
+                        ; this is the temperature at which the fuel scoops start
                         ; working)
 
  ASL T                  ; ???
@@ -24711,12 +24711,12 @@ ENDIF
 
 .QU2L2
 
- STX T					\ Set A = A EOR X
- EOR T					\
- ROR A					\ This additional step is the only difference between
-						\ the original checksum from BBC Micro Elite (in CHECK),
-						\ and this additional checksum in the Commodore 64 and
-						\ Apple II versions
+ STX T                  ; Set A = A EOR X
+ EOR T                  ;
+ ROR A                  ; This additional step is the only difference between
+                        ; the original checksum from BBC Micro Elite (in CHECK),
+                        ; and this additional checksum in the Commodore 64 and
+                        ; Apple II versions
 
  ADC NA%+7,X            ; Add the X-1-th byte of the data block to A, plus the
                         ; C flag
@@ -25010,145 +25010,367 @@ ENDIF
  BNE OSW06              ; character in A (i.e. the DELETE character) and listen
                         ; for the next key press
 
+; ******************************************************************************
+;
+;       Name: RLINE
+;       Type: Variable
+;   Category: Text
+;    Summary: The OSWORD configuration block used to fetch a line of text from
+;             the keyboard
+;
+; ------------------------------------------------------------------------------
+;
+; This block is left over from the BBC Micro version of Elite and is not used in
+; this version.
+;
+; ******************************************************************************
+
 .RLINE
 
- EQUW (INWK+5)
- EQUB 9
- EQUB $21
- EQUB $7B
+ EQUW INWK+5            ; The address to store the input, so the text entered
+                        ; will be stored in INWK+5 as it is typed
+
+ EQUB 9                 ; Maximum line length = 9, as that's the maximum size
+                        ; for a commander's name including a directory name
+
+ EQUB '!'               ; Allow ASCII characters from "!" through to "{" in
+ EQUB '{'               ; the input
+
+; ******************************************************************************
+;
+;       Name: FILEPR
+;       Type: Subroutine
+;   Category: Save and load
+;    Summary: Display the currently selected media (disc or tape)
+;  Deep dive: Extended text tokens
+;
+; ******************************************************************************
 
 .FILEPR
 
- LDA#3
- CLC
- ADC DISK
- JMP DETOK
+ LDA #3                 ; Print extended token 3 + DISK, i.e. token 3 or 2 (as
+ CLC                    ; DISK can be 0 or $FF). Token 2 is "disk" and token 3
+ ADC DISK               ; is "tape", so this displays the currently selected
+ JMP DETOK              ; media
+
+; ******************************************************************************
+;
+;       Name: OTHERFILEPR
+;       Type: Subroutine
+;   Category: Save and load
+;    Summary: Display the non-selected media (disc or tape)
+;  Deep dive: Extended text tokens
+;
+; ******************************************************************************
 
 .OTHERFILEPR
 
- LDA #2
- SEC
- SBC DISK
- JMP DETOK
+ LDA #2                 ; Print extended token 2 - DISK, i.e. token 2 or 3 (as
+ SEC                    ; DISK can be 0 or $FF). Token 2 is "disk" and token 3
+ SBC DISK               ; is "tape", so this displays the other, non-selected
+ JMP DETOK              ; media
+
+; ******************************************************************************
+;
+;       Name: ZERO
+;       Type: Subroutine
+;   Category: Utility routines
+;    Summary: Reset the local bubble of universe and ship status
+;
+; ------------------------------------------------------------------------------
+;
+; This resets the following workspaces to zero:
+;
+;   * UP workspace variables from FRIN to de, which include the ship slots for
+;     the local bubble of universe, and various flight and ship status variables
+;
+; ******************************************************************************
 
 .ZERO
 
- LDX #(de-FRIN)
- LDA #0
+ LDX #(de-FRIN)         ; We're going to zero the UP workspace variables from
+                        ; FRIN to de, so set a counter in X for the correct
+                        ; number of bytes
+
+ LDA #0                 ; Set A = 0 so we can zero the variables
 
 .ZEL2
 
- STA FRIN,X
- DEX
- BPL ZEL2
- RTS
+ STA FRIN,X             ; Zero the X-th byte of FRIN to de
+
+ DEX                    ; Decrement the loop counter
+
+ BPL ZEL2               ; Loop back to zero the next variable until we have done
+                        ; them all
+
+ RTS                    ; Return from the subroutine
+
+; ******************************************************************************
+;
+;       Name: ZEBC
+;       Type: Subroutine
+;   Category: Utility routines
+;    Summary: Zero-fill pages $B and $C
+;
+; ******************************************************************************
 
 .ZEBC
 
- RTS
- LDX #$C
+ RTS                    ; Return from the subroutine, as ZEBC does nothing in
+                        ; this version of Elite (it is left over from the BBC
+                        ; Micro version)
+
+ LDX #$C                ; Call ZES1 with X = $C to zero-fill page $C
  JSR ZES1
- DEX  ;<<
+
+ DEX                    ; Decrement X to $B
+
+                        ; Fall through into ZES1 to zero-fill page $B
+
+; ******************************************************************************
+;
+;       Name: ZES1
+;       Type: Subroutine
+;   Category: Utility routines
+;    Summary: Zero-fill the page whose number is in X
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   X                   The page we want to zero-fill
+;
+; ******************************************************************************
 
 .ZES1
 
- LDY #0
- STY SC
+ LDY #0                 ; If we set Y = SC = 0 and fall through into ZES2
+ STY SC                 ; below, then we will zero-fill 255 bytes starting from
+                        ; SC - in other words, we will zero-fill the whole of
+                        ; page X
+
+; ******************************************************************************
+;
+;       Name: ZES2
+;       Type: Subroutine
+;   Category: Utility routines
+;    Summary: Zero-fill a specific page
+;
+; ------------------------------------------------------------------------------
+;
+; Zero-fill from address (X SC) + Y to (X SC) + $FF.
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   X                   The high byte (i.e. the page) of the starting point of
+;                       the zero-fill
+;
+;   Y                   The offset from (X SC) where we start zeroing, counting
+;                       up to $FF
+;
+;   SC                  The low byte (i.e. the offset into the page) of the
+;                       starting point of the zero-fill
+;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   Z flag              Z flag is set
+;
+; ******************************************************************************
 
 .ZES2
 
- LDA #0
- STX SC+1
+ LDA #0                 ; Load A with the byte we want to fill the memory block
+                        ; with - i.e. zero
+
+ STX SC+1               ; We want to zero-fill page X, so store this in the
+                        ; high byte of SC, so the 16-bit address in SC and
+                        ; SC+1 is now pointing to the SC-th byte of page X
 
 .ZEL1
 
- STA (SC),Y
- INY
- BNE ZEL1
- RTS
+ STA (SC),Y             ; Zero the Y-th byte of the block pointed to by SC,
+                        ; so that's effectively the Y-th byte before SC
+
+ INY                    ; Increment the loop counter
+
+ BNE ZEL1               ; Loop back to zero the next byte
+
+ RTS                    ; Return from the subroutine
+
+; ******************************************************************************
+;
+;       Name: SVE
+;       Type: Subroutine
+;   Category: Save and load
+;    Summary: Display the disc access menu and process saving of commander files
+;  Deep dive: Commander save files
+;             The competition code
+;
+; ******************************************************************************
 
 .SVE
 
- LDA #1
- JSR DETOK
- JSR t
- CMP #$31
- BEQ loading
- CMP #$32
- BEQ SV1
- CMP #$33
- BEQ feb10
- CMP #$34
- BNE feb13
- LDA #224
- JSR DETOK
- JSR YESNO
- BCC feb13
- JSR JAMESON
- JMP DFAULT
+ LDA #1                 ; Print extended token 1, the disk access menu, which
+ JSR DETOK              ; presents these options:
+                        ;
+                        ;   1. Load New Commander
+                        ;   2. Save Commander {commander name}
+                        ;   3. Change to {other media}
+                        ;   4. Default JAMESON
+                        ;   5. Exit
+
+ JSR t                  ; Scan the keyboard until a key is pressed, returning
+                        ; the ASCII code in A and X
+
+ CMP #'1'               ; Option 1 was chosen, so jump to loading to load a new
+ BEQ loading            ; commander
+
+ CMP #'2'               ; Option 2 was chosen, so jump to SV1 to save the
+ BEQ SV1                ; current commander
+
+ CMP #'3'               ; Option 3 was chosen, so jump to feb10 to change to the
+ BEQ feb10              ; other media
+
+ CMP #'4'               ; If option 4 wasn't chosen, jump to feb13 to exit the
+ BNE feb13              ; menu
+
+ LDA #224               ; Option 4 was chosen, so print extended token 224
+ JSR DETOK              ; ("ARE YOU SURE?")
+
+ JSR YESNO              ; Call YESNO to wait until either "Y" or "N" is pressed
+
+ BCC feb13              ; If "N" was pressed, jump to feb13
+
+ JSR JAMESON            ; Otherwise "Y" was pressed, so call JAMESON to set the
+                        ; last saved commander to the default "JAMESON"
+                        ; commander
+
+ JMP DFAULT             ; Jump to DFAULT to reset the current commander data
+                        ; block to the last saved commander, returning from the
+                        ; subroutine using a tail call
 
 .feb13
 
- CLC
- RTS
+ CLC                    ; Option 5 was chosen, so clear the C flag to indicate
+                        ; that nothing was loaded
+
+ RTS                    ; Return from the subroutine
 
 .feb10
 
- LDA DISK
+ LDA DISK               ; ???
  EOR #$FF
  STA DISK
- JMP SVE
+
+ JMP SVE                ; Jump to SVE to display the disc access menu and return
+                        ; from the subroutine using a tail call
 
 .loading
 
- JSR GTNMEW
- JSR LOD
- JSR TRNME
- SEC
- RTS
+ JSR GTNMEW             ; If we get here then option 1 (load) was chosen, so
+                        ; call GTNMEW to fetch the name of the commander file
+                        ; to load (including drive number and directory) into
+                        ; INWK
+
+ JSR LOD                ; Call LOD to load the commander file
+
+ JSR TRNME              ; Transfer the commander filename from INWK to NA%
+
+ SEC                    ; Set the C flag to indicate we loaded a new commander
+
+.jan2186
+
+ RTS                    ; Return from the subroutine
 
 .SV1
 
- JSR GTNMEW
- JSR TRNME
- LSR SVC
- LDA #4 ;C64
+ JSR GTNMEW             ; If we get here then option 2 (save) was chosen, so
+                        ; call GTNMEW to fetch the name of the commander file
+                        ; to save (including drive number and directory) into
+                        ; INWK
+
+ JSR TRNME              ; Transfer the commander filename from INWK to NA%
+
+ LSR SVC                ; Halve the save count value in SVC
+
+ LDA #4                 ; Print extended token 4 ("COMPETITION NUMBER:")
  JSR DETOK
- LDX #NT%
+
+ LDX #NT%               ; We now want to copy the current commander data block
+                        ; from location TP to the last saved commander block at
+                        ; NA%+8, so set a counter in X to copy the NT% bytes in
+                        ; the commander data block
 
 .SVL1
 
- LDA TP,X
-;STA $B00,X
- STA NA%+8,X
- DEX
- BPL SVL1
- JSR CHECK2
- STA CHK3
- JSR CHECK
- STA CHK
- PHA
- ORA #128
+ LDA TP,X               ; Copy the X-th byte of TP to the X-th byte of NA%+8
+;STA $0B00,X            ;
+ STA NA%+8,X            ; The STA is commented out in the original source
+
+ DEX                    ; Decrement the loop counter
+
+ BPL SVL1               ; Loop back until we have copied all the bytes in the
+                        ; commander data block
+
+ JSR CHECK2             ; Call CHECK2 to calculate the second checksum for the
+                        ; last saved commander and return it in A
+
+ STA CHK3               ; Store the checksum in CHK3, which is at the end of the
+                        ; last saved commander block
+
+ JSR CHECK              ; Call CHECK to calculate the checksum for the last
+                        ; saved commander and return it in A
+
+ STA CHK                ; Store the checksum in CHK, which is at the end of the
+                        ; last saved commander block
+
+ PHA                    ; Store the checksum on the stack
+
+ ORA #%10000000         ; Set K = checksum with bit 7 set
  STA K
- EOR COK
+
+ EOR COK                ; Set K+2 = K EOR COK (the competition flags)
  STA K+2
- EOR CASH+2
+
+ EOR CASH+2             ; Set K+1 = K+2 EOR CASH+2 (the third cash byte)
  STA K+1
- EOR #$5A
- EOR TALLY+1
+
+ EOR #$5A               ; Set K+3 = K+1 EOR $5A EOR TALLY+1 (the high byte of
+ EOR TALLY+1            ; the kill tally)
  STA K+3
- CLC
- JSR BPRNT
+
+ CLC                    ; Clear the C flag so the call to BPRNT does not include
+                        ; a decimal point
+
+ JSR BPRNT              ; Print the competition number stored in K to K+3. The
+                        ; value of U might affect how this is printed, and as
+                        ; it's a temporary variable in zero page that isn't
+                        ; reset by ZERO, it might have any value, but as the
+                        ; competition code is a 10-digit number, this just means
+                        ; it may or may not have an extra space of padding
+
+ JSR TT67               ; Call TT67 twice to print two newlines
  JSR TT67
- JSR TT67
- PLA
-;STA $B00+NT% <<
- EOR #$A9
- STA CHK2
-;STA $AFF+NT% <<
-;LDA #0
-;JSR QUS1device instead of drive? **
- JSR KERNALSETUP
+
+ PLA                    ; Restore the checksum from the stack
+
+;STA $0B00+NT%          ; This instruction is commented out in the original
+                        ; source
+
+ EOR #$A9               ; Store the checksum EOR $A9 in CHK2, the penultimate
+ STA CHK2               ; byte of the last saved commander block
+
+;STA $AFF+NT%           ; This instruction is commented out in the original
+                        ; source
+
+;LDA #0                 ; These instructions are commented out in the original
+;JSR QUS1               ; source
+
+ JSR KERNALSETUP        ; ???
  LDA #((NA%+8)MOD 256)
  STA $FD ; SC
  LDA #((NA%+8)DIV 256)
@@ -25178,26 +25400,58 @@ ENDIF
  PLP
  CLI
  BCS saveerror
- JSR DFAULT
- \SC over BASIC
- JSR t
+
+ JSR DFAULT             ; Call DFAULT to reset the current commander data block
+                        ; to the last saved commander
+
+ JSR t                  ; Scan the keyboard until a key is pressed, returning
+                        ; the ASCII code in A and X
 
 .SVEX
 
- CLC
- RTS
+ CLC                    ; Clear the C flag to indicate we didn't just load a new
+                        ; commander file
+
+ RTS                    ; Return from the subroutine
 
 .saveerror
 
- JMP tapeerror
+ JMP tapeerror          ; ???
+
+; ******************************************************************************
+;
+;       Name: thislong
+;       Type: Variable
+;   Category: Save and load
+;    Summary: Contains the length of the most recently entered commander name
+;
+; ******************************************************************************
 
 .thislong
 
  EQUB 7
 
+; ******************************************************************************
+;
+;       Name: oldlong
+;       Type: Variable
+;   Category: Save and load
+;    Summary: Contains the length of the last saved commander name
+;
+; ******************************************************************************
+
 .oldlong
 
  EQUB 7
+
+; ******************************************************************************
+;
+;       Name: KERNALSETUP
+;       Type: Subroutine
+;   Category: Save and load
+;    Summary: ???
+;
+; ******************************************************************************
 
 .KERNALSETUP
 
@@ -25224,29 +25478,90 @@ ENDIF
  LDY #0
  JMP KERNALSETNAM
 
+; ******************************************************************************
+;
+;       Name: GTDRV
+;       Type: Subroutine
+;   Category: Save and load
+;    Summary: Get an ASCII disc drive number from the keyboard
+;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   A                   The ASCII value of the entered drive number ("0" to "3")
+;
+;   C flag              Clear if a valid drive number was entered (0-3), set
+;                       otherwise
+;
+; ******************************************************************************
+
 .GTDRV
 
- LDA #2
+ LDA #2                 ; Print extended token 2 ("{cr}WHICH DRIVE?")
  JSR DETOK
- JSR t
- ORA #$10
- JSR CHPR
- PHA
- JSR FEED
- PLA
- CMP #$30
- BCC LOR
- CMP #$34
- RTS
+
+ JSR t                  ; Scan the keyboard until a key is pressed, returning
+                        ; the ASCII code in A and X
+
+ ORA #%00010000         ; Set bit 4 of A, perhaps to avoid printing any control
+                        ; characters in the next instruction
+
+ JSR CHPR               ; Print the character in A
+
+ PHA                    ; Store A on the stack so we can retrieve it after the
+                        ; call to FEED
+
+ JSR FEED               ; Print a newline
+
+ PLA                    ; Restore A from the stack
+
+ CMP #'0'               ; If A < ASCII "0", then it is not a valid drive number,
+ BCC LOR                ; so jump to LOR to set the C flag and return from the
+                        ; subroutine
+
+ CMP #'4'               ; If A >= ASCII "4", then it is not a valid drive
+                        ; number, and this CMP sets the C flag, otherwise it is
+                        ; a valid drive number in the range 0-3, so clear it
+
+ RTS                    ; Return from the subroutine
+
+; ******************************************************************************
+;
+;       Name: filesys
+;       Type: Variable
+;   Category: Save and load
+;    Summary: ???
+;
+; ******************************************************************************
 
 .filesys
 
  EQUB 8
  EQUB 1
 
+; ******************************************************************************
+;
+;       Name: LOD
+;       Type: Subroutine
+;   Category: Save and load
+;    Summary: Load a commander file
+;
+; ------------------------------------------------------------------------------
+;
+; The filename should be stored at INWK, terminated with a carriage return (13).
+;
+; ------------------------------------------------------------------------------
+;
+; Other entry points:
+;
+;   LOR                 Set the C flag and return from the subroutine
+;
+; ******************************************************************************
+
 .LOD
 
- JSR KERNALSETUP
+ JSR KERNALSETUP        ; ???
  LDA #0
  LDX #(TAP%MOD 256)
  LDY #(TAP%DIV 256)
@@ -25271,153 +25586,397 @@ ENDIF
  PLP
  CLI
  BCS tapeerror
- LDA TAP%
- BMI ELT2F
- LDY #NT%
+
+ LDA TAP%               ; If the first byte of the loaded file has bit 7 set,
+ BMI ELT2F              ; jump to ELT2F, as this is an invalid commander file
+                        ;
+                        ; ELT2F contains a BRK instruction, which will force an
+                        ; interrupt to call the address in BRKV, which will
+                        ; print out the system error at ELT2F
+
+ LDY #NT%               ; We have successfully loaded the commander file to the
+                        ; TAP% staging area, so now we want to copy it to the
+                        ; last saved commander data block at NA%+8, so we set up
+                        ; a counter in Y to copy NT% bytes
 
 .copyme
 
- LDA TAP%,Y
+ LDA TAP%,Y             ; Copy the Y-th byte of TAP% to the Y-th byte of NA%+8
  STA NA%+8,Y
- DEY
- BPL copyme
+
+ DEY                    ; Decrement the loop counter
+
+ BPL copyme             ; Loop back until we have copied all NT% bytes
 
 .LOR
 
- SEC
- RTS
+ SEC                    ; Set the C flag
+
+ RTS                    ; Return from the subroutine
 
 .ELT2F
 
- LDA #9
- JSR DETOK
- JSR t
- JMP SVE
+ LDA #9                 ; Print extended token 9 ("{cr}{all caps}ILLEGAL ELITE
+ JSR DETOK              ; II FILE{sentence case}")
+
+ JSR t                  ; Scan the keyboard until a key is pressed, returning
+                        ; the ASCII code in A and X
+
+ JMP SVE                ; Jump to SVE to display the disc access menu and return
+                        ; from the subroutine using a tail call
+
+; ******************************************************************************
+;
+;       Name: backtonormal
+;       Type: Subroutine
+;   Category: Utility routines
+;
+; ******************************************************************************
 
 .backtonormal
 
- RTS
- \VIAE,DODOSVN
+ RTS                    ; Return from the subroutine, as backtonormal does
+                        ; nothing in this version of Elite (it is left over from
+                        ; the 6502 Second Processor version)
+
+; ******************************************************************************
+;
+;       Name: tapeerror
+;       Type: Subroutine
+;   Category: Save and load
+;    Summary: Print either "TAPE ERROR" or "DISK ERROR"
+;
+; ******************************************************************************
 
 .tapeerror
 
- LDA #255
- JSR DETOK
- JSR t
- JMP SVE
+ LDA #255               ; Print extended token 255 ("{cr}{currently selected
+ JSR DETOK              ; media} ERROR")
+
+ JSR t                  ; Scan the keyboard until a key is pressed, returning
+                        ; the ASCII code in A and X
+
+ JMP SVE                ; Jump to SVE to display the disc access menu and return
+                        ; from the subroutine using a tail call
+
+; ******************************************************************************
+;
+;       Name: CLDELAY
+;       Type: Subroutine
+;   Category: Utility routines
+;    Summary: Do nothing
+;
+; ******************************************************************************
 
 .CLDELAY
 
- RTS
+ RTS                    ; Return from the subroutine, as CLDELAY does nothing in
+                        ; this version of Elite (it is left over from the 6502
+                        ; Second Processor version)
+
+; ******************************************************************************
+;
+;       Name: ZEKTRAN
+;       Type: Subroutine
+;   Category: Keyboard
+;    Summary: Clear the key logger
+;
+; ******************************************************************************
 
 .ZEKTRAN
 
- LDX #$40
- LDA #0
- STA thiskey
+ LDX #64                ; We want to clear the 65 key logger locations from
+                        ; KEYLOOK to KEYLOOK+64, so set a counter in X
+
+ LDA #0                 ; We want to zero the key logger buffer, so set A % 0
+
+ STA thiskey            ; ???
 
 .ZEKLOOP
 
- STA KEYLOOK,X
- DEX
- BPL ZEKLOOP
- RTS
- RTS
+ STA KEYLOOK,X          ; Reset the X-th byte of the key logger buffer to 0
+
+ DEX                    ; Decrement the loop counter
+
+ BPL ZEKLOOP            ; Loop back until we have zeroed bytes #11 through #0
+
+ RTS                    ; Return from the subroutine
+
+ RTS                    ; This instruction has no effect as we already returned
+                        ; from the subroutine
+
+; ******************************************************************************
+;
+;       Name: SPS1
+;       Type: Subroutine
+;   Category: Maths (Geometry)
+;    Summary: Calculate the vector to the planet and store it in XX15
+;
+; ------------------------------------------------------------------------------
+;
+; Other entry points:
+;
+;   SPS1+1              A BRK instruction
+;
+; ******************************************************************************
 
 .SPS1
 
- LDX #0
- JSR SPS3
- LDX #3
- JSR SPS3
- LDX #6
- JSR SPS3
+ LDX #0                 ; Copy the two high bytes of the planet's x-coordinate
+ JSR SPS3               ; into K3(2 1 0), separating out the sign bit into K3+2
+
+ LDX #3                 ; Copy the two high bytes of the planet's y-coordinate
+ JSR SPS3               ; into K3(5 4 3), separating out the sign bit into K3+5
+
+ LDX #6                 ; Copy the two high bytes of the planet's z-coordinate
+ JSR SPS3               ; into K3(8 7 6), separating out the sign bit into K3+8
+
+                        ; Fall through into TAS2 to build XX15 from K3
+
+; ******************************************************************************
+;
+;       Name: TAS2
+;       Type: Subroutine
+;   Category: Maths (Geometry)
+;    Summary: Normalise the three-coordinate vector in K3
+;
+; ------------------------------------------------------------------------------
+;
+; Normalise the vector in K3, which has 16-bit values and separate sign bits,
+; and store the normalised version in XX15 as a signed 8-bit vector.
+;
+; A normalised vector (also known as a unit vector) has length 1, so this
+; routine takes an existing vector in K3 and scales it so the length of the
+; new vector is 1. This is used in two places: when drawing the compass, and
+; when applying AI tactics to ships.
+;
+; We do this in two stages. This stage shifts the 16-bit vector coordinates in
+; K3 to the left as far as they will go without losing any bits off the end, so
+; we can then take the high bytes and use them as the most accurate 8-bit vector
+; to normalise. Then the next stage (in routine NORM) does the normalisation.
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   K3(2 1 0)           The 16-bit x-coordinate as (x_sign x_hi x_lo), where
+;                       x_sign is just bit 7
+;
+;   K3(5 4 3)           The 16-bit y-coordinate as (y_sign y_hi y_lo), where
+;                       y_sign is just bit 7
+;
+;   K3(8 7 6)           The 16-bit z-coordinate as (z_sign z_hi z_lo), where
+;                       z_sign is just bit 7
+;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   XX15                The normalised vector, with:
+;
+;                         * The x-coordinate in XX15
+;
+;                         * The y-coordinate in XX15+1
+;
+;                         * The z-coordinate in XX15+2
+;
+; ------------------------------------------------------------------------------
+;
+; Other entry points:
+;
+;   TA2                 Calculate the length of the vector in XX15 (ignoring the
+;                       low coordinates), returning it in Q
+;
+; ******************************************************************************
 
 .TAS2
 
- LDA K3
- ORA K3+3
- ORA K3+6
- ORA #1
+ LDA K3                 ; OR the three low bytes and 1 to get a byte that has
+ ORA K3+3               ; a 1 wherever any of the three low bytes has a 1
+ ORA K3+6               ; (as well as always having bit 0 set), and store in
+ ORA #1                 ; K3+9
  STA K3+9
- LDA K3+1
- ORA K3+4
+
+ LDA K3+1               ; OR the three high bytes to get a byte in A that has a
+ ORA K3+4               ; 1 wherever any of the three high bytes has a 1
  ORA K3+7
 
+                        ; (A K3+9) now has a 1 wherever any of the 16-bit
+                        ; values in K3 has a 1
 .TAL2
 
- ASL K3+9
- ROL A
- BCS TA2
- ASL K3
+ ASL K3+9               ; Shift (A K3+9) to the left, so bit 7 of the high byte
+ ROL A                  ; goes into the C flag
+
+ BCS TA2                ; If the left shift pushed a 1 out of the end, then we
+                        ; know that at least one of the coordinates has a 1 in
+                        ; this position, so jump to TA2 as we can't shift the
+                        ; values in K3 any further to the left
+
+ ASL K3                 ; Shift K3(1 0), the x-coordinate, to the left
  ROL K3+1
- ASL K3+3
+
+ ASL K3+3               ; Shift K3(4 3), the y-coordinate, to the left
  ROL K3+4
- ASL K3+6
+
+ ASL K3+6               ; Shift K3(6 7), the z-coordinate, to the left
  ROL K3+7
- BCC TAL2
+
+ BCC TAL2               ; Jump back to TAL2 to do another shift left (this BCC
+                        ; is effectively a JMP as we know bit 7 of K3+7 is not a
+                        ; 1, as otherwise bit 7 of A would have been a 1 and we
+                        ; would have taken the BCS above)
 
 .TA2
 
- LDA K3+1
- LSR A
- ORA K3+2
- STA XX15
- LDA K3+4
- LSR A
- ORA K3+5
- STA XX15+1
- LDA K3+7
- LSR A
- ORA K3+8
- STA XX15+2
+ LDA K3+1               ; Fetch the high byte of the x-coordinate from our left-
+ LSR A                  ; shifted K3, shift it right to clear bit 7, stick the
+ ORA K3+2               ; sign bit in there from the x_sign part of K3, and
+ STA XX15               ; store the resulting signed 8-bit x-coordinate in XX15
+
+ LDA K3+4               ; Fetch the high byte of the y-coordinate from our left-
+ LSR A                  ; shifted K3, shift it right to clear bit 7, stick the
+ ORA K3+5               ; sign bit in there from the y_sign part of K3, and
+ STA XX15+1             ; store the resulting signed 8-bit y-coordinate in
+                        ; XX15+1
+
+ LDA K3+7               ; Fetch the high byte of the z-coordinate from our left-
+ LSR A                  ; shifted K3, shift it right to clear bit 7, stick the
+ ORA K3+8               ; sign bit in there from the z_sign part of K3, and
+ STA XX15+2             ; store the resulting signed 8-bit  z-coordinate in
+                        ; XX15+2
+
+                        ; Now we have a signed 8-bit version of the vector K3 in
+                        ; XX15, so fall through into NORM to normalise it
+
+; ******************************************************************************
+;
+;       Name: NORM
+;       Type: Subroutine
+;   Category: Maths (Geometry)
+;    Summary: Normalise the three-coordinate vector in XX15
+;  Deep dive: Tidying orthonormal vectors
+;             Orientation vectors
+;
+; ------------------------------------------------------------------------------
+;
+; We do this by dividing each of the three coordinates by the length of the
+; vector, which we can calculate using Pythagoras. Once normalised, 96 ($60) is
+; used to represent a value of 1, and 96 with bit 7 set ($E0) is used to
+; represent -1. This enables us to represent fractional values of less than 1
+; using integers.
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   XX15                The vector to normalise, with:
+;
+;                         * The x-coordinate in XX15
+;
+;                         * The y-coordinate in XX15+1
+;
+;                         * The z-coordinate in XX15+2
+;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   XX15                The normalised vector
+;
+;   Q                   The length of the original XX15 vector
+;
+; ------------------------------------------------------------------------------
+;
+; Other entry points:
+;
+;   NO1                 Contains an RTS
+;
+; ******************************************************************************
 
 .NORM
 
- LDA XX15
- JSR SQUA
- STA R
+ LDA XX15               ; Fetch the x-coordinate into A
+
+ JSR SQUA               ; Set (A P) = A * A = x^2
+
+ STA R                  ; Set (R Q) = (A P) = x^2
  LDA P
  STA Q
- LDA XX15+1
- JSR SQUA
- STA T
- LDA P
- ADC Q
- STA Q
- LDA T
+
+ LDA XX15+1             ; Fetch the y-coordinate into A
+
+ JSR SQUA               ; Set (A P) = A * A = y^2
+
+ STA T                  ; Set (T P) = (A P) = y^2
+
+ LDA P                  ; Set (R Q) = (R Q) + (T P) = x^2 + y^2
+ ADC Q                  ;
+ STA Q                  ; First, doing the low bytes, Q = Q + P
+
+ LDA T                  ; And then the high bytes, R = R + T
  ADC R
  STA R
- LDA XX15+2
- JSR SQUA
- STA T
- LDA P
- ADC Q
- STA Q
- LDA T
+
+ LDA XX15+2             ; Fetch the z-coordinate into A
+
+ JSR SQUA               ; Set (A P) = A * A = z^2
+
+ STA T                  ; Set (T P) = (A P) = z^2
+
+ LDA P                  ; Set (R Q) = (R Q) + (T P) = x^2 + y^2 + z^2
+ ADC Q                  ;
+ STA Q                  ; First, doing the low bytes, Q = Q + P
+
+ LDA T                  ; And then the high bytes, R = R + T
  ADC R
  STA R
- JSR LL5
- LDA XX15
- JSR TIS2
- STA XX15 ;*96/Q
- LDA XX15+1
- JSR TIS2
+
+ JSR LL5                ; We now have the following:
+                        ;
+                        ; (R Q) = x^2 + y^2 + z^2
+                        ;
+                        ; so we can call LL5 to use Pythagoras to get:
+                        ;
+                        ; Q = SQRT(R Q)
+                        ;   = SQRT(x^2 + y^2 + z^2)
+                        ;
+                        ; So Q now contains the length of the vector (x, y, z),
+                        ; and we can normalise the vector by dividing each of
+                        ; the coordinates by this value, which we do by calling
+                        ; routine TIS2. TIS2 returns the divided figure, using
+                        ; 96 to represent 1 and 96 with bit 7 set for -1
+
+ LDA XX15               ; Call TIS2 to divide the x-coordinate in XX15 by Q,
+ JSR TIS2               ; with 1 being represented by 96
+ STA XX15
+
+ LDA XX15+1             ; Call TIS2 to divide the y-coordinate in XX15+1 by Q,
+ JSR TIS2               ; with 1 being represented by 96
  STA XX15+1
- LDA XX15+2
- JSR TIS2
+
+ LDA XX15+2             ; Call TIS2 to divide the z-coordinate in XX15+2 by Q,
+ JSR TIS2               ; with 1 being represented by 96
  STA XX15+2
 
 .NO1
 
- RTS
+ RTS                    ; Return from the subroutine
+
+; ******************************************************************************
+;
+;       Name: KEYLOOK
+;       Type: Variable
+;   Category: Keyboard
+;    Summary: The key logger
+;
+; ******************************************************************************
 
 .KEYLOOK
 
  EQUS "123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF01234567"
- \..............
 
- KLO = KEYLOOK
+ KLO = KEYLOOK          ; ???
  KY1 = KLO+9
  KY2 = KLO+4
  KY3 = KLO+$11
@@ -25434,6 +25993,15 @@ ENDIF
  KY18 = KLO+$1E
  KY19 = KLO+$2C
  KY20 = KLO+$17
+
+; ******************************************************************************
+;
+;       Name: RDKEY
+;       Type: Subroutine
+;   Category: Keyboard
+;    Summary: Scan the keyboard for key presses
+;
+; ******************************************************************************
 
 .RDKEY
 
@@ -25654,84 +26222,289 @@ ENDIF
  TAX
  RTS  ;!!
 
+; ******************************************************************************
+;
+;       Name: WARP
+;       Type: Subroutine
+;   Category: Flight
+;    Summary: Perform an in-system jump
+;
+; ------------------------------------------------------------------------------
+;
+; This is called when we press "J" during flight. The following checks are
+; performed:
+;
+;   * Make sure we don't have any ships or space stations in the vicinity
+;
+;   * Make sure we are not in witchspace
+;
+;   * If we are facing the planet, make sure we aren't too close
+;
+;   * If we are facing the sun, make sure we aren't too close
+;
+; If the above checks are passed, then we perform an in-system jump by moving
+; the sun and planet in the opposite direction to travel, so we appear to jump
+; in space. This means that any asteroids, cargo canisters or escape pods get
+; dragged along for the ride.
+;
+; ******************************************************************************
+
 .WARP
 
- LDX JUNK
- LDA FRIN+2,X
- ORA SSPR
- ORA MJ
- BNE WA1
- LDY K%+8
- BMI WA3
- TAY
- JSR MAS2
- CMP #2
- BCC WA1
+ LDX JUNK               ; Set X to the total number of junk items in the
+                        ; vicinity (e.g. asteroids, escape pods, cargo
+                        ; canisters, Shuttles, Transporters and so on)
+
+ LDA FRIN+2,X           ; If the slot at FRIN+2+X is non-zero, then we have
+                        ; something else in the vicinity besides asteroids,
+                        ; escape pods and cargo canisters, so to check whether
+                        ; we can jump, we first grab the slot contents into A
+
+ ORA SSPR               ; If there is a space station nearby, then SSPR will
+                        ; be non-zero, so OR'ing with SSPR will produce a
+                        ; non-zero result if either A or SSPR are non-zero
+
+ ORA MJ                 ; If we are in witchspace, then MJ will be non-zero, so
+                        ; OR'ing with MJ will produce a non-zero result if
+                        ; either A or SSPR or MJ are non-zero
+
+ BNE WA1                ; A is non-zero if we have either a ship or a space
+                        ; station in the vicinity, or we are in witchspace, in
+                        ; which case jump to WA1 to make a low beep to show that
+                        ; we can't do an in-system jump
+
+ LDY K%+8               ; Otherwise we can do an in-system jump, so now we fetch
+                        ; the byte at K%+8, which contains the z_sign for the
+                        ; first ship slot, i.e. the distance of the planet
+
+ BMI WA3                ; If the planet's z_sign is negative, then the planet
+                        ; is behind us, so jump to WA3 to skip the following
+
+ TAY                    ; Set A = Y = 0 (as we didn't BNE above) so the call
+                        ; to MAS2 measures the distance to the planet
+
+ JSR MAS2               ; Call MAS2 to set A to the largest distance to the
+                        ; planet in any of the three axes (we could also call
+                        ; routine m to do the same thing, as A = 0)
+
+ CMP #2                 ; If A < 2 then jump to WA1 to abort the in-system jump
+ BCC WA1                ; with a low beep, as we are facing the planet and are
+                        ; too close to jump in that direction
 
 .WA3
 
- LDY K%+NI%+8
- BMI WA2
- LDY #NI%
- JSR m
- CMP #2
- BCC WA1
+ LDY K%+NI%+8           ; Fetch the z_sign (byte #8) of the second ship in the
+                        ; ship data workspace at K%, which is reserved for the
+                        ; sun or the space station (in this case it's the
+                        ; former, as we already confirmed there isn't a space
+                        ; station in the vicinity)
+
+ BMI WA2                ; If the sun's z_sign is negative, then the sun is
+                        ; behind us, so jump to WA2 to skip the following
+
+ LDY #NI%               ; Set Y to point to the offset of the ship data block
+                        ; for the sun, which is NI% (as each block is NI% bytes
+                        ; long, and the sun is the second block)
+
+ JSR m                  ; Call m to set A to the largest distance to the sun
+                        ; in any of the three axes
+
+ CMP #2                 ; If A < 2 then jump to WA1 to abort the in-system jump
+ BCC WA1                ; with a low beep, as we are facing the sun and are too
+                        ; close to jump in that direction
 
 .WA2
 
- LDA #$81
+                        ; If we get here, then we can do an in-system jump, as
+                        ; we don't have any ships or space stations in the
+                        ; vicinity, we are not in witchspace, and if we are
+                        ; facing the planet or the sun, we aren't too close to
+                        ; jump towards it
+                        ;
+                        ; We do an in-system jump by moving the sun and planet,
+                        ; rather than moving our own local bubble (this is why
+                        ; in-system jumps drag asteroids, cargo canisters and
+                        ; escape pods along for the ride). Specifically, we move
+                        ; them in the z-axis by a fixed amount in the opposite
+                        ; direction to travel, thus performing a jump towards
+                        ; our destination
+
+ LDA #$81               ; Set R = R = P = $81
  STA S
  STA R
  STA P
- LDA K%+8
- JSR ADD
- STA K%+8
- LDA K%+NI%+8
- JSR ADD
- STA K%+NI%+8
- LDA #1
- STA QQ11
- STA MCNT
- LSR A
- STA EV
- LDX VIEW
- JMP LOOK1
+
+ LDA K%+8               ; Set A = z_sign for the planet
+
+ JSR ADD                ; Set (A X) = (A P) + (S R)
+                        ;           = (z_sign $81) + $8181
+                        ;           = (z_sign $81) - $0181
+                        ;
+                        ; This moves the planet against the direction of travel
+                        ; by reducing z_sign by 1, as the above maths is:
+                        ;
+                        ;         z_sign 00000000
+                        ;   +   00000000 10000001
+                        ;   -   00000001 10000001
+                        ;
+                        ; or:
+                        ;
+                        ;         z_sign 00000000
+                        ;   +   00000000 00000000
+                        ;   -   00000001 00000000
+                        ;
+                        ; i.e. the high byte is z_sign - 1, making sure the sign
+                        ; is preserved
+
+ STA K%+8               ; Set the planet's z_sign to the high byte of the result
+
+ LDA K%+NI%+8           ; Set A = z_sign for the sun
+
+ JSR ADD                ; Set (A X) = (A P) + (S R)
+                        ;           = (z_sign $81) + $8181
+                        ;           = (z_sign $81) - $0181
+                        ;
+                        ; which moves the sun against the direction of travel
+                        ; by reducing z_sign by 1
+
+ STA K%+NI%+8           ; Set the planet's z_sign to the high byte of the result
+
+ LDA #1                 ; Temporarily set the view type to a non-zero value, so
+ STA QQ11               ; the call to LOOK1 below clears the screen before
+                        ; switching to the space view
+
+ STA MCNT               ; Set the main loop counter to 1, so the next iteration
+                        ; through the main loop will potentially spawn ships
+                        ; (see part 2 of the main game loop at me3)
+
+ LSR A                  ; Set EV, the extra vessels spawning counter, to 0
+ STA EV                 ; (the LSR produces a 0 as A was previously 1)
+
+ LDX VIEW               ; Set X to the current view (front, rear, left or right)
+ JMP LOOK1              ; and jump to LOOK1 to initialise that view, returning
+                        ; from the subroutine using a tail call
 
 .WA1
 
- LDY #sfxboop
- JMP NOISE
+ LDY #sfxboop           ; If we get here then we can't do an in-system jump, so
+ JMP NOISE              ; call the NOISE routine with Y = sfxboop to make a
+                        ; long, low beep and return from the subroutine using a
+                        ; tail call
+
+; ******************************************************************************
+;
+;       Name: KYTB
+;       Type: Variable
+;   Category: Keyboard
+;    Summary: Lookup table for in-flight keyboard controls
+;  Deep dive: The key logger
+;
+; ------------------------------------------------------------------------------
+;
+; This table is not used by the Commodore 64 version of Elite, and is left over
+; from the BBC Micro version.
+;
+; ******************************************************************************
 
 .KYTB
 
- RTS
- EQUB $E8
- EQUB $E2
- EQUB $E6
- EQUB $E7
- EQUB $C2
- EQUB $D1
- EQUB $C1
- \EQUD &56336443
- EQUD &35237060
- EQUW $2265
- EQUB $45
- EQUB $52
- EQUB $37 ;? <>XSA.FBRLtabescTUMEJCP
+ RTS                    ; Return from the subroutine (used as an entry point and
+                        ; a fall-through from above)
+
+                        ; These are the primary flight controls (pitch, roll,
+                        ; speed and lasers):
+
+ EQUB $68 + 128         ; ?         KYTB+1      Slow down
+ EQUB $62 + 128         ; Space     KYTB+2      Speed up
+ EQUB $66 + 128         ; <         KYTB+3      Roll left
+ EQUB $67 + 128         ; >         KYTB+4      Roll right
+ EQUB $42 + 128         ; X         KYTB+5      Pitch up
+ EQUB $51 + 128         ; S         KYTB+6      Pitch down
+ EQUB $41 + 128         ; A         KYTB+7      Fire lasers
+
+                        ; These are the secondary flight controls:
+
+ EQUB $60               ; TAB       KYTB+8      Energy bomb
+ EQUB $70               ; ESCAPE    KYTB+9      Launch escape pod
+ EQUB $23               ; T         KYTB+10     Arm missile
+ EQUB $35               ; U         KYTB+11     Unarm missile
+ EQUB $65               ; M         KYTB+12     Fire missile
+ EQUB $22               ; E         KYTB+13     E.C.M.
+ EQUB $45               ; J         KYTB+14     In-system jump
+ EQUB $52               ; C         KYTB+15     Docking computer
+
+ EQUB $37               ; P         KYTB+16     Cancel docking computer
+
+; ******************************************************************************
+;
+;       Name: CTRL
+;       Type: Subroutine
+;   Category: Keyboard
+;    Summary: Scan the keyboard to see if CTRL is currently pressed
+;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   X                   X = %10000001 (i.e. 129 or -127) if CTRL is being
+;                       pressed
+;
+;                       X = 1 if CTRL is not being pressed
+;
+;   A                   Contains the same as X
+;
+; ******************************************************************************
 
 .CTRL
 
- LDX #6
+ LDX #6                 ; Set X to the internal key number for CTRL and fall
+                        ; through into DKS4 to fetch the relevent entry from
+                        ; the key logger
+
+; ******************************************************************************
+;
+;       Name: DKS4
+;       Type: Subroutine
+;   Category: Keyboard
+;    Summary: Scan the keyboard to see if a specific key is being pressed
+;  Deep dive: The key logger
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   X                   The internal number of the key to check
+;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   A                   $FF if the key is being pressed, 0 otherwise
+;
+;   X                   Contains the same as A
+;
+; ******************************************************************************
 
 .DKS4
 
- LDA KEYLOOK,X
- TAX
- RTS
+ LDA KEYLOOK,X          ; Fetch the entry from the key logger for the key in X
+
+ TAX                    ; Copy A to X
+
+ RTS                    ; Return from the subroutine
+
+; ******************************************************************************
+;
+;       Name: DKSANYKEY
+;       Type: Subroutine
+;   Category: Keyboard
+;    Summary: ???
+;
+; ******************************************************************************
 
 .DKSANYKEY
 
- LDA #5
+ LDA #5                 ; ???
  JSR SETL1
  SEI
  STX $DC00
@@ -25749,39 +26522,130 @@ ENDIF
  RTS
  RTS
 
+; ******************************************************************************
+;
+;       Name: DKS2
+;       Type: Subroutine
+;   Category: Keyboard
+;    Summary: Read the joystick position
+;
+; ------------------------------------------------------------------------------
+;
+; This routine is not used in this version of Elite. It is left over from the
+; BBC Micro version.
+;
+; ******************************************************************************
+
 .DKS2
 
- LDA KTRAN+7,X
- EOR JSTE
- RTS
+ LDA KTRAN+7,X          ; Fetch either the joystick X value or joystick Y value
+                        ; from the key logger buffer, depending on the value of
+                        ; X (i.e. fetch either KTRAN+8 or KTRAN+0)
+
+ EOR JSTE               ; The high byte A is now EOR'd with the value in
+                        ; location JSTE, which contains $FF if both joystick
+                        ; channels are reversed and 0 otherwise (so A now
+                        ; contains the high byte but inverted, if that's what
+                        ; the current settings say)
+
+ RTS                    ; Return from the subroutine
+
+; ******************************************************************************
+;
+;       Name: DKS3
+;       Type: Subroutine
+;   Category: Keyboard
+;    Summary: Toggle a configuration setting and emit a beep
+;
+; ------------------------------------------------------------------------------
+;
+; This is called when the game is paused and a key is pressed that changes the
+; game's configuration.
+;
+; Specifically, this routine toggles the configuration settings for the
+; following keys:
+;
+;   * CAPS LOCK toggles keyboard flight damping (0)
+;   * A toggles keyboard auto-recentre (1)
+;   * X toggles author names on start-up screen (2)
+;   * F toggles flashing console bars (3)
+;   * Y toggles reverse joystick Y channel (4)
+;   * J toggles reverse both joystick channels (5)
+;   * K toggles keyboard and joystick (6)
+;
+; The numbers in brackets are the configuration options that we pass in Y. We
+; pass the ASCII code of the key that has been pressed in X, and the option to
+; check it against in Y, so this routine is typically called in a loop that
+; loops through the various configuration option.
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   X                   The ASCII code of the key that's been pressed
+;
+;   Y                   The number of the configuration option to check against
+;                       from the list above (i.e. Y must be from 0 to 6)
+;
+; ******************************************************************************
 
 .DKS3
 
- TXA
- CMP TGINT,Y
- BNE Dk3
- LDA DAMP,Y
- EOR #$FF
- STA DAMP,Y
- JSR BELL
- TYA
- PHA
- LDY #20
+ TXA                    ; Copy the ASCII code of the key that has been pressed
+                        ; into A
+
+ CMP TGINT,Y            ; If the pressed key doesn't match the configuration key
+ BNE Dk3                ; for option Y (as listed in the TGINT table), then jump
+                        ; to Dk3 to return from the subroutine
+
+ LDA DAMP,Y             ; The configuration keys listed in TGINT correspond to
+ EOR #$FF               ; the configuration option settings from DAMP onwards,
+ STA DAMP,Y             ; so to toggle a setting, we fetch the existing byte
+                        ; from DAMP+Y, invert it and put it back (0 means no
+                        ; and $FF means yes in the configuration bytes, so
+                        ; this toggles the setting)
+
+ JSR BELL               ; Make a beep sound so we know something has happened
+
+ TYA                    ; Store Y and A on the stack so we can retrieve them
+ PHA                    ; below
+
+ LDY #20                ; Wait for 20 vertical syncs (20/50 = 0.4 seconds)
  JSR DELAY
- PLA
+
+ PLA                    ; Restore A and Y from the stack
  TAY
 
 .Dk3
 
- RTS
- \DKJ1 LDAauto
+ RTS                    ; Return from the subroutine
+
+; ******************************************************************************
+;
+;       Name: DKJ1
+;       Type: Subroutine
+;   Category: Keyboard
+;    Summary: Read joystick and flight controls
+;
+; ------------------------------------------------------------------------------
+;
+; Specifically, scan the keyboard for the speed up and slow down keys, and read
+; the joystick's fire button and X and Y axes, storing the results in the key
+; logger and the joystick position variables.
+;
+; This routine is only called if joysticks are enabled (JSTK = non-zero).
+;
+; ******************************************************************************
+
+;.DKJ1                  ; These instructions are commented out in the original
+;LDA auto               ; source (they are from the BBC Micro version)
 ;BNE auton
 ;LDA KTRAN+1
 ;STA KL+1
 ;LDA KTRAN+2
 ;STA KL+2
- \BS1 LDAKTRAN+12
- \$FE40
+;.BS1
+;LDA KTRAN+12
 ;TAX 
 ;AND #16
 ;EOR #16
