@@ -1069,345 +1069,796 @@ ENDIF
 
  SKIP NOSH * NI%        ; Ship data blocks and ship line heap
 
-; ******************************************
+; ******************************************************************************
+;
+;       Name: UP
+;       Type: Workspace
+;    Address: $0400 to ???
+;   Category: Workspaces
+;    Summary: Configuration variables
+;
+; ******************************************************************************
 
- ORG $400
+ ORG $0400
 
 .UP
 
+ SKIP 0                 ; The start of the UP workspace
+
 ;.QQ16
 
- SKIP 65
+ SKIP 65                ; This QQ16 label is present in the original source, but
+                        ; it is overridden by the QQ16 label in the Elite A
+                        ; section, so this declaration has no effect. BeebAsm
+                        ; does not allow labels to be defined twice, so this one
+                        ; is commented out
 
 .KL
 
- SKIP 17
+ SKIP 17                ; ??? (KY1 etc. are elsewhere)
 
 .FRIN
 
- SKIP NOSH+1
+ SKIP NOSH + 1          ; Slots for the ships in the local bubble of universe
+                        ;
+                        ; There are #NOSH + 1 slots, but the ship-spawning
+                        ; routine at NWSHP only populates #NOSH of them, so
+                        ; (the last slot is effectively used as a null
+                        ; terminator when shuffling the slots down in the
+                        ; KILLSHP routine)
+                        ;
+                        ; See the deep dive on "The local bubble of universe"
+                        ; for details of how Elite stores the local universe in
+                        ; FRIN, UNIV and K%
 
 .MANY
 
- SKIP NTY+1
+ SKIP SST               ; The number of ships of each type in the local bubble
+                        ; of universe
+                        ;
+                        ; The number of ships of type X in the local bubble is
+                        ; stored at MANY+X
+                        ;
+                        ; See the deep dive on "Ship blueprints" for a list of
+                        ; ship types
 
- SSPR = MANY+SST
+.SSPR
+
+ SKIP NTY + 1 - SST     ; "Space station present" flag
+                        ;
+                        ;   * Non-zero if we are inside the space station's safe
+                        ;     zone
+                        ;
+                        ;
+                        ; This flag is at MANY+SST, which is no coincidence, as
+                        ; MANY+SST is a count of how many space stations there
+                        ; are in our local bubble, which is the same as saying
+                        ; "space station present"
 
 .JUNK
 
- SKIP 1
+ SKIP 1                 ; The amount of junk in the local bubble
+                        ;
+                        ; "Junk" is defined as being one of these:
+                        ;
+                        ;   * Escape pod
+                        ;   * Alloy plate
+                        ;   * Cargo canister
+                        ;   * Asteroid
+                        ;   * Splinter
+                        ;   * Shuttle
+                        ;   * Transporter
 
 .auto
 
- SKIP 1
+ SKIP 1                 ; Docking computer activation status
+                        ;
+                        ;   * 0 = Docking computer is off
+                        ;
+                        ;   * Non-zero = Docking computer is running
 
 .ECMP
 
- SKIP 1
+ SKIP 1                 ; Our E.C.M. status
+                        ;
+                        ;   * 0 = E.C.M. is off
+                        ;
+                        ;   * Non-zero = E.C.M. is on
 
 .MJ
 
- SKIP 1
+ SKIP 1                 ; Are we in witchspace (i.e. have we mis-jumped)?
+                        ;
+                        ;   * 0 = no, we are in normal space
+                        ;
+                        ;   * $FF = yes, we are in witchspace
 
 .CABTMP
 
- SKIP 1
+ SKIP 1                 ; Cabin temperature
+                        ;
+                        ; The ambient cabin temperature in deep space is 30,
+                        ; which is displayed as one notch on the dashboard bar
+                        ;
+                        ; We get higher temperatures closer to the sun
+                        ;
+                        ; CABTMP shares a location with MANY, but that's OK as
+                        ; MANY+0 would contain the number of ships of type 0,
+                        ; and as there is no ship type 0 (they start at 1), the
+                        ; byte at MANY+0 is not used for storing a ship type
+                        ; and can be used for the cabin temperature instead
 
 .LAS2
 
- SKIP 1
+ SKIP 1                 ; Laser power for the current laser
+                        ;
+                        ;   * Bits 0-6 contain the laser power of the current
+                        ;     space view
+                        ;
+                        ;   * Bit 7 denotes whether or not the laser pulses:
+                        ;
+                        ;     * 0 = pulsing laser
+                        ;
+                        ;     * 1 = beam laser (i.e. always on)
 
 .MSAR
 
- SKIP 1
+ SKIP 1                 ; The targeting state of our leftmost missile
+                        ;
 
 .VIEW
 
- SKIP 1
+ SKIP 1                 ; The number of the current space view
+                        ;
+                        ;   * 0 = front
+                        ;   * 1 = rear
+                        ;   * 2 = left
+                        ;   * 3 = right
 
 .LASCT
 
- SKIP 1
+ SKIP 1                 ; The laser pulse count for the current laser
+                        ;
+                        ; This is a counter that defines the gap between the
+                        ; pulses of a pulse laser. It is set as follows:
+                        ;
+                        ;   * 0 for a beam laser
+                        ;
+                        ;   * 10 for a pulse laser
+                        ;
+                        ;
+                        ; In comparison, beam lasers fire continuously as the
+                        ; value of LASCT is always 0
 
 .GNTMP
 
- SKIP 1
+ SKIP 1                 ; Laser temperature (or "gun temperature")
+                        ;
+                        ; If the laser temperature exceeds 242 then the laser
+                        ; overheats and cannot be fired again until it has
+                        ; cooled down
 
 .HFX
 
- SKIP 1
+ SKIP 1                 ; This flag is unused in this version of Elite. In the
+                        ; other versions, setting HFX to a non-zero value makes
+                        ; the hyperspace rings multi-coloured, but ???
 
 .EV
 
- SKIP 1
+ SKIP 1                 ; The "extra vessels" spawning counter
+                        ;
+                        ; This counter is set to 0 on arrival in a system and
+                        ; following an in-system jump, and is bumped up when we
+                        ; spawn bounty hunters or pirates (i.e. "extra vessels")
+                        ;
+                        ; It decreases by 1 each time we consider spawning more
+                        ; "extra vessels" in part 4 of the main game loop, so
+                        ; increasing the value of EV has the effect of delaying
+                        ; the spawning of more vessels
+                        ;
+                        ; In other words, this counter stops bounty hunters and
+                        ; pirates from continually appearing, and ensures that
+                        ; there's a delay between spawnings
 
 .DLY
 
- SKIP 1
+ SKIP 1                 ; In-flight message delay
+                        ;
+                        ; This counter is used to keep an in-flight message up
+                        ; for a specified time before it gets removed. The value
+                        ; in DLY is decremented each time we start another
+                        ; iteration of the main game loop at TT100
 
 .de
 
- SKIP 1
+ SKIP 1                 ; Equipment destruction flag
+                        ;
+                        ;   * Bit 1 denotes whether or not the in-flight message
+                        ;     about to be shown by the MESS routine is about
+                        ;     destroyed equipment:
+                        ;
+                        ;     * 0 = the message is shown normally
+                        ;
+                        ;     * 1 = the string " DESTROYED" gets added to the
+                        ;       end of the message
 
 .JSTX
 
- SKIP 1
+ SKIP 1                 ; Our current roll rate
+                        ;
+                        ; This value is shown in the dashboard's RL indicator,
+                        ; and determines the rate at which we are rolling
+                        ;
+                        ; The value ranges from 1 to 255 with 128 as the centre
+                        ; point, so 1 means roll is decreasing at the maximum
+                        ; rate, 128 means roll is not changing, and 255 means
+                        ; roll is increasing at the maximum rate
 
 .JSTY
 
- SKIP 1
+ SKIP 1                 ; Our current pitch rate
+                        ;
+                        ; This value is shown in the dashboard's DC indicator,
+                        ; and determines the rate at which we are pitching
+                        ;
+                        ; The value ranges from 1 to 255 with 128 as the centre
+                        ; point, so 1 means pitch is decreasing at the maximum
+                        ; rate, 128 means pitch is not changing, and 255 means
+                        ; pitch is increasing at the maximum rate
 
 .XSAV2
 
- SKIP 1
+ SKIP 1                 ; This byte appears to be unused
 
 .YSAV2
 
- SKIP 1
+ SKIP 1                 ; Temporary storage, used for storing the value of the Y
+                        ; register in the CHPR routine
 
 .NAME
 
- SKIP 8
+ SKIP 8                 ; The current commander name
+                        ;
+                        ; The commander name can be up to 7 characters (the DFS
+                        ; limit for filenames), and is terminated by a carriage
+                        ; return
 
 .TP
 
- SKIP 1
+ SKIP 1                 ; The current mission status
+                        ;
+                        ;   * Bits 0-1 = Mission 1 status
+                        ;
+                        ;     * %00 = Mission not started
+                        ;     * %01 = Mission in progress, hunting for ship
+                        ;     * %11 = Constrictor killed, not debriefed yet
+                        ;     * %10 = Mission and debrief complete
+                        ;
+                        ;   * Bits 2-3 = Mission 2 status
+                        ;
+                        ;     * %00 = Mission not started
+                        ;     * %01 = Mission in progress, plans not picked up
+                        ;     * %10 = Mission in progress, plans picked up
+                        ;     * %11 = Mission complete
+                        ;
+                        ;   * Bit 4 = Trumble mission status
+                        ;
+                        ;     * %0 = Trumbles not yet offered
+                        ;     * %1 = Trumbles accepted or declined
 
 .QQ0
 
- SKIP 1
+ SKIP 1                 ; The current system's galactic x-coordinate (0-256)
 
 .QQ1
 
- SKIP 1
+ SKIP 1                 ; The current system's galactic y-coordinate (0-256)
 
 .QQ21
 
- SKIP 6
+ SKIP 6                 ; The three 16-bit seeds for the current galaxy
+                        ;
+                        ; These seeds define system 0 in the current galaxy, so
+                        ; they can be used as a starting point to generate all
+                        ; 256 systems in the galaxy
+                        ;
+                        ; Using a galactic hyperdrive rotates each byte to the
+                        ; left (rolling each byte within itself) to get the
+                        ; seeds for the next galaxy, so after eight galactic
+                        ; jumps, the seeds roll around to the first galaxy again
+                        ;
+                        ; See the deep dives on "Galaxy and system seeds" and
+                        ; "Twisting the system seeds" for more details
 
 .CASH
 
- SKIP 4
+ SKIP 4                 ; Our current cash pot
+                        ;
+                        ; The cash stash is stored as a 32-bit unsigned integer,
+                        ; with the most significant byte in CASH and the least
+                        ; significant in CASH+3. This is big-endian, which is
+                        ; the opposite way round to most of the numbers used in
+                        ; Elite - to use our notation for multi-byte numbers,
+                        ; the amount of cash is CASH(0 1 2 3)
 
 .QQ14
 
- SKIP 1
+ SKIP 1                 ; Our current fuel level (0-70)
+                        ;
+                        ; The fuel level is stored as the number of light years
+                        ; multiplied by 10, so QQ14 = 1 represents 0.1 light
+                        ; years, and the maximum possible value is 70, for 7.0
+                        ; light years
 
 .COK
 
- SKIP 1
+ SKIP 1                 ; Flags used to generate the competition code
+                        ;
+                        ; See the deep dive on "The competition code" for
+                        ; details of these flags and how they are used in
+                        ; generating and decoding the competition code
 
 .GCNT
 
- SKIP 1
+ SKIP 1                 ; The number of the current galaxy (0-7)
+                        ;
+                        ; When this is displayed in-game, 1 is added to the
+                        ; number, so we start in galaxy 1 in-game, but it's
+                        ; stored as galaxy 0 internally
+                        ;
+                        ; The galaxy number increases by one every time a
+                        ; galactic hyperdrive is used, and wraps back around to
+                        ; the start after eight galaxies
 
 .LASER
 
- SKIP 6
+ SKIP 4                 ; The specifications of the lasers fitted to each of the
+                        ; four space views:
+                        ;
+                        ;   * Byte #0 = front view
+                        ;   * Byte #1 = rear view
+                        ;   * Byte #2 = left view
+                        ;   * Byte #3 = right view
+                        ;
+                        ; For each of the views:
+                        ;
+                        ;   * 0 = no laser is fitted to this view
+                        ;
+                        ;   * Non-zero = a laser is fitted to this view, with
+                        ;     the following specification:
+                        ;
+                        ;     * Bits 0-6 contain the laser's power
+                        ;
+                        ;     * Bit 7 determines whether or not the laser pulses
+                        ;       (0 = pulse or mining laser) or is always on
+                        ;       (1 = beam or military laser)
+
+ SKIP 2                 ; These bytes appear to be unused (they were originally
+                        ; used for up/down lasers, but they were dropped)
 
 .CRGO
 
- SKIP 1
+ SKIP 1                 ; Our ship's cargo capacity
+                        ;
+                        ;   * 22 = standard cargo bay of 20 tonnes
+                        ;
+                        ;   * 37 = large cargo bay of 35 tonnes
+                        ;
+                        ; The value is two greater than the actual capacity to
+                        ; make the maths in tnpr slightly more efficient
 
 .QQ20
 
- SKIP 17
+ SKIP 17                ; The contents of our cargo hold
+                        ;
+                        ; The amount of market item X that we have in our hold
+                        ; can be found in the X-th byte of QQ20. For example:
+                        ;
+                        ;   * QQ20 contains the amount of food (item 0)
+                        ;
+                        ;   * QQ20+7 contains the amount of computers (item 7)
+                        ;
+                        ; See QQ23 for a list of market item numbers and their
+                        ; storage units
 
 .ECM
 
- SKIP 1
+ SKIP 1                 ; E.C.M. system
+                        ;
+                        ;   * 0 = not fitted
+                        ;
+                        ;   * $FF = fitted
 
 .BST
 
- SKIP 1
+ SKIP 1                 ; Fuel scoops (BST stands for "barrel status")
+                        ;
+                        ;   * 0 = not fitted
+                        ;
+                        ;   * $FF = fitted
 
 .BOMB
 
- SKIP 1
+ SKIP 1                 ; Energy bomb
+                        ;
+                        ;   * 0 = not fitted
+                        ;
+                        ;   * $7F = fitted
 
 .ENGY
 
- SKIP 1
+ SKIP 1                 ; Energy unit
+                        ;
+                        ;   * 0 = not fitted
+                        ;
+                        ;   * Non-zero = fitted
+                        ;
+                        ; The actual value determines the refresh rate of our
+                        ; energy banks, as they refresh by ENGY+1 each time (so
+                        ; our ship's energy level goes up by 2 each time if we
+                        ; have an energy unit fitted, otherwise it goes up by 1)
 
 .DKCMP
 
- SKIP 1
+ SKIP 1                 ; Docking computer
+                        ;
+                        ;   * 0 = not fitted
+                        ;
+                        ;   * $FF = fitted
 
 .GHYP
 
- SKIP 1
+ SKIP 1                 ; Galactic hyperdrive
+                        ;
+                        ;   * 0 = not fitted
+                        ;
+                        ;   * $FF = fitted
 
 .ESCP
 
- SKIP 2
+ SKIP 1                 ; Escape pod
+                        ;
+                        ;   * 0 = not fitted
+                        ;
+                        ;   * $FF = fitted
+
+ SKIP 1                 ; This byte appears to be unused
 
 .TRIBBLE
 
- SKIP 2
+ SKIP 2                 ; The number of Trumbles in the cargo hold
 
 .TALLYL
 
- SKIP 1
+ SKIP 1                 ; Combat rank fraction
+                        ;
+                        ; Contains the fraction part of the kill count, which
+                        ; together with the integer in TALLY(1 0) determines our
+                        ; combat rank. The fraction is stored as the numerator
+                        ; of a fraction with a denominator of 256, so a TALLYL
+                        ; of 128 would represent 0.5 (i.e. 128 / 256)
 
 .NOMSL
 
- SKIP 1
+ SKIP 1                 ; The number of missiles we have fitted (0-4)
 
 .FIST
 
- SKIP 1
+ SKIP 1                 ; Our legal status (FIST stands for "fugitive/innocent
+                        ; status"):
+                        ;
+                        ;   * 0 = Clean
+                        ;
+                        ;   * 1-49 = Offender
+                        ;
+                        ;   * 50+ = Fugitive
+                        ;
+                        ; You get 64 points if you kill a cop, so that's a fast
+                        ; ticket to fugitive status
 
 .AVL
 
- SKIP 17
+ SKIP 17                ; Market availability in the current system
+                        ;
+                        ; The available amount of market item X is stored in
+                        ; the X-th byte of AVL, so for example:
+                        ;
+                        ;   * AVL contains the amount of food (item 0)
+                        ;
+                        ;   * AVL+7 contains the amount of computers (item 7)
+                        ;
+                        ; See QQ23 for a list of market item numbers and their
+                        ; storage units, and the deep dive on "Market item
+                        ; prices and availability" for details of the algorithm
+                        ; used for calculating each item's availability
 
 .QQ26
 
- SKIP 1
+ SKIP 1                 ; A random value used to randomise market data
+                        ;
+                        ; This value is set to a new random number for each
+                        ; change of system, so we can add a random factor into
+                        ; the calculations for market prices (for details of how
+                        ; this is used, see the deep dive on "Market prices")
 
 .TALLY
 
- SKIP 2
+ SKIP 2                 ; Our combat rank
+                        ;
+                        ; The combat rank is stored as the number of kills, in a
+                        ; 16-bit number TALLY(1 0) - so the high byte is in
+                        ; TALLY+1 and the low byte in TALLY
+                        ;
+                        ; If the high byte in TALLY+1 is 0 then we have between
+                        ; 0 and 255 kills, so our rank is Harmless, Mostly
+                        ; Harmless, Poor, Average or Above Average, according to
+                        ; the value of the low byte in TALLY:
+                        ;
+                        ;   Harmless        = %00000000 to %00000011 = 0 to 3
+                        ;   Mostly Harmless = %00000100 to %00000111 = 4 to 7
+                        ;   Poor            = %00001000 to %00001111 = 8 to 15
+                        ;   Average         = %00010000 to %00011111 = 16 to 31
+                        ;   Above Average   = %00100000 to %11111111 = 32 to 255
+                        ;
+                        ; If the high byte in TALLY+1 is non-zero then we are
+                        ; Competent, Dangerous, Deadly or Elite, according to
+                        ; the high byte in TALLY+1:
+                        ;
+                        ;   Competent       = 1           = 256 to 511 kills
+                        ;   Dangerous       = 2 to 9      = 512 to 2559 kills
+                        ;   Deadly          = 10 to 24    = 2560 to 6399 kills
+                        ;   Elite           = 25 and up   = 6400 kills and up
+                        ;
+                        ; You can see the rating calculation in the STATUS
+                        ; subroutine
 
 .SVC
 
- SKIP 1
+ SKIP 1                 ; The save count
+                        ;
+                        ; When a new commander is created, the save count gets
+                        ; set to 128. This value gets halved each time the
+                        ; commander file is saved, but it is otherwise unused.
+                        ; It is presumably part of the security system for the
+                        ; competition, possibly another flag to catch out
+                        ; entries with manually altered commander files
 
- SKIP 1
+ SKIP 2                 ; The commander file checksum
+                        ;
+                        ; These two bytes are reserved for the commander file
+                        ; checksum, so when the current commander block is
+                        ; copied from here to the last saved commander block at
+                        ; NA%, CHK and CHK2 get overwritten
 
- SKIP 1
+ SKIP 1                 ; The second commander file checksum
+                        ;
+                        ; This byte is reserved for the second commander file
+                        ; checksum in CHK3
 
- SKIP 1
+ NT% = SVC + 3 - TP     ; This sets the variable NT% to the size of the current
+                        ; commander data block, which starts at TP and ends at
+                        ; SVC+3 (inclusive), i.e. with the last checksum byte
 
 .MCH
 
- SKIP 1
-
- NT% = MCH-1-TP
+ SKIP 1                 ; The text token number of the in-flight message that is
+                        ; currently being shown, and which will be removed by
+                        ; the me2 routine when the counter in DLY reaches zero
 
 .FSH
 
- SKIP 1
+ SKIP 1                 ; Forward shield status
+                        ;
+                        ;   * 0 = empty
+                        ;
+                        ;   * $FF = full
 
 .ASH
 
- SKIP 1
+ SKIP 1                 ; Aft shield status
+                        ;
+                        ;   * 0 = empty
+                        ;
+                        ;   * $FF = full
 
 .ENERGY
 
- SKIP 1
+ SKIP 1                 ; Energy bank status
+                        ;
+                        ;   * 0 = empty
+                        ;
+                        ;   * $FF = full
 
 .COMX
 
- SKIP 1
+ SKIP 1                 ; The x-coordinate of the compass dot
 
 .COMY
 
- SKIP 1
+ SKIP 1                 ; The y-coordinate of the compass dot
 
 .QQ24
 
- SKIP 1
+ SKIP 1                 ; Temporary storage, used to store the current market
+                        ; item's price in routine TT151
 
 .QQ25
 
- SKIP 1
+ SKIP 1                 ; Temporary storage, used to store the current market
+                        ; item's availability in routine TT151
 
 .QQ28
 
- SKIP 1
+ SKIP 1                 ; The current system's economy (0-7)
+                        ;
+                        ;   * 0 = Rich Industrial
+                        ;   * 1 = Average Industrial
+                        ;   * 2 = Poor Industrial
+                        ;   * 3 = Mainly Industrial
+                        ;   * 4 = Mainly Agricultural
+                        ;   * 5 = Rich Agricultural
+                        ;   * 6 = Average Agricultural
+                        ;   * 7 = Poor Agricultural
+                        ;
+                        ; See the deep dive on "Generating system data" for more
+                        ; information on economies
 
 .QQ29
 
- SKIP 1
+ SKIP 1                 ; Temporary storage, used in a number of places
 
 .gov
 
- SKIP 1
+ SKIP 1                 ; The current system's government type (0-7)
+                        ;
+                        ; See the deep dive on "Generating system data" for
+                        ; details of the various government types
 
 .tek
 
- SKIP 1
+ SKIP 1                 ; The current system's tech level (0-14)
+                        ;
+                        ; See the deep dive on "Generating system data" for more
+                        ; information on tech levels
 
 .SLSP
 
- SKIP 2
+ SKIP 2                 ; The address of the bottom of the ship line heap
+                        ;
+                        ; The ship line heap is a descending block of memory
+                        ; extended downwards by the NWSHP routine when adding
+                        ; new ships (and their associated ship line heaps), in
+                        ; which case SLSP is lowered to provide more heap space,
+                        ; assuming there is enough free memory to do so
 
 .QQ2
 
- SKIP 6
+ SKIP 6                 ; The three 16-bit seeds for the current system, i.e.
+                        ; the one we are currently in
+                        ;
+                        ; See the deep dives on "Galaxy and system seeds" and
+                        ; "Twisting the system seeds" for more details
 
 .safehouse
 
- SKIP 6
+ SKIP 6                 ; Backup storage for the seeds for the selected system
+                        ;
+                        ; The seeds for the current system get stored here as
+                        ; soon as a hyperspace is initiated, so we can fetch
+                        ; them in the hyp1 routine. This fixes a bug in an
+                        ; earlier version where you could hyperspace while
+                        ; docking and magically appear in your destination
+                        ; station
 
 .QQ3
 
- SKIP 1
+ SKIP 1                 ; The selected system's economy (0-7)
+                        ;
+                        ;   * 0 = Rich Industrial
+                        ;   * 1 = Average Industrial
+                        ;   * 2 = Poor Industrial
+                        ;   * 3 = Mainly Industrial
+                        ;   * 4 = Mainly Agricultural
+                        ;   * 5 = Rich Agricultural
+                        ;   * 6 = Average Agricultural
+                        ;   * 7 = Poor Agricultural
+                        ;
+                        ; See the deep dive on "Generating system data" for more
+                        ; information on economies
 
 .QQ4
 
- SKIP 1
+ SKIP 1                 ; The selected system's government (0-7)
+                        ;
+                        ; See the deep dive on "Generating system data" for more
+                        ; details of the various government types
 
 .QQ5
 
- SKIP 1
+ SKIP 1                 ; The selected system's tech level (0-14)
+                        ;
+                        ; See the deep dive on "Generating system data" for more
+                        ; information on tech levels
 
 .QQ6
 
- SKIP 2
+ SKIP 2                 ; The selected system's population in billions * 10
+                        ; (1-71), so the maximum population is 7.1 billion
+                        ;
+                        ; See the deep dive on "Generating system data" for more
+                        ; details on population levels
 
 .QQ7
 
- SKIP 2
+ SKIP 2                 ; The selected system's productivity in M CR (96-62480)
+                        ;
+                        ; See the deep dive on "Generating system data" for more
+                        ; details about productivity levels
 
 .QQ8
 
- SKIP 2
+ SKIP 2                 ; The distance from the current system to the selected
+                        ; system in light years * 10, stored as a 16-bit number
+                        ;
+                        ; The distance will be 0 if the selected system is the
+                        ; current system
+                        ;
+                        ; The galaxy chart is 102.4 light years wide and 51.2
+                        ; light years tall (see the intra-system distance
+                        ; calculations in routine TT111 for details), which
+                        ; equates to 1024 x 512 in terms of QQ8
 
 .QQ9
 
- SKIP 1
+ SKIP 1                 ; The galactic x-coordinate of the crosshairs in the
+                        ; galaxy chart (and, most of the time, the selected
+                        ; system's galactic x-coordinate)
 
 .QQ10
 
- SKIP 1
+ SKIP 1                 ; The galactic y-coordinate of the crosshairs in the
+                        ; galaxy chart (and, most of the time, the selected
+                        ; system's galactic y-coordinate)
 
 .NOSTM
 
- SKIP 1
+ SKIP 1                 ; The number of stardust particles shown on screen,
+                        ; which is 12 (#NOST) for normal space, and 3 for
+                        ; witchspace
 
-.COL2
+.COL2                   ; ???
 
  SKIP 1
 
 .frump
 
- SKIP 1
+ SKIP 1                 ; Used to store the number of particles in the explosion
+                        ; cloud, though the number is never actually used
 
 .sprx
 
- SKIP 1
+ SKIP 1                 ; ???
 
 .spry
 
- SKIP 1
+ SKIP 1                 ; ???
 
 .TRIBCT
 
- SKIP 1
+ SKIP 1                 ; ???
 
 .TRIBVX
 
- SKIP 16
+ SKIP 16                ; ???
 
 .TRIBVXH
 
- SKIP 16
+ SKIP 16                ; ???
 
 .TRIBXH
 
- SKIP 16
+ SKIP 16                ; ???
 
 ; ******************************************
 
