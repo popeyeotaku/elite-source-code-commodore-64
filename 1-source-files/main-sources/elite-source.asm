@@ -662,15 +662,9 @@ ENDIF
 
 .thiskey
 
- SKIP 1                 ; The following bytes implement a key logger that
-                        ; enables Elite to scan for concurrent key presses of
-                        ; the primary flight keys, plus a secondary flight key
-                        ;
-                        ; See the deep dive on "The key logger" for more details
-                        ;
-                        ; If a key is being pressed that is not in the keyboard
-                        ; table at KYTB, it can be stored here (as seen in
-                        ; routine DK4, for example)
+ SKIP 1                 ; If a key is being pressed that is not in the keyboard
+                        ; table at KYTB, it can be stored in KL and thiskey (as
+                        ; seen in routine DK4, for example)
 
 .LSP
 
@@ -764,6 +758,18 @@ ENDIF
                         ;   1   = Title screen
                         ;         Get commander name ("@", save/load commander)
                         ;         In-system jump just arrived ("J")
+                        ;         Data on System screen (key "7")
+                        ;   2   = Buy Cargo screen (key "2")
+                        ;   3   = Mis-jump just arrived (witchspace)
+                        ;   4   = Sell Cargo screen (key "3")
+                        ;   6   = Death screen
+                        ;   8   = Status Mode screen (key "9")
+                        ;         Inventory screen (key "0")
+                        ;   16  = Market Price screen (key "8")
+                        ;   32  = Equip Ship screen (key "4")
+                        ;   64  = Long-range Chart (key "5")
+                        ;   128 = Short-range Chart (key "6")
+                        ;   255 = Launch view
                         ;
                         ; This value is typically set by calling routine TT66
 
@@ -1012,7 +1018,7 @@ ENDIF
 
  SKIP 1                 ; ???
 
- PRINT "Zero page variables from ", ~ZP, " to ", ~P%
+ PRINT "ZP workspace from ", ~ZP, "to ", ~P%-1, "inclusive"
 
 ; ******************************************************************************
 ;
@@ -1040,7 +1046,7 @@ ENDIF
 ;
 ;       Name: K%
 ;       Type: Workspace
-;    Address: $F900 to ??? ($F000 to ??? in the source disk variant)
+;    Address: $F900 to $FA71 ($F000 to $F171 in the source disk variant)
 ;   Category: Workspaces
 ;    Summary: Ship data blocks and ship line heaps
 ;  Deep dive: Ship data blocks
@@ -1069,11 +1075,13 @@ ENDIF
 
  SKIP NOSH * NI%        ; Ship data blocks and ship line heap
 
+ PRINT "K% workspace from ", ~K%, "to ", ~P%-1, "inclusive"
+
 ; ******************************************************************************
 ;
 ;       Name: UP
 ;       Type: Workspace
-;    Address: $0400 to ???
+;    Address: $0400 to $0540
 ;   Category: Workspaces
 ;    Summary: Configuration variables
 ;
@@ -1205,6 +1213,12 @@ ENDIF
 
  SKIP 1                 ; The targeting state of our leftmost missile
                         ;
+                        ;   * 0 = missile is not looking for a target, or it
+                        ;     already has a target lock (indicator is not
+                        ;     yellow/white)
+                        ;
+                        ;   * Non-zero = missile is currently looking for a
+                        ;     target (indicator is yellow/white)
 
 .VIEW
 
@@ -1294,6 +1308,13 @@ ENDIF
                         ; point, so 1 means roll is decreasing at the maximum
                         ; rate, 128 means roll is not changing, and 255 means
                         ; roll is increasing at the maximum rate
+                        ;
+                        ; This value is updated by "<" and ">" key presses, or
+                        ; if joysticks are enabled, from the joystick. If
+                        ; keyboard damping is enabled (which it is by default),
+                        ; the value is slowly moved towards the centre value of
+                        ; 128 (no roll) if there are no key presses or joystick
+                        ; movement
 
 .JSTY
 
@@ -1306,10 +1327,18 @@ ENDIF
                         ; point, so 1 means pitch is decreasing at the maximum
                         ; rate, 128 means pitch is not changing, and 255 means
                         ; pitch is increasing at the maximum rate
+                        ;
+                        ; This value is updated by "S" and "X" key presses, or
+                        ; if joysticks are enabled, from the joystick. If
+                        ; keyboard damping is enabled (which it is by default),
+                        ; the value is slowly moved towards the centre value of
+                        ; 128 (no pitch) if there are no key presses or joystick
+                        ; movement
 
 .XSAV2
 
- SKIP 1                 ; This byte appears to be unused
+ SKIP 1                 ; Temporary storage, used for storing the value of the X
+                        ; register in the CHPR routine
 
 .YSAV2
 
@@ -1834,7 +1863,7 @@ ENDIF
 .frump
 
  SKIP 1                 ; Used to store the number of particles in the explosion
-                        ; cloud, though the number is never actually used
+                        ; cloud
 
 .sprx
 
@@ -1860,95 +1889,143 @@ ENDIF
 
  SKIP 16                ; ???
 
-; ******************************************
+ PRINT "UP workspace from ", ~UP, "to ", ~P%-1, "inclusive"
 
- ORG $580
+; ******************************************************************************
+;
+;       Name: WP
+;       Type: Workspace
+;    Address: $0580 to $6FB
+;   Category: Workspaces
+;    Summary: Variables
+;
+; ******************************************************************************
+
+ ORG $0580
 
 .WP
 
+ SKIP 0                 ; The start of the WP workspace
+
+.LSX
+
+ SKIP 0                 ; LSX is an alias that points to the first byte of the
+                        ; sun line heap at LSO
+                        ;
+                        ;   * $FF indicates the sun line heap is empty
+                        ;
+                        ;   * Otherwise the LSO heap contains the line data for
+                        ;     the sun
+
 .LSO
 
- SKIP 200
-
- LSX = LSO
+ SKIP 200               ; The ship line heap for the space station (see NWSPS)
+                        ; and the sun line heap (see SUN)
+                        ;
+                        ; The spaces can be shared as our local bubble of
+                        ; universe can support either the sun or a space
+                        ; station, but not both
 
 .BUF
 
- SKIP 90
+ SKIP 90                ; The line buffer used by DASC to print justified text
 
 .SX
 
- SKIP NOST+1
+ SKIP NOST + 1          ; This is where we store the x_hi coordinates for all
+                        ; the stardust particles
 
 .SXL
 
- SKIP NOST+1
+ SKIP NOST + 1          ; This is where we store the x_lo coordinates for all
+                        ; the stardust particles
 
 .SY
 
- SKIP NOST+1
+ SKIP NOST + 1          ; This is where we store the y_hi coordinates for all
+                        ; the stardust particles
 
 .SYL
 
- SKIP NOST+1
+ SKIP NOST + 1          ; This is where we store the y_lo coordinates for all
+                        ; the stardust particles
 
 .SZ
 
- SKIP NOST+1
+ SKIP NOST + 1          ; This is where we store the z_hi coordinates for all
+                        ; the stardust particles
 
 .SZL
 
- SKIP NOST+1
-
-; $70
+ SKIP NOST + 1          ; This is where we store the z_lo coordinates for all
+                        ; the stardust particles
 
 .LASX
 
- SKIP 1
+ SKIP 1                 ; The x-coordinate of the tip of the laser line
 
 .LASY
 
- SKIP 1
+ SKIP 1                 ; The y-coordinate of the tip of the laser line
 
 .XX24
 
- SKIP 1
+ SKIP 1                 ; This byte appears to be unused
 
 .ALTIT
 
- SKIP 1
+ SKIP 1                 ; Our altitude above the surface of the planet or sun
+                        ;
+                        ;   * 255 = we are a long way above the surface
+                        ;
+                        ;   * 1-254 = our altitude as the square root of:
+                        ;
+                        ;       x_hi^2 + y_hi^2 + z_hi^2 - 6^2
+                        ;
+                        ;     where our ship is at the origin, the centre of the
+                        ;     planet/sun is at (x_hi, y_hi, z_hi), and the
+                        ;     radius of the planet/sun is 6
+                        ;
+                        ;   * 0 = we have crashed into the surface
 
 .SWAP
 
- SKIP 1
+ SKIP 1                 ; Temporary storage, used to store a flag that records
+                        ; whether or not we had to swap a line's start and end
+                        ; coordinates around when clipping the line in routine
+                        ; LL145 (the flag is used in places like BLINE to swap
+                        ; them back)
 
 .XP
 
- SKIP 1
+ SKIP 1                 ; This byte appears to be unused
 
 .YP
 
- SKIP 1
+ SKIP 1                 ; This byte appears to be unused
 
 .YS
 
- SKIP 1
+ SKIP 1                 ; This byte appears to be unused
 
 .BALI
 
- SKIP 1
+ SKIP 1                 ; This byte appears to be unused
 
 .UPO
 
- SKIP 1
+ SKIP 1                 ; This byte appears to be unused
 
 .boxsize
 
- SKIP 1
+ SKIP 1                 ; This byte appears to be unused
 
 .distaway
 
- SKIP 1
+ SKIP 1                 ; Used to store the nearest distance of the rotating
+                        ; ship on the title screen
+
+ PRINT "WP workspace from ", ~WP, "to ", ~P%-1, "inclusive"
 
 ; ******************************************************************************
 ;
