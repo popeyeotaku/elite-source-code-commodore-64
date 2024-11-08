@@ -2247,41 +2247,91 @@ ENDIF
 
  EQUB $24               ; B
 
- RTS  ;checksum here
+; ******************************************************************************
+;
+;       Name: S%
+;       Type: Subroutine
+;   Category: Loader
+;    Summary: Checksum, decrypt and unscramble the main game code, and start the
+;             game
+;
+; ******************************************************************************
+
+ RTS                    ; The checksum byte goes here, at S%-1. In the original
+                        ; source this byte is set by the first call to ZP in the
+                        ; Big Code File, though in the BeebAsm version this is
+                        ; populated by elite-checksum.py
 
 .S%
 
- CLD
- LDX #2
+ CLD                    ; Clear the D flag to make sure we are in binary mode
+
+ LDX #2                 ; ???
 
 .ZONKPZERO
 
- LDA 0,X
+ LDA $0000,X
  STA $CE00,X
  INX
  BNE ZONKPZERO ; shove over loader prog
- JSR DEEOR
- JSR COLD
-;JSR Checksum
- JMP BEGIN
+
+ JSR DEEOR              ; Decrypt the main game code between $1300 and $9FFF
+
+ JSR COLD               ; Copy the recursive tokens and ship blueprints to their
+                        ; correct locations
+
+;JSR Checksum           ; This instruction is commented out in the original
+                        ; source
+
+ JMP BEGIN              ; Jump to BEGIN to start the game
+
+; ******************************************************************************
+;
+;       Name: DEEOR
+;       Type: Subroutine
+;   Category: Utility routines
+;    Summary: Unscramble the main code
+;
+; ------------------------------------------------------------------------------
+;
+; The main game code and data are encrypted. This routine decrypts the game code
+; in two parts: between G% and R%, and between C% and F%.
+;
+; In the BeebAsm version, the encryption is done by elite-checksum.py, but in
+; the original this would have been done by the BBC BASIC build scripts.
+;
+; ******************************************************************************
 
 .DEEOR
 
- LDA #((G%-1)MOD 256)
- STA FRIN
- LDA #((G%-1)DIV 256)
+ LDA #LO(G%-1)          ; Set FRIN(1 0) = G%-1 as the low address of the
+ STA FRIN               ; decryption block, so we decrypt from the start of the
+ LDA #HI(G%-1)          ; DOENTRY routine
  STA FRIN+1
- LDA #((R%-1)DIV 256)
- LDY #((R%-1)MOD 256)
- LDX #KEY1
- JSR DEEORS
- LDA #((C%-1)MOD 256)
- STA FRIN
- LDA #((C%-1)DIV 256)
+
+ LDA #HI(R%-1)          ; Set (A Y) to R% as the high address of the decryption
+ LDY #LO(R%-1)          ; block, so we decrypt to the end of the first block of
+                        ; game code at R% (so we decrypt from DOENTRY to the end
+                        ; of the Elite C section)
+
+ LDX #KEY1              ; Set X = KEY1 as the decryption seed (the value used to
+                        ; encrypt the code, which is done in elite-checksum.py)
+
+ JSR DEEORS             ; Call DEEORS to decrypt between G% and R%
+
+ LDA #LO(C%-1)          ; Set FRIN(1 0) = C%-1 and  as the low address of the
+ STA FRIN               ; decryption block, so we decrypt from the start of the
+ LDA #HI(C%-1)          ; Elite D section
  STA FRIN+1
- LDA #((F%-1)DIV 256)
- LDY #((F%-1)MOD 256)
- LDX #KEY2
+
+ LDA #HI(F%-1)          ; Set (A Y) to F% as the high address of the decryption
+ LDY #LO(F%-1)          ; block, so we decrypt to the end of the second block of
+                        ; game code at F% (so we decrypt Elite D to K)
+
+ LDX #KEY2              ; Set X = KEY2 as the decryption seed (the value used to
+                        ; encrypt the code, which is done in elite-checksum.py)
+
+                        ; Fall through into DEEORS to decrypt Elite D to K
 
 .DEEORS
 
