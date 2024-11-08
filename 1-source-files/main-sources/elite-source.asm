@@ -1856,9 +1856,9 @@ ENDIF
                         ; which is 12 (#NOST) for normal space, and 3 for
                         ; witchspace
 
-.COL2                   ; ???
+.COL2
 
- SKIP 1
+ SKIP 1                 ; ???
 
 .frump
 
@@ -2039,115 +2039,214 @@ ENDIF
 
  LOAD_A% = LOAD%
 
+; ******************************************************************************
+;
+;       Name: Option variables
+;       Type: Workspace
+;    Address: $1D00 to $1D13
+;   Category: Workspaces
+;    Summary: Variables used to store the game options
+;
+; ******************************************************************************
+
 .MOS
 
- SKIP 1
+ SKIP 1                 ; This variable appears to be unused
 
 .COMC
 
- SKIP 1
+ SKIP 1                 ; The colour of the dot on the compass
+                        ;
+                        ;   * #YELLOW = the object in the compass is in front of
+                        ;     us, so the dot is yellow ???
+                        ;
+                        ;   * #GREEN = the object in the compass is behind us,
+                        ;     so the dot is green ???
 
 .MUTOKOLD
 
- SKIP 1
+ SKIP 1                 ; ???
 
 .MUPLA
 
- SKIP 1
+ SKIP 1                 ; ???
 
 .DFLAG
 
- SKIP 1
+ EQUB 0                 ; This byte appears to be unused
 
 .DNOIZ
 
- SKIP 1
+ SKIP 1                 ; Sound on/off configuration setting
+                        ;
+                        ;   * 0 = sound is on (default)
+                        ;
+                        ;   * Non-zero = sound is off
+                        ;
+                        ; Toggled by pressing "S" when paused, see the DK4
+                        ; routine for details
 
 .DAMP
 
- SKIP 1 ; runstop
+ SKIP 1                 ; Keyboard damping configuration setting
+                        ;
+                        ;   * 0 = damping is enabled (default)
+                        ;
+                        ;   * $FF = damping is disabled
+                        ;
+                        ; Toggled by pressing RUN/STOP when paused, see the
+                        ; DKS3 routine for details
 
 .DJD
 
- SKIP 1 ; A
+ SKIP 1                 ; Keyboard auto-recentre configuration setting
+                        ;
+                        ;   * 0 = auto-recentre is enabled (default)
+                        ;
+                        ;   * $FF = auto-recentre is disabled
+                        ;
+                        ; Toggled by pressing "A" when paused, see the DKS3
+                        ; routine for details
 
 .PATG
 
- SKIP 1 ; X
+ SKIP 1                 ; Configuration setting to show the author names on the
+                        ; start-up screen and enable manual hyperspace mis-jumps
+                        ;
+                        ;   * 0 = no author names or manual mis-jumps (default)
+                        ;
+                        ;   * $FF = show author names and allow manual mis-jumps
+                        ;
+                        ; Toggled by pressing "X" when paused, see the DKS3
+                        ; routine for details
+                        ;
+                        ; This needs to be turned on for manual mis-jumps to be
+                        ; possible. To do a manual mis-jump, first toggle the
+                        ; author display by pausing the game and pressing "X",
+                        ; and during the next hyperspace, hold down CTRL to
+                        ; force a mis-jump. See routine ee5 for the "AND PATG"
+                        ; instruction that implements this logic
 
 .FLH
 
- SKIP 1 ; F
+ SKIP 1                 ; Flashing console bars configuration setting
+                        ;
+                        ;   * 0 = static bars (default)
+                        ;
+                        ;   * $FF = flashing bars
+                        ;
+                        ; Toggled by pressing "F" when paused, see the DKS3
+                        ; routine for details
 
 .JSTGY
 
- SKIP 1 ; Y
+ SKIP 1                 ; Reverse joystick Y-channel configuration setting
+                        ;
+                        ;   * 0 = standard Y-channel (default)
+                        ;
+                        ;   * $FF = reversed Y-channel
+                        ;
+                        ; Toggled by pressing "Y" when paused, see the DKS3
+                        ; routine for details
 
 .JSTE
 
- SKIP 1 ; J
+ SKIP 1                 ; Reverse both joystick channels configuration setting
+                        ;
+                        ;   * 0 = standard channels (default)
+                        ;
+                        ;   * $FF = reversed channels
+                        ;
+                        ; Toggled by pressing "J" when paused, see the DKS3
+                        ; routine for details
 
 .JSTK
 
- SKIP 1 ; K
+ SKIP 1                 ; Keyboard or joystick configuration setting
+                        ;
+                        ;   * 0 = keyboard (default)
+                        ;
+                        ;   * $FF = joystick
+                        ;
+                        ; Toggled by pressing "K" when paused, see the DKS3
+                        ; routine for details
 
 .MUTOK
 
- SKIP 1 ; M
+ SKIP 1                 ; M Toggle docking music ???
 
 .DISK
 
- SKIP 1 ; D
+ SKIP 1                 ; The configuration setting for toggle key "T", which
+                        ; isn't actually used but is still updated by pressing
+                        ; "T" while the game is paused. This is a configuration
+                        ; option from some non-BBC versions of Elite that lets
+                        ; you switch between tape and disc
 
 .PLTOG
 
- SKIP 1 ; P
+ SKIP 1                 ; P Toggle planet surface lines ???
 
 .MUFOR
 
- SKIP 1 ; C
+ SKIP 1                 ; C music possible/not possible ???
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- SKIP 1
+.L1D11
+
+ SKIP 1                 ; E swap tunes ???
 
 ENDIF
 
 .MUSILLY
 
- SKIP 1 ; B
+ SKIP 1                 ; B switch on/off sounds during music ???
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
 .MULIE
 
- SKIP 1
+ SKIP 1					\ ???
 
 ENDIF
+
+; ******************************************************************************
+;
+;       Name: TGINT
+;       Type: Variable
+;   Category: Keyboard
+;    Summary: The keys used to toggle configuration settings when the game is
+;             paused
+;
+; ******************************************************************************
 
 .TGINT
 
- EQUB $01
- EQUB $36
- EQUB $29
- EQUB $2B
- EQUB $27
- EQUB $1E
- EQUB $1B
- EQUB $1C
- EQUB $2E
- \  RS       A       X       F       Y       J       K      M       D
- EQUB $17
- EQUB $2C
+                        ; The configuration keys in the same order as their
+                        ; configuration bytes (starting from DAMP), using their
+                        ; internal key numbers ???
+
+ EQUB $01               ; RUN/STOP
+ EQUB $36               ; A
+ EQUB $29               ; X
+ EQUB $2B               ; F
+ EQUB $27               ; Y
+ EQUB $1E               ; J
+ EQUB $1B               ; K
+ EQUB $1C               ; M
+ EQUB $2E               ; D
+ EQUB $17               ; P
+ EQUB $2C               ; C
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- EQUB $32
+ EQUB $32               ; E
 
 ENDIF
 
- EQUB $24
- \   P       C       B
+ EQUB $24               ; B
+
  RTS  ;checksum here
 
 .S%
@@ -28919,7 +29018,7 @@ ENDIF
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- BIT $1D11
+ BIT L1D11
  BMI startat
  LDA #$2C
  LDX #$B7
@@ -33676,7 +33775,7 @@ ENDIF
 ;
 ; ******************************************************************************
 
-.^DOT
+.DOT
 
  LDA COMY               ; Set Y1 = COMY, the y-coordinate of the dash
  STA Y1
