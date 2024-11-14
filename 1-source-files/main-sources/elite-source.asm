@@ -2277,8 +2277,7 @@ ENDIF
 
  JSR DEEOR              ; Decrypt the main game code between $1300 and $9FFF
 
- JSR COLD               ; Copy the recursive tokens and ship blueprints to their
-                        ; correct locations
+ JSR COLD               ; ???
 
 ;JSR Checksum           ; This instruction is commented out in the original
                         ; source
@@ -40371,113 +40370,286 @@ ENDIF
 
  LOAD_I% = LOAD% + P% - CODE%
 
+; ******************************************************************************
+;
+;       Name: yetanotherrts
+;       Type: Subroutine
+;   Category: Tactics
+;    Summary: Contains an RTS
+;
+; ------------------------------------------------------------------------------
+;
+; This routine contains an RTS so we can return from the SFRMIS subroutine with
+; a branch instruction.
+;
+; It also contains the DEMON label, which implements the demo in the 6502
+; Second Processor version, so this acts as a stub for the JSR DEMON call during
+; conversion of the 6502 Second Processor version into the later Commodore 64,
+; Apple II and BBC Master versions.
+;
+; ------------------------------------------------------------------------------
+;
+; Other entry points:
+;
+;   DEMON               Contains an RTS
+;
+; ******************************************************************************
+
 .yetanotherrts
 
 .DEMON
 
- RTS ;<<
+ RTS                    ; Return from the subroutine
+
+; ******************************************************************************
+;
+;       Name: ECMOF
+;       Type: Subroutine
+;   Category: Sound
+;    Summary: Switch off the E.C.M.
+;
+; ------------------------------------------------------------------------------
+;
+; Switch the E.C.M. off, turn off the dashboard bulb and make the sound of the
+; E.C.M. switching off).
+;
+; ******************************************************************************
 
 .ECMOF
 
- LDA #0
- STA ECMA
+ LDA #0                 ; Set ECMA and ECMP to 0 to indicate that no E.C.M. is
+ STA ECMA               ; currently running
  STA ECMP
- JSR ECBLB
- LDY #sfxecm
- JMP NOISEOFF
+
+ JSR ECBLB              ; Update the E.C.M. indicator bulb on the dashboard
+
+ LDY #sfxecm            ; Call the NOISEOFF routine with A = sfxecm to make the
+ JMP NOISEOFF           ; sound of the E.C.M. being turned off and return from
+                        ; the subroutine using a tail call
+
+; ******************************************************************************
+;
+;       Name: SFRMIS
+;       Type: Subroutine
+;   Category: Tactics
+;    Summary: Add an enemy missile to our local bubble of universe
+;
+; ------------------------------------------------------------------------------
+;
+; An enemy has fired a missile, so add the missile to our universe if there is
+; room, and if there is, make the appropriate warnings and noises.
+;
+; ******************************************************************************
 
 .SFRMIS
 
- LDX #MSL
- JSR SFS1-2
- BCC yetanotherrts
- LDA #$78
- JSR MESS
- LDY #sfxwhosh
- JMP NOISE
+ LDX #MSL               ; Set X to the ship type of a missile, and call SFS1-2
+ JSR SFS1-2             ; to add the missile to our universe with an AI flag
+                        ; of %11111110 (AI enabled, hostile, no E.C.M.)
+
+ BCC yetanotherrts      ; The C flag will be set if the call to SFS1-2 was a
+                        ; success, so if it's clear, jump to yetanotherrts to
+                        ; return from the subroutine (as yetanotherrts contains
+                        ; an RTS)
+
+ LDA #120               ; Print recursive token 120 ("INCOMING MISSILE") as an
+ JSR MESS               ; in-flight message
+
+ LDY #sfxwhosh          ; Call the NOISE routine with Y = solaun to make the
+ JMP NOISE              ; sound of the missile being launched and return from
+                        ; the subroutine using a tail call
+
+; ******************************************************************************
+;
+;       Name: EXNO2
+;       Type: Subroutine
+;   Category: Status
+;    Summary: Process us making a kill
+;  Deep dive: Combat rank
+;
+; ------------------------------------------------------------------------------
+;
+; We have killed a ship, so increase the kill tally, displaying an iconic
+; message of encouragement if the kill total is a multiple of 256, and then
+; make a nearby explosion sound.
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   X                   The type of the ship that was killed
+;
+; ******************************************************************************
 
 .EXNO2
 
- LDA TALLYL
- CLC
- ADC KWL%-1,X
- STA TALLYL
- LDA TALLY
- ADC KWH%-1,X
- STA TALLY
- BCC davidscockup
- INC TALLY+1
- LDA #101
- JSR MESS
+ LDA TALLYL             ; We now add the fractional kill count to our tally,
+ CLC                    ; starting with the fractional bytes:
+ ADC KWL%-1,X           ;
+ STA TALLYL             ;   TALLYL = TALLYL + fractional kill count
+                        ;
+                        ; where the fractional kill count is taken from the
+                        ; KWL% table, according to the ship's type (we look up
+                        ; the X-1-th value from KWL% because ship types start
+                        ; at 1 rather than 0)
+
+ LDA TALLY              ; And then we add the low byte of TALLY(1 0):
+ ADC KWH%-1,X           ;
+ STA TALLY              ;   TALLY = TALLY + carry + integer kill count
+                        ;
+                        ; where the integer kill count is taken from the KWH%
+                        ; table in the same way
+
+ BCC davidscockup       ; If there is no carry, jump straight to EXNO3 to skip
+                        ; the following three instructions
+
+ INC TALLY+1            ; Increment the high byte of the kill count in TALLY
+
+ LDA #101               ; The kill total is a multiple of 256, so it's time
+ JSR MESS               ; for a pat on the back, so print recursive token 101
+                        ; ("RIGHT ON COMMANDER!") as an in-flight message
 
 .davidscockup
 
- LDA INWK+7
- LDX #$B
- CMP #16
+ LDA INWK+7             ; Fetch z_hi, the distance of the ship being hit in
+                        ; terms of the z-axis (in and out of the screen)
+
+ LDX #11                ; We now set X to a number between 11 and 15 depending
+                        ; on the z-axis distance to the exploding ship, with 11
+                        ; for distant ships and 15 for close ships
+
+ CMP #16                ; If z_hi >= 16, jump to quiet2 with X = 11
  BCS quiet2
- INX
- CMP #8
+
+ INX                    ; Increment X to 12
+
+ CMP #8                 ; If z_hi >= 8, jump to quiet2 with X = 12
  BCS quiet2
- INX
- CMP #6
+
+ INX                    ; Increment X to 13
+
+ CMP #6                 ; If z_hi >= 6, jump to quiet2 with X = 13
  BCS quiet2
- INX
- CMP #3
+
+ INX                    ; Increment X to 14
+
+ CMP #3                 ; If z_hi >= 3, jump to quiet2 with X = 14
  BCS quiet2
- INX
+
+ INX                    ; Increment X to 15
 
 .quiet2
 
- TXA
+ TXA                    ; Set A = X << 4
+ ASL A                  ;
+ ASL A                  ; So the value of X is in the high nibble of A
  ASL A
  ASL A
- ASL A
- ASL A
- ORA #3
+
+ ORA #3                 ; ???
  LDY #sfxexpl
  LDX #$51
  JMP NOISE2
 
+; ******************************************************************************
+;
+;       Name: EXNO
+;       Type: Subroutine
+;   Category: Sound
+;    Summary: Make the sound of a laser strike or ship explosion
+;
+; ------------------------------------------------------------------------------
+;
+; Make the two-part explosion sound of us making a laser strike, or of another
+; ship exploding.
+;
+; The volume of the first explosion is affected by the distance of the ship
+; being hit, with more distant ships being quieter.
+;
+; ******************************************************************************
+
 .EXNO
 
- LDA INWK+7
- LDX #$B
- CMP #8
+ LDA INWK+7             ; Fetch z_hi, the distance of the ship being hit in
+                        ; terms of the z-axis (in and out of the screen)
+
+ LDX #11                ; We now set X to a number between 11 and 15 depending
+                        ; on the z-axis distance to the exploding ship, with 11
+                        ; for distant ships and 15 for close ships
+
+ CMP #8                 ; If z_hi >= 8, jump to quiet with X = 11
  BCS quiet
- INX
- CMP #4
+
+ INX                    ; Increment X to 12
+
+ CMP #4                 ; If z_hi >= 4, jump to quiet with X = 12
  BCS quiet
- INX
- CMP #3
+
+ INX                    ; Increment X to 13
+
+ CMP #3                 ; If z_hi >= 3, jump to quiet with X = 13
  BCS quiet
- INX
- CMP #2
+
+ INX                    ; Increment X to 14
+
+ CMP #2                 ; If z_hi >= 2, jump to quiet with X = 14
  BCS quiet
- INX
+
+ INX                    ; Increment X to 15
 
 .quiet
 
- TXA
+ TXA                    ; Set A = X << 4
+ ASL A                  ;
+ ASL A                  ; So the value of X is in the high nibble of A
  ASL A
  ASL A
- ASL A
- ASL A
- ORA #3
+
+ ORA #3                 ; ???
  LDY #sfxhit
  LDX #$D0
  JMP NOISE2
- \...................
+
+; ******************************************************************************
+;
+;       Name: BEEP
+;       Type: Subroutine
+;   Category: Sound
+;    Summary: Make a short, high beep
+;
+; ******************************************************************************
 
 .BEEP
 
- LDY #sfxbeep
- BNE NOISE
+ LDY #sfxbeep           ; Call the NOISE routine with Y = sfxbeep to make a
+ BNE NOISE              ; short, high beep, returning from the subroutine using
+                        ; a tail call (this BNE is effectively a JMP as Y will
+                        ; never be zero)
+
+; ******************************************************************************
+;
+;       Name: EXNO3
+;       Type: Subroutine
+;   Category: Sound
+;    Summary: Make an explosion sound
+;
+; ------------------------------------------------------------------------------
+;
+; Make the sound of death in the cold, hard vacuum of space. Apparently, in
+; Elite space, everyone can hear you scream.
+;
+; This routine also makes the sound of a destroyed cargo canister if we don't
+; get scooping right, the sound of us colliding with another ship, and the sound
+; of us being hit with depleted shields. It is not a good sound to hear.
+;
+; ******************************************************************************
 
 .EXNO3
 
- LDY #sfxexpl
- BNE NOISE
+ LDY #sfxexpl           ; Call the NOISE routine with Y = sfxexpl to make the
+ BNE NOISE              ; sound of an explosion, returning from the subroutine
+                        ; using a tail call (this BNE is effectively a JMP as Y
+                        ; will never be zero)
 
 .SOFLUSH
 
@@ -41065,6 +41237,15 @@ ENDIF
  EQUB $FF
  EQUB $03
 
+; ******************************************************************************
+;
+;       Name: COLD
+;       Type: Subroutine
+;   Category: Loader
+;    Summary: Configure memory and set up NMI and character handlers ???
+;
+; ******************************************************************************
+
 .COLD
 
  \Page out KERNAL etc
@@ -41141,10 +41322,21 @@ ENDIF
  CLI ;Sound
  RTS
 
+; ******************************************************************************
+;
+;       Name: NMIpissoff
+;       Type: Subroutine
+;   Category: Loader
+;    Summary: Acknowledge NMI interrupts and ignore tham
+;
+; ******************************************************************************
+
 .NMIpissoff
 
- CLI
- RTI
+ CLI                    ; Enable interrupts, so we acknowledge the NMI and
+                        ; basically ignore it
+
+ RTI                    ; Return from the interrupt
 
 ; ******************************************************************************
 ;
