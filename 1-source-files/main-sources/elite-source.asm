@@ -255,7 +255,7 @@ ENDIF
  LL = 30                ; The length of lines (in characters) of justified text
                         ; in the extended tokens system
 
- PALCK = 311 MOD 256    ; ???
+ PALCK = LO(311)        ; ???
 
  l1 = $0001             ; ???
 
@@ -28661,7 +28661,7 @@ ENDIF
  LDA RAND               ; Calculate the next two values f2 and f3 in the feeder
  ROL A                  ; sequence:
  TAX                    ;
- ADC RAND+2             ;   * f2 = (f1 << 1) mod 256 + C flag on entry
+ ADC RAND+2             ;   * f2 = (f1 << 1) MOD 256 + C flag on entry
  STA RAND               ;   * f3 = f0 + f2 + (1 if bit 7 of f1 is set)
  STX RAND+2             ;   * C flag is set according to the f3 calculation
 
@@ -31485,13 +31485,13 @@ ENDIF
 ;JSR QUS1               ; source
 
  JSR KERNALSETUP        ; ???
- LDA #((NA%+8)MOD 256)
+ LDA #LO(NA%+8)
  STA $FD ; SC
- LDA #((NA%+8)DIV 256)
+ LDA #HI(NA%+8)
  STA $FE ; SC+1
  LDA #$FD ; SC
- LDX #((CHK+1)MOD 256)
- LDY #((CHK+1)DIV 256)
+ LDX #LO(CHK+1)
+ LDY #HI(CHK+1)
  JSR KERNALSVE
  PHP
  SEI
@@ -31677,8 +31677,8 @@ ENDIF
 
  JSR KERNALSETUP        ; ???
  LDA #0
- LDX #(TAP%MOD 256)
- LDY #(TAP%DIV 256)
+ LDX #LO(TAP%)
+ LDY #HI(TAP%)
  JSR KERNALLOAD
  PHP
  LDA #1
@@ -34353,9 +34353,7 @@ ELSE
 
  FOR I%, 1, 255
 
-  B% = INT($2000 * LOG(I%) / LOG(2) + 0.5)
-
-  EQUB B% DIV 256
+  EQUB HI(INT($2000 * LOG(I%) / LOG(2) + 0.5))
 
  NEXT
 
@@ -34433,9 +34431,7 @@ ELSE
 
  FOR I%, 1, 255
 
-  B% = INT($2000 * LOG(I%) / LOG(2) + 0.5)
-
-  EQUB B% MOD 256
+  EQUB LO(INT($2000 * LOG(I%) / LOG(2) + 0.5))
 
  NEXT
 
@@ -34464,7 +34460,7 @@ ENDIF
 
  FOR I%, 0, 255
 
-  EQUB INT(2^((I% / 2 + 128) / 16) + 0.5) DIV 256
+  EQUB HI(INT(2^((I% / 2 + 128) / 16) + 0.5))
 
  NEXT
 
@@ -34492,7 +34488,7 @@ ENDIF
 
  FOR I%, 0, 255
 
-  EQUB INT(2^((I% / 2 + 128.25) / 16) + 0.5) DIV 256
+  EQUB HI(INT(2^((I% / 2 + 128.25) / 16) + 0.5))
 
  NEXT
 
@@ -34510,7 +34506,7 @@ ENDIF
 
  FOR I%, 0, 255
 
-  EQUB (SCBASE + $20 + ((I% AND $F8) * 40)) MOD 256
+  EQUB LO(SCBASE + $20 + ((I% AND $F8) * 40))
 
  NEXT
 
@@ -34528,7 +34524,7 @@ ENDIF
 
  FOR I%, 0, 255
 
-  EQUB (SCBASE + $20 + ((I% AND $F8) * 40)) DIV 256
+  EQUB HI(SCBASE + $20 + ((I% AND $F8) * 40))
 
  NEXT
 
@@ -34546,7 +34542,7 @@ ENDIF
 
  FOR I%, 0, 24
 
-  EQUB (SCBASE + $2003 + (40 * I%)) MOD 256
+  EQUB LO(SCBASE + $2003 + (40 * I%))
 
  NEXT
 
@@ -34564,7 +34560,7 @@ ENDIF
 
  FOR I%, 0, 24
 
-  EQUB (SCBASE + $2003 + (40 * I%)) DIV 256
+  EQUB HI(SCBASE + $2003 + (40 * I%))
 
  NEXT
 
@@ -40651,20 +40647,50 @@ ENDIF
                         ; using a tail call (this BNE is effectively a JMP as Y
                         ; will never be zero)
 
+; ******************************************************************************
+;
+;       Name: SOFLUSH
+;       Type: Subroutine
+;   Category: Sound
+;    Summary: Reset the sound buffer and turn off all sound channels
+;
+; ------------------------------------------------------------------------------
+;
+; Other entry points:
+;
+;   SOUR1               Contains an RTS
+;
+; ******************************************************************************
+
 .SOFLUSH
 
- LDY #3
- LDA #1
+ LDY #3                 ; We need to zero the first 3 bytes of the sound buffer
+                        ; at SOCNT, so set a counter in Y
+
+ LDA #1                 ; Set A to 1 so we can reset the sound buffer to contain
+                        ; values of 1
 
 .SOUL2
 
- STA SOCNT-1,Y
- DEY
- BNE SOUL2
+ STA SOCNT-1,Y          ; Zero the Y-1th byte of SOCNT
+
+ DEY                    ; Decrement the loop counter
+
+ BNE SOUL2              ; Loop back to zero the next byte until we have done all
+                        ; three from SOFLG+2 down to SOFLG
 
 .SOUR1
 
- RTS  ;!!
+ RTS                    ; Return from the subroutine
+
+; ******************************************************************************
+;
+;       Name: NOISEOFF
+;       Type: Subroutine
+;   Category: Sound
+;    Summary: ???
+;
+; ******************************************************************************
 
 .NOISEOFF
 
@@ -40684,6 +40710,15 @@ ENDIF
  STA SOCNT,X
  RTS
 
+; ******************************************************************************
+;
+;       Name: HYPNOISE
+;       Type: Subroutine
+;   Category: Sound
+;    Summary: ???
+;
+; ******************************************************************************
+
 .HYPNOISE
 
  LDY #sfxhyp1
@@ -40697,6 +40732,15 @@ ENDIF
  LDY #(sfxhyp1+128)
  BNE NOISE
 
+; ******************************************************************************
+;
+;       Name: NOISE2
+;       Type: Subroutine
+;   Category: Sound
+;    Summary: ???
+;
+; ******************************************************************************
+
 .NOISE2
 
  BIT SOUR1
@@ -40705,6 +40749,15 @@ ENDIF
  STX XX15+1
  EQUB $50
 ;BVC   -Vol in A, Freq in X
+
+; ******************************************************************************
+;
+;       Name: NOISE
+;       Type: Subroutine
+;   Category: Sound
+;    Summary: ???
+;
+; ******************************************************************************
 
 .NOISE
 
@@ -40788,52 +40841,150 @@ ENDIF
  CLI
  SEC
  RTS
- \............
+
+; ******************************************************************************
+;
+;       Name: RASTCT
+;       Type: Variable
+;   Category: Drawing the screen
+;    Summary: ???
+;
+; ******************************************************************************
 
 .RASTCT
 
  EQUB 0
 
+; ******************************************************************************
+;
+;       Name: zebop
+;       Type: Variable
+;   Category: Drawing the screen
+;    Summary: ???
+;
+; ******************************************************************************
+
 .zebop
 
  EQUB $81
 
+; ******************************************************************************
+;
+;       Name: abraxas
+;       Type: Variable
+;   Category: Drawing the screen
+;    Summary: ???
+;
+; ******************************************************************************
+
 .abraxas
 
  EQUB $81
+
+; ******************************************************************************
+;
+;       Name: innersec
+;       Type: Variable
+;   Category: Drawing the screen
+;    Summary: ???
+;
+; ******************************************************************************
 
 .innersec
 
  EQUB 1
  EQUB 0
 
+; ******************************************************************************
+;
+;       Name: shango
+;       Type: Variable
+;   Category: Drawing the screen
+;    Summary: ???
+;
+; ******************************************************************************
+
 .shango
 
  EQUB 51+143
  EQUB 51
 
+; ******************************************************************************
+;
+;       Name: moonflower
+;       Type: Variable
+;   Category: Drawing the screen
+;    Summary: ???
+;
+; ******************************************************************************
+
 .moonflower
 
  EQUB $C0
 
+; ******************************************************************************
+;
+;       Name: caravanserai
+;       Type: Variable
+;   Category: Drawing the screen
+;    Summary: ???
+;
+; ******************************************************************************
+
 .caravanserai
 
  EQUB $C0
+
+; ******************************************************************************
+;
+;       Name: santana
+;       Type: Variable
+;   Category: Drawing the screen
+;    Summary: ???
+;
+; ******************************************************************************
 
 .santana
 
  EQUB $FE
  EQUB $FC
 
+; ******************************************************************************
+;
+;       Name: lotus
+;       Type: Variable
+;   Category: Drawing the screen
+;    Summary: ???
+;
+; ******************************************************************************
+
 .lotus
 
  EQUB 2
  EQUB 0
 
+; ******************************************************************************
+;
+;       Name: welcome
+;       Type: Variable
+;   Category: Drawing the screen
+;    Summary: ???
+;
+; ******************************************************************************
+
 .welcome
 
  EQUB 0
  EQUB 0
+
+; ******************************************************************************
+;
+;       Name: COMIRQ1
+;       Type: Subroutine
+;   Category: Drawing the screen
+;    Summary: ???
+;
+; ******************************************************************************
 
 .SOUL3b
 
@@ -40899,6 +41050,16 @@ ENDIF
  BIT MUSILLY
  BMI SOINT
  JMP coffee
+
+; ******************************************************************************
+;
+;       Name: SOINT
+;       Type: Subroutine
+;   Category: Sound
+;    Summary: Process the contents of the sound buffer and send it to the sound
+;             chip
+;
+; ******************************************************************************
 
 .SOINT
 
@@ -41019,75 +41180,103 @@ ENDIF
  PLA
  RTI
 
+; ******************************************************************************
+;
+;       Name: Sound variables
+;       Type: Workspace
+;   Category: Sound
+;    Summary: The sound buffer where the data to be sent to the sound chip is
+;             processed
+;
+; ******************************************************************************
+
 .SOFLG
 
- EQUB 0
+ EQUB 0                 ; ???
  EQUB 0
  EQUB 0
 
 .SOCNT
 
- EQUB 0
+ EQUB 0                 ; ???
  EQUB 0
  EQUB 0
 
 .SOPR
 
- EQUB 0
+ EQUB 0                 ; ???
  EQUB 0
  EQUB 0
 
 .PULSEW
 
- EQUB 2
+ EQUB 2                 ; ???
 
 .SOFRCH
 
- EQUB 0
+ EQUB 0                 ; ???
  EQUB 0
  EQUB 0
 
 .SOFRQ
 
- EQUB 0
+ EQUB 0                 ; ???
  EQUB 0
  EQUB 0
 
 .SOCR
 
- EQUB 0
+ EQUB 0                 ; ???
  EQUB 0
  EQUB 0
 
 .SOATK
 
- EQUB 0
+ EQUB 0                 ; ???
  EQUB 0
  EQUB 0
 
 .SOSUS
 
- EQUB 0
+ EQUB 0                 ; ???
  EQUB 0
  EQUB 0
 
 .SOVCH
 
+ EQUB 0                 ; ???
  EQUB 0
  EQUB 0
- EQUB 0
+
+; ******************************************************************************
+;
+;       Name: SEVENS
+;       Type: Variable
+;   Category: Sound
+;    Summary: ???
+;
+; ******************************************************************************
 
 .SEVENS
 
- EQUB 0
+ EQUB 0                 ; ???
  EQUB 7
  EQUB 14
+
+; ******************************************************************************
+;
+;       Name: SFXPR
+;       Type: Variable
+;   Category: Sound
+;    Summary: ???
+;
+; ******************************************************************************
 
  \        0-Plas  1-Elas  2-Hit   3-Expl  4-Whosh 5-Beep  6-Boop  7-Hyp1  8-Eng   9-ECM  10-Blas 11-Alas 12-Mlas          14-Trib
 
 .SFXPR
 
- EQUB $72
+ EQUB $72               ; ???
  EQUB $70
  EQUB $74
  EQUB $77
@@ -41104,9 +41293,18 @@ ENDIF
  EQUB $51
  EQUB $02
 
+; ******************************************************************************
+;
+;       Name: SFXCNT
+;       Type: Variable
+;   Category: Sound
+;    Summary: ???
+;
+; ******************************************************************************
+
 .SFXCNT
 
- EQUB $14
+ EQUB $14               ; ???
  EQUB $0E
  EQUB $0C
  EQUB $50
@@ -41123,9 +41321,18 @@ ENDIF
  EQUB $0F
  EQUB $0E
 
+; ******************************************************************************
+;
+;       Name: SFXFQ
+;       Type: Variable
+;   Category: Sound
+;    Summary: ???
+;
+; ******************************************************************************
+
 .SFXFQ
 
- EQUB $45
+ EQUB $45               ; ???
  EQUB $48
  EQUB $D0
  EQUB $51
@@ -41142,9 +41349,18 @@ ENDIF
  EQUB $80
  EQUB $40
 
+; ******************************************************************************
+;
+;       Name: SFXCR
+;       Type: Variable
+;   Category: Sound
+;    Summary: ???
+;
+; ******************************************************************************
+
 .SFXCR
 
- EQUB $41
+ EQUB $41               ; ???
  EQUB $11
  EQUB $81
  EQUB $81
@@ -41160,10 +41376,19 @@ ENDIF
  EQUB $81
  EQUB $11
  EQUB $21
+
+; ******************************************************************************
+;
+;       Name: SFXATK
+;       Type: Variable
+;   Category: Sound
+;    Summary: ???
+;
+; ******************************************************************************
 
 .SFXATK
 
- EQUB $01
+ EQUB $01               ; ???
  EQUB $09
  EQUB $20
  EQUB $08
@@ -41180,9 +41405,18 @@ ENDIF
  EQUB $18
  EQUB $09
 
+; ******************************************************************************
+;
+;       Name: SFXSUS
+;       Type: Variable
+;   Category: Sound
+;    Summary: ???
+;
+; ******************************************************************************
+
 .SFXSUS
 
- EQUB $D1
+ EQUB $D1               ; ???
  EQUB $F1
  EQUB $E5
  EQUB $FB
@@ -41199,9 +41433,18 @@ ENDIF
  EQUB $B0
  EQUB $A1
 
+; ******************************************************************************
+;
+;       Name: SFXFRCH
+;       Type: Variable
+;   Category: Sound
+;    Summary: ???
+;
+; ******************************************************************************
+
 .SFXFRCH
 
- EQUB $FE
+ EQUB $FE               ; ???
  EQUB $FE
  EQUB $F3
  EQUB $FF
@@ -41218,9 +41461,18 @@ ENDIF
  EQUB $7B
  EQUB $FE
 
+; ******************************************************************************
+;
+;       Name: SFXVCH
+;       Type: Variable
+;   Category: Sound
+;    Summary: ???
+;
+; ******************************************************************************
+
 .SFXVCH
 
- EQUB $03
+ EQUB $03               ; ???
  EQUB $03
  EQUB $03
  EQUB $0F
@@ -41248,8 +41500,9 @@ ENDIF
 
 .COLD
 
- \Page out KERNAL etc
- LDA #4
+;Page out KERNAL etc
+
+ LDA #4                 ; ???
  STA SC+1
  LDX #3
  LDA #0
@@ -41264,13 +41517,13 @@ ENDIF
  INC SC+1
  DEX
  BNE zerowksploop
- LDA #(NMIpissoff MOD 256)
+ LDA #LO(NMIpissoff)
  STA NMIV
- LDA #(NMIpissoff DIV 256)
+ LDA #HI(NMIpissoff)
  STA NMIV+1
- LDA #(CHPR2 MOD 256)
+ LDA #LO(CHPR2)
  STA CHRV
- LDA #(CHPR2 DIV 256)
+ LDA #HI(CHPR2)
  STA CHRV+1
  LDA #5
  JSR SETL1 ; I/O in
@@ -41311,13 +41564,13 @@ ENDIF
  STA l1
  LDA #4
  STA L1M ;I/O out
- LDA #(NMIpissoff MOD 256)
+ LDA #LO(NMIpissoff)
  STA $FFFA
- LDA #(NMIpissoff DIV 256)
+ LDA #HI(NMIpissoff)
  STA $FFFB
- LDA #(COMIRQ1 DIV 256)
+ LDA #HI(COMIRQ1)
  STA $FFFF
- LDA #(COMIRQ1 MOD 256)
+ LDA #LO(COMIRQ1)
  STA $FFFE
  CLI ;Sound
  RTS
@@ -41366,28 +41619,74 @@ ENDIF
 
  LOAD_J% = LOAD% + P% - CODE%
 
+; ******************************************************************************
+;
+;       Name: STARTUP
+;       Type: Subroutine
+;   Category: Loader
+;    Summary: ???
+;
+; ******************************************************************************
+
 .STARTUP
 
- LDA #$FF
+ LDA #$FF               ; ???
  STA COL
 
- \ ............. OSWRCH revectored bumbling .....................
+; ******************************************************************************
+;
+;       Name: PUTBACK
+;       Type: Subroutine
+;   Category: Tube
+;    Summary: Reset the OSWRCH vector in WRCHV to point to USOSWRCH
+;
+; ******************************************************************************
 
 .PUTBACK
 
- RTS  ;LDA#128
+;LDA #128               ; ???
+ RTS  
 
-;.DOHFX ;STAHFX
-;JMP PUTBACK ;Hyperspace colours
+; ******************************************************************************
+;
+;       Name: DOHFX
+;       Type: Subroutine
+;   Category: Drawing circles
+;    Summary: Implement the #DOHFX <flag> command (update the hyperspace effect
+;             flag)
+;
+; ******************************************************************************
+
+;.DOHFX
+;STA HFX
+;JMP PUTBACK
+
+; ******************************************************************************
+;
+;       Name: DOCOL
+;       Type: Subroutine
+;   Category: Text
+;
+; ******************************************************************************
 
 .DOCOL
 
- STA COL
+ STA COL                ; ???
  RTS
+
+; ******************************************************************************
+;
+;       Name: DOSVN
+;       Type: Subroutine
+;   Category: Save and load
+;    Summary: Implement the #DOSVN <flag> command (update the "save in progress"
+;             flag)
+;
+; ******************************************************************************
 
 .DOSVN
 
-;STA svn
+;STA svn                ; ???
 ;JMP PUTBACK
 
 ; ******************************************************************************
@@ -41418,6 +41717,15 @@ ENDIF
  EQUB %10000000
  EQUB %01000000
 
+; ******************************************************************************
+;
+;       Name: DTWOS
+;       Type: Variable
+;   Category: Drawing pixels
+;    Summary: ???
+;
+; ******************************************************************************
+
 .DTWOS
 
  EQUD &030C30C0
@@ -41427,102 +41735,180 @@ ENDIF
  EQUD &3060C0C0
  EQUD &03060C18
 
+; ******************************************************************************
+;
+;       Name: CTWOS2
+;       Type: Variable
+;   Category: Drawing pixels
+;    Summary: ???
+;
+; ******************************************************************************
+
 .CTWOS2
 
  EQUD &3030C0C0
  EQUD &03030C0C
  EQUW $C0C0
 
+; ******************************************************************************
+;
+;       Name: LIJT1
+;       Type: Variable
+;   Category: Drawing lines
+;    Summary: ???
+;
+; ******************************************************************************
+
 .LIJT1
 
- EQUB (LI81 MOD 256)
- EQUB (LI82 MOD 256)
- EQUB (LI83 MOD 256)
- EQUB (LI84 MOD 256)
- EQUB (LI85 MOD 256)
- EQUB (LI86 MOD 256)
- EQUB (LI87 MOD 256)
- EQUB (LI88 MOD 256)
+ EQUB LO(LI81)
+ EQUB LO(LI82)
+ EQUB LO(LI83)
+ EQUB LO(LI84)
+ EQUB LO(LI85)
+ EQUB LO(LI86)
+ EQUB LO(LI87)
+ EQUB LO(LI88)
+
+; ******************************************************************************
+;
+;       Name: LIJT2
+;       Type: Variable
+;   Category: Drawing lines
+;    Summary: ???
+;
+; ******************************************************************************
 
 .LIJT2
 
- EQUB (LI81 DIV 256)
- EQUB (LI82 DIV 256)
- EQUB (LI83 DIV 256)
- EQUB (LI84 DIV 256)
- EQUB (LI85 DIV 256)
- EQUB (LI86 DIV 256)
- EQUB (LI87 DIV 256)
- EQUB (LI88 DIV 256)
+ EQUB HI(LI81)
+ EQUB HI(LI82)
+ EQUB HI(LI83)
+ EQUB HI(LI84)
+ EQUB HI(LI85)
+ EQUB HI(LI86)
+ EQUB HI(LI87)
+ EQUB HI(LI88)
+
+; ******************************************************************************
+;
+;       Name: LIJT3
+;       Type: Variable
+;   Category: Drawing lines
+;    Summary: ???
+;
+; ******************************************************************************
 
 .LIJT3
 
- EQUB ((LI81+6)MOD 256)
- EQUB ((LI82+6)MOD 256)
- EQUB ((LI83+6)MOD 256)
- EQUB ((LI84+6)MOD 256)
- EQUB ((LI85+6)MOD 256)
- EQUB ((LI86+6)MOD 256)
- EQUB ((LI87+6)MOD 256)
- EQUB ((LI88+6)MOD 256)
+ EQUB LO(LI81+6)
+ EQUB LO(LI82+6)
+ EQUB LO(LI83+6)
+ EQUB LO(LI84+6)
+ EQUB LO(LI85+6)
+ EQUB LO(LI86+6)
+ EQUB LO(LI87+6)
+ EQUB LO(LI88+6)
+
+; ******************************************************************************
+;
+;       Name: LIJT4
+;       Type: Variable
+;   Category: Drawing lines
+;    Summary: ???
+;
+; ******************************************************************************
 
 .LIJT4
 
- EQUB ((LI81+6)DIV 256)
- EQUB ((LI82+6)DIV 256)
- EQUB ((LI83+6)DIV 256)
- EQUB ((LI84+6)DIV 256)
- EQUB ((LI85+6)DIV 256)
- EQUB ((LI86+6)DIV 256)
- EQUB ((LI87+6)DIV 256)
- EQUB ((LI88+6)DIV 256)
- \...
+ EQUB HI(LI81+6)
+ EQUB HI(LI82+6)
+ EQUB HI(LI83+6)
+ EQUB HI(LI84+6)
+ EQUB HI(LI85+6)
+ EQUB HI(LI86+6)
+ EQUB HI(LI87+6)
+ EQUB HI(LI88+6)
+
+; ******************************************************************************
+;
+;       Name: LIJT5
+;       Type: Variable
+;   Category: Drawing lines
+;    Summary: ???
+;
+; ******************************************************************************
 
 .LIJT5
 
- EQUB (LI21 MOD 256)
- EQUB (LI22 MOD 256)
- EQUB (LI23 MOD 256)
- EQUB (LI24 MOD 256)
- EQUB (LI25 MOD 256)
- EQUB (LI26 MOD 256)
- EQUB (LI27 MOD 256)
- EQUB (LI28 MOD 256)
+ EQUB LO(LI21)
+ EQUB LO(LI22)
+ EQUB LO(LI23)
+ EQUB LO(LI24)
+ EQUB LO(LI25)
+ EQUB LO(LI26)
+ EQUB LO(LI27)
+ EQUB LO(LI28)
+
+; ******************************************************************************
+;
+;       Name: LIJT6
+;       Type: Variable
+;   Category: Drawing lines
+;    Summary: ???
+;
+; ******************************************************************************
 
 .LIJT6
 
- EQUB (LI21 DIV 256)
- EQUB (LI22 DIV 256)
- EQUB (LI23 DIV 256)
- EQUB (LI24 DIV 256)
- EQUB (LI25 DIV 256)
- EQUB (LI26 DIV 256)
- EQUB (LI27 DIV 256)
- EQUB (LI28 DIV 256)
+ EQUB HI(LI21)
+ EQUB HI(LI22)
+ EQUB HI(LI23)
+ EQUB HI(LI24)
+ EQUB HI(LI25)
+ EQUB HI(LI26)
+ EQUB HI(LI27)
+ EQUB HI(LI28)
+
+; ******************************************************************************
+;
+;       Name: LIJT7
+;       Type: Variable
+;   Category: Drawing lines
+;    Summary: ???
+;
+; ******************************************************************************
 
 .LIJT7
 
- EQUB ((LI21+6)MOD 256)
- EQUB ((LI22+6)MOD 256)
- EQUB ((LI23+6)MOD 256)
- EQUB ((LI24+6)MOD 256)
- EQUB ((LI25+6)MOD 256)
- EQUB ((LI26+6)MOD 256)
- EQUB ((LI27+6)MOD 256)
- EQUB ((LI28+6)MOD 256)
+ EQUB LO(LI21+6)
+ EQUB LO(LI22+6)
+ EQUB LO(LI23+6)
+ EQUB LO(LI24+6)
+ EQUB LO(LI25+6)
+ EQUB LO(LI26+6)
+ EQUB LO(LI27+6)
+ EQUB LO(LI28+6)
+
+; ******************************************************************************
+;
+;       Name: LIJT8
+;       Type: Variable
+;   Category: Drawing lines
+;    Summary: ???
+;
+; ******************************************************************************
 
 .LIJT8
 
- EQUB ((LI21+6)DIV 256)
- EQUB ((LI22+6)DIV 256)
- EQUB ((LI23+6)DIV 256)
- EQUB ((LI24+6)DIV 256)
- EQUB ((LI25+6)DIV 256)
- EQUB ((LI26+6)DIV 256)
- EQUB ((LI27+6)DIV 256)
- EQUB ((LI28+6)DIV 256)
-
- \............. Line Draw ..............
+ EQUB HI(LI21+6)
+ EQUB HI(LI22+6)
+ EQUB HI(LI23+6)
+ EQUB HI(LI24+6)
+ EQUB HI(LI25+6)
+ EQUB HI(LI26+6)
+ EQUB HI(LI27+6)
+ EQUB HI(LI28+6)
 
 .LL30
 
@@ -42650,11 +43036,11 @@ ENDIF
 .RR1
 
  TAY
- LDX #((FONT DIV 256)-1)
+ LDX #HI(FONT)-1
  ASL A
  ASL A
  BCC P%+4
- LDX #((FONT DIV 256)+1)
+ LDX #HI(FONT)+1
  ASL A
  BCC P%+3
  INX
@@ -42677,7 +43063,7 @@ ENDIF
  LSR A
  ROR SC
  ADC YC
- ADC #(SCBASE DIV 256)
+ ADC #HI(SCBASE)
  STA SC+1
  LDA XC
  ASL A
@@ -42755,15 +43141,15 @@ ENDIF
  INC SC+1
  DEX
  BNE BOL3
- LDX #(SCBASE DIV 256)
+ LDX #HI(SCBASE)
 
 .BOL1
 
  JSR ZES1k
  INX
- CPX #((DLOC% DIV 256))
+ CPX #HI(DLOC%)
  BNE BOL1
- LDY #((DLOC%MOD 256)-1)
+ LDY #LO(DLOC%)-1
  JSR ZES2k
  STA (SC),Y ; <<
  LDA #1
@@ -42786,7 +43172,7 @@ ENDIF
 
  JSR ZES1k
  INX
- CPX #((SCBASE DIV 256)+$20)
+ CPX #HI(SCBASE)+$20
  BNE BOL2
  LDX #0
  STX COMC
@@ -42833,14 +43219,14 @@ ENDIF
 
  LDX #18
  STX T2
- LDY #((SCBASE+$18)MOD 256)
+ LDY #LO(SCBASE+$18)
  STY SC
- LDY #((SCBASE+$18)DIV 256)
+ LDY #HI(SCBASE+$18)
  LDA #3
  JSR BOXS2
- LDY #((SCBASE+$120)MOD 256)
+ LDY #LO(SCBASE+$120)
  STY SC
- LDY #((SCBASE+$120)DIV 256)
+ LDY #HI(SCBASE+$120)
  LDA #$C0
  LDX T2
 
@@ -42898,13 +43284,13 @@ ENDIF
  LDA DFLAG
  BNE nearlyxmas
  LDX #8
- LDA #(DSTORE%MOD 256)
+ LDA #LO(DSTORE%)
  STA V
- LDA #(DSTORE%DIV 256)
+ LDA #HI(DSTORE%)
  STA V+1
- LDA #(DLOC%MOD 256)
+ LDA #LO(DLOC%)
  STA SC
- LDA #(DLOC%DIV 256)
+ LDA #HI(DLOC%)
  STA SC+1
  JSR mvblockK
  LDY #$C0
@@ -42948,11 +43334,11 @@ ENDIF
 
 .BLUEBAND
 
- LDX #((SCBASE)MOD 256)
- LDY #((SCBASE)DIV 256)
+ LDX #LO(SCBASE)
+ LDY #HI(SCBASE)
  JSR BLUEBANDS
- LDX #((SCBASE+$128)MOD 256)
- LDY #((SCBASE+$128)DIV 256)
+ LDX #LO(SCBASE+$128)
+ LDY #HI(SCBASE+$128)
 
 .BLUEBANDS
 
@@ -43082,7 +43468,7 @@ ENDIF
  STA YC
  LDA #1
  STA XC
- LDA #((SCBASE DIV 256)+$1A)
+ LDA #HI(SCBASE)+$1A
  STA SC+1
  LDA #$60
  STA SC
@@ -43625,7 +44011,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
 ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
 
- LDA  #musicstart MOD 256
+ LDA  #LO(musicstart)
 
 ENDIF
 
@@ -43638,7 +44024,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
 ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
 
- LDA  #musicstart DIV 256
+ LDA  #HI(musicstart)
 
 ENDIF
 
@@ -43649,9 +44035,9 @@ ENDIF
 ;SEI
  RTS  ;<<
  \ point IRQ to start
-;LDA  #BDirqhere MOD 256
+;LDA  #LO(BDirqhere)
 ;STA  $0314
-;LDA  #BDirqhere DIV 256
+;LDA  #HI(BDirqhere)
 ;STA  $0315
 ;CLI
 ;BRK  ; re enter monitor!
@@ -43768,40 +44154,40 @@ ENDIF
 
 .BDJMPTBL
 
- EQUB (BDRO1 MOD 256)
- EQUB (BDRO2 MOD 256)
- EQUB (BDRO3 MOD 256)
- EQUB (BDRO4 MOD 256)
- EQUB (BDRO5 MOD 256)
- EQUB (BDRO6 MOD 256)
- EQUB (BDRO7 MOD 256)
- EQUB (BDRO8 MOD 256)
- EQUB (BDRO9 MOD 256)
- EQUB (BDRO10 MOD 256)
- EQUB (BDRO11 MOD 256)
- EQUB (BDRO12 MOD 256)
- EQUB (BDRO13 MOD 256)
- EQUB (BDRO14 MOD 256)
- EQUB (BDRO15 MOD 256)
+ EQUB LO(BDRO1)
+ EQUB LO(BDRO2)
+ EQUB LO(BDRO3)
+ EQUB LO(BDRO4)
+ EQUB LO(BDRO5)
+ EQUB LO(BDRO6)
+ EQUB LO(BDRO7)
+ EQUB LO(BDRO8)
+ EQUB LO(BDRO9)
+ EQUB LO(BDRO10)
+ EQUB LO(BDRO11)
+ EQUB LO(BDRO12)
+ EQUB LO(BDRO13)
+ EQUB LO(BDRO14)
+ EQUB LO(BDRO15)
 
 .BDJMPTBH
 
- EQUB (BDRO1 DIV 256)
- EQUB (BDRO2 DIV 256)
- EQUB (BDRO3 DIV 256)
- EQUB (BDRO4 DIV 256)
- EQUB (BDRO5 DIV 256)
- EQUB (BDRO6 DIV 256)
- EQUB (BDRO7 DIV 256)
- EQUB (BDRO8 DIV 256)
- EQUB (BDRO9 DIV 256)
- EQUB (BDRO10 DIV 256)
- EQUB (BDRO11 DIV 256)
- EQUB (BDRO12 DIV 256)
- EQUB (BDRO13 DIV 256)
- EQUB (BDRO14 DIV 256)
+ EQUB HI(BDRO1)
+ EQUB HI(BDRO2)
+ EQUB HI(BDRO3)
+ EQUB HI(BDRO4)
+ EQUB HI(BDRO5)
+ EQUB HI(BDRO6)
+ EQUB HI(BDRO7)
+ EQUB HI(BDRO8)
+ EQUB HI(BDRO9)
+ EQUB HI(BDRO10)
+ EQUB HI(BDRO11)
+ EQUB HI(BDRO12)
+ EQUB HI(BDRO13)
+ EQUB HI(BDRO14)
 .musicstart
- EQUB (BDRO15 DIV 256)
+ EQUB HI(BDRO15)
 
 ;musicstart = P%-1
 ;IF Z>4 OSCLI("L.:2.COMUDAT "+STR$~O%)
