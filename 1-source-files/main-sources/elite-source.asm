@@ -41226,19 +41226,19 @@ ENDIF
 
 .SOFLG
 
- EQUB 0                 ; ???
+ EQUB 0                 ; Sound buffer for channel control flags
  EQUB 0
  EQUB 0
 
 .SOCNT
 
- EQUB 0                 ; ???
+ EQUB 0                 ; Sound buffer for SFXBT values
  EQUB 0
  EQUB 0
 
 .SOPR
 
- EQUB 0                 ; ???
+ EQUB 0                 ; Sound buffer for SFXPR values
  EQUB 0
  EQUB 0
 
@@ -41248,13 +41248,13 @@ ENDIF
 
 .SOFRCH
 
- EQUB 0                 ; ???
+ EQUB 0                 ; Sound buffer for SFXBT values
  EQUB 0
  EQUB 0
 
 .SOFRQ
 
- EQUB 0                 ; ???
+ EQUB 0                 ; Sound buffer for SFXFQ values
  EQUB 0
  EQUB 0
 
@@ -41278,7 +41278,7 @@ ENDIF
 
 .SOVCH
 
- EQUB 0                 ; ???
+ EQUB 0                 ; Sound buffer for SFXVC values
  EQUB 0
  EQUB 0
 
