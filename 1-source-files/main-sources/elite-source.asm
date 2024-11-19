@@ -257,18 +257,19 @@ ENDIF
 
  PALCK = LO(311)        ; ???
 
- l1 = $0001             ; ???
+ l1 = $0001             ; The 6510 input/output port register, which we can use
+                        ; to configure the Commodore 64 memory layout (see page
+                        ; 260 of the Programmer's Reference Guide)
 
- BRKV = $0316           ; The break vector that we intercept to enable us to
-                        ; handle and display system errors
+ BRKV = $0316           ; The CBINV break vector that we intercept to enable us
+                        ; to handle and display system errors
 
- IRQV = $0314           ; The IRQV vector that we intercept to implement the
-                        ; split-screen mode ???
+ NMIV = $0318           ; The NMINV vector that we intercept with our custom NMI
+                        ; handler, which just acknowledges NMI interrupts and
+                        ; ignores tham
 
- CHRV = $0326           ; The CHRV vector that we intercept with our custom
+ CHRV = $0326           ; The IBSOUT vector that we intercept with our custom
                         ; text printing routine
-
- NMIV = $0318           ; ???
 
  QQ18 = $0700           ; The address of the text token table, as set in
                         ; elite-data.asm
@@ -293,44 +294,65 @@ ENDIF
  RUTOK = TKN1 + $C5C    ; The address of the extended system description token
                         ; table, as set in elite-data.asm
 
- SCBASE = $4000         ; ???
- DLOC% = SCBASE+18*8*40
- ECELL = SCBASE+$2400+23*40+11
- SCELL = SCBASE+$2400+23*40+28
- MCELL = SCBASE+$2400+24*40+6
+ SCBASE = $4000         ; The address of the screen bitmap
+
+ DLOC% = SCBASE+18*8*40 ; The address in the screen bitmap of the start of the
+                        ; dashboard
+
+ ECELL = SCBASE+$2400+23*40+11  ; The address in the screen bitmap of the E.C.M.
+                                ; indicator bulb ("E")
+
+ SCELL = SCBASE+$2400+23*40+28  ; The address in the screen bitmap of the space
+                                ; station indicator ("S")
+
+ MCELL = SCBASE+$2400+24*40+6   ; The address in the screen bitmap of the first
+                                ; missile indicator
 
  TAP% = $CF00           ; The staging area where we copy files after loading and
                         ; before saving
 
- VIC = $D000            ; ???
+ VIC = $D000            ; Memory-mapped registers for the VIC-II graphics chip,
+                        ; mapping to the 46 bytes from $D000 to $D02E (see page
+                        ; 454 of the Programmer's Reference Guide)
 
- SID = $D400            ; ???
+ SID = $D400            ; Memory-mapped registers for the SID sound chip,
+                        ; mapping to the 29 bytes from $D400 to $D41C (see page
+                        ; 461 of the Programmer's Reference Guide)
 
- CIA = $DC00            ; ???
+ CIA = $DC00            ; Memory-mapped registers for the first CIA I/O chip,
+                        ; mapping to the 16 bytes from $DC00 to $DC0F (see page
+                        ; 428 of the Programmer's Reference Guide)
 
- CIA2 = $DD00           ; ???
+ CIA2 = $DD00           ; Memory-mapped registers for the second CIA I/O chip,
+                        ; mapping to the 16 bytes from $DD00 to $DD0F (see page
+                        ; 428 of the Programmer's Reference Guide)
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- DSTORE% = $EF90        ; ???
+ DSTORE% = $EF90        ; The address of a copy of the dashboard bitmap, which
+                        ; gets copied into screen memory when setting up a new
+                        ; screen
 
 ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
 
- DSTORE% = $6800        ; ???
+ DSTORE% = $6800        ; The address of a copy of the dashboard bitmap, which
+                        ; gets copied into screen memory when setting up a new
+                        ; screen
 
 ENDIF
 
  LS% = $FFC0            ; The start of the descending ship line heap
 
- KERNALSVE = $FFD8      ; ???
+ KERNALSVE = $FFD8      ; The kernal call to save a file to a device
 
- KERNALSETLFS = $FFBA   ; ???
+ KERNALSETLFS = $FFBA   ; The kernal call to set the logical, first, and second
+                        ; addresses for file access
 
- KERNALSETNAM = $FFBD   ; ???
+ KERNALSETNAM = $FFBD   ; The kernal call to set a filename
 
- KERNALSETMSG = $FF90   ; ???
+ KERNALSETMSG = $FF90   ; The kernal call to control kernal messages
 
- KERNALLOAD = $FFD5     ; ???
+ KERNALLOAD = $FFD5     ; The kernal call to load a file from a device
 
 ; ******************************************************************************
 ;
@@ -5853,9 +5875,9 @@ ENDIF
  EQUW $B753             ; QQ21 = Seed s2 for system 0, galaxy 0 (Tibedied), #7-8
 
 IF Q%
- EQUD &00CA9A3B         ; CASH = Amount of cash (100,000,000 Cr), #9-12
+ EQUD $00CA9A3B         ; CASH = Amount of cash (100,000,000 Cr), #9-12
 ELSE
- EQUD &E8030000         ; CASH = Amount of cash (100 Cr), #9-12
+ EQUD $E8030000         ; CASH = Amount of cash (100 Cr), #9-12
 ENDIF
 
  EQUB 70                ; QQ14 = Fuel level, #13
@@ -6251,13 +6273,13 @@ ENDIF
 
  NEXT
 
- EQUD &10204080         ; These bytes appear to be unused; they contain a copy
- EQUD &01020408         ; of the TWOS variable, and the original source has a
- EQUW $4080             ; commented out comment \.TWOS
+ EQUD $10204080         ; These bytes appear to be unused; they contain a copy
+ EQUD $01020408         ; of the TWOS variable, and the original source has a
+ EQUW $4080             ; commented out label \.TWOS
 
- EQUD &030C30C0         ; These bytes appear to be unused; they contain a copy
+ EQUD $030C30C0         ; These bytes appear to be unused; they contain a copy
                         ; of the DTWOS variable, and the original source has a
-                        ; commented out comment \.DTWOS
+                        ; commented out label \.DTWOS
 
 ; ******************************************************************************
 ;
@@ -6544,8 +6566,8 @@ ENDIF
 
 .TWFR
 
- EQUD &1F3F7FFF         ; ???
- EQUD &0103070F
+ EQUD $1F3F7FFF         ; ???
+ EQUD $0103070F
 
 ; ******************************************************************************
 ;
@@ -8681,7 +8703,7 @@ ENDIF
 
 .TENS
 
- EQUD &00E87648
+ EQUD $00E87648
 
 ; ******************************************************************************
 ;
@@ -16747,7 +16769,19 @@ ENDIF
  EQUB 120               ; Token 36: a random extended token between 120 and 124
  EQUB 125               ; Token 37: a random extended token between 125 and 129
 
-.R%                     ; ???
+; ******************************************************************************
+;
+;       Name: R%
+;       Type: Variable
+;   Category: Utility routines
+;    Summary: Denotes the end of the first part of the main game code (CODE1),
+;             from ELITE A to ELITE C
+;
+; ******************************************************************************
+
+.R%
+
+ SKIP 0
 
 ; ******************************************************************************
 ;
@@ -33642,7 +33676,7 @@ ENDMACRO
  ITEM 32,  -1, 't',  53, %00000011  ; 12 = Minerals
  ITEM 97,  -1, 'k',  66, %00000111  ; 13 = Gold
 
-;EQUD &360A118          ; This data is commented out in the original source
+;EQUD $360A118          ; This data is commented out in the original source
 
  ITEM 171, -2, 'k',  55, %00011111  ; 14 = Platinum
  ITEM 45,  -1, 'g', 250, %00001111  ; 15 = Gem-Stones
@@ -34244,10 +34278,10 @@ ENDIF
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- EQUB $A9, $05, $20, $7F, $82, $A9, $00, $8D   ; These bytes appear to be
- EQUB $15, $D0, $A9, $04, $78, $8D, $8E, $82   ; unused and just contain random
- EQUB $A5, $01, $29, $F8, $0D, $8E, $82, $85   ; workspace noise left over from
- EQUB $01, $58, $60, $04, $A5, $2E, $8D, $F2   ; the BBC Micro assembly process
+ EQUB $A9, $05, $20, $7F, $82, $A9, $00, $8D    ; These bytes appear to be
+ EQUB $15, $D0, $A9, $04, $78, $8D, $8E, $82    ; unused and just contain random
+ EQUB $A5, $01, $29, $F8, $0D, $8E, $82, $85    ; workspace noise left over from
+ EQUB $01, $58, $60, $04, $A5, $2E, $8D, $F2    ; the BBC Micro assembly process
  EQUB $04, $A5, $2F, $8D, $F3, $04, $60, $A6
  EQUB $9D, $20, $F3, $82, $A6, $9D, $4C, $2F
  EQUB $20, $20, $47, $84, $20, $4F, $7B, $8D
@@ -34256,15 +34290,15 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
 ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
 
- EQUB $A2, $36, $B5, $00, $BC, $00, $CE, $9D   ; These bytes appear to be
- EQUB $00, $CE, $94, $00, $E8, $D0, $F3, $60   ; unused and just contain random
- EQUB $A9, $05, $20, $7F, $8B, $A9, $00, $8D   ; workspace noise left over from
- EQUB $15, $D0, $A9, $04, $78, $8D, $8E, $8B   ; the BBC Micro assembly process
- EQUB $A5, $01, $29, $F8, $0D, $8E, $8B, $85   ; (specifically they contain bits
- EQUB $01, $58, $60, $04, $A5, $2E, $8D, $F2   ; of the SWAPPZERO, NOSPRITES and
- EQUB $04, $A5, $2F, $8D, $F3, $04, $60, $A6   ; KS3 routines)
- EQUB $9D, $20, $F3, $8B, $A6, $9D, $4C, $2C
- EQUB $20, $20, $47, $8D, $20, $3F, $84, $8D
+ EQUB $A2, $36, $B5, $00, $BC, $00, $CE, $9D    ; These bytes appear to be
+ EQUB $00, $CE, $94, $00, $E8, $D0, $F3, $60    ; unused and just contain random
+ EQUB $A9, $05, $20, $7F, $8B, $A9, $00, $8D    ; workspace noise left over from
+ EQUB $15, $D0, $A9, $04, $78, $8D, $8E, $8B    ; the BBC Micro assembly process
+ EQUB $A5, $01, $29, $F8, $0D, $8E, $8B, $85    ;
+ EQUB $01, $58, $60, $04, $A5, $2E, $8D, $F2    ; They contain parts of the
+ EQUB $04, $A5, $2F, $8D, $F3, $04, $60, $A6    ; SWAPPZERO, NOSPRITES and KS3
+ EQUB $9D, $20, $F3, $8B, $A6, $9D, $4C, $2C    ; routines from when they were
+ EQUB $20, $20, $47, $8D, $20, $3F, $84, $8D    ; assembled in memory
  EQUB $53, $04, $8D, $5F, $04, $20, $0E, $BA
  EQUB $A9, $06, $85, $0E, $A9, $81, $4C, $5B
  EQUB $85, $A2, $FF, $E8, $BD, $52, $04, $F0
@@ -41580,7 +41614,7 @@ ENDIF
 ;       Name: NMIpissoff
 ;       Type: Subroutine
 ;   Category: Loader
-;    Summary: Acknowledge NMI interrupts and ignore tham
+;    Summary: Acknowledge NMI interrupts and ignore them
 ;
 ; ******************************************************************************
 
@@ -41728,12 +41762,11 @@ ENDIF
 
 .DTWOS
 
- EQUD &030C30C0
+ EQUD $030C30C0
 
-;.TWOS2
-
- EQUD &3060C0C0
- EQUD &03060C18
+ EQUD $3060C0C0         ; These bytes appear to be unused; they contain a copy
+ EQUD $03060C18         ; of the TWOS2 variable, and the original source has a
+                        ; commented out label \.TWOS2
 
 ; ******************************************************************************
 ;
@@ -41746,8 +41779,8 @@ ENDIF
 
 .CTWOS2
 
- EQUD &3030C0C0
- EQUD &03030C0C
+ EQUD $3030C0C0
+ EQUD $03030C0C
  EQUW $C0C0
 
 ; ******************************************************************************
@@ -42968,13 +43001,13 @@ ENDIF
  LDY YSAV
  RTS
 
- EQUD &F0E0C080         ; These bytes appear to be unused; they contain a copy
+ EQUD $F0E0C080         ; These bytes appear to be unused; they contain a copy
  EQUW $FCF8             ; of the TWFL variable, and the original source has a
- EQUB $FE               ; commented out comment \.TWFL
+ EQUB $FE               ; commented out label \.TWFL
 
- EQUD &1F3F7FFF         ; These bytes appear to be unused; they contain a copy
- EQUD &0103070F         ; of the TWFR variable, and the original source has a
-                        ; commented out comment \.TWFR
+ EQUD $1F3F7FFF         ; These bytes appear to be unused; they contain a copy
+ EQUD $0103070F         ; of the TWFR variable, and the original source has a
+                        ; commented out label \.TWFR
 
 ; ******************************************************************************
 ;

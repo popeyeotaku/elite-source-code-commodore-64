@@ -39,9 +39,9 @@
 ;
 ; ******************************************************************************
 
- CODE% = $7C3A          ; ???
+ CODE% = $7C3A          ; The address where the code will be run
 
- LOAD% = $7C3A          ; ???
+ LOAD% = $7C3A          ; The address where the code will be loaded
 
 ; ******************************************************************************
 ;
@@ -95,6 +95,22 @@ ENDMACRO
 ;
 ; This macro inserts one byte of a two-colour sprite pixel row, with eight
 ; pixels per byte (i.e. eight pixels per character block).
+;
+; In BeebAsm, true statements evaluate to -1 while false statements evaluate to
+; 0 (just as in BBC BASIC), so this statement:
+;
+;   bit7 = -(ASC(MID$(pixel_byte, 1, 1)) = ASC("X")) << 7
+;
+; does the same as this longer statement:
+;
+;   IF ASC(MID$(pixel_byte, 1, 1)) = ASC("X")
+;    bit7 = 1 << 7
+;   ELSE
+;    bit7 = 0
+;   ENDIF
+;
+; In other words, bit7 gets set to 1 << 7 (i.e. %10000000) if character 1 of
+; pixel_byte is "X", otherwise it gets set to 0.
 ;
 ; ------------------------------------------------------------------------------
 ;
@@ -173,6 +189,22 @@ ENDMACRO
 ; This macro inserts one byte of a four-colour sprite pixel row, with four
 ; pixels per byte (i.e. four pixels per character block).
 ;
+; In BeebAsm, true statements evaluate to -1 while false statements evaluate to
+; 0 (just as in BBC BASIC), so this statement:
+;
+;   bit67_1 = (%01 * -(ASC(MID$(pixel_byte, 1, 1)) = ASC("/"))) << 6
+;
+; does the same as this longer statement:
+;
+;   IF ASC(MID$(pixel_byte, 1, 1)) = ASC("/")
+;    bit67_1 = %01 << 6
+;   ELSE
+;    bit67_1 = 0
+;   ENDIF
+;
+; In other words, bit67_1 gets set to %01 << 6 (i.e. %01000000) if character 1
+; of pixel_byte is "/", otherwise it gets set to 0.
+;
 ; ------------------------------------------------------------------------------
 ;
 ; Arguments:
@@ -229,7 +261,7 @@ ENDMACRO
 
 .spritp
 
- SPRITE2 "........................"
+ SPRITE2 "........................"     ; The laser sights for a pulse laser
  SPRITE2 "........................"
  SPRITE2 "...........X............"
  SPRITE2 "...........X............"
@@ -255,7 +287,7 @@ ENDMACRO
                         ; random workspace noise left over from the BBC Micro
                         ; assembly process
 
- SPRITE2 "........................"
+ SPRITE2 "........................"     ; The laser sights for a beam laser
  SPRITE2 "........................"
  SPRITE2 "...........X............"
  SPRITE2 "...........X............"
@@ -281,7 +313,7 @@ ENDMACRO
                         ; random workspace noise left over from the BBC Micro
                         ; assembly process
 
- SPRITE2 "........................"
+ SPRITE2 "........................"     ; The laser sights for a military laser
  SPRITE2 "........................"
  SPRITE2 "........................"
  SPRITE2 "........XXXXXXX........."
@@ -307,7 +339,7 @@ ENDMACRO
                         ; random workspace noise left over from the BBC Micro
                         ; assembly process
 
- SPRITE2 "..XXXXXXXXXXXXXXXXXXX..."
+ SPRITE2 "..XXXXXXXXXXXXXXXXXXX..."     ; The laser sights for a mining laser
  SPRITE2 "..X........X........X..."
  SPRITE2 "..X.......XXX.......X..."
  SPRITE2 "....X......X......X....."
@@ -333,7 +365,7 @@ ENDMACRO
                         ; random workspace noise left over from the BBC Micro
                         ; assembly process
 
- SPRITE2 "........................"
+ SPRITE2 "........................"     ; The explosion cloud sprite
  SPRITE2 ".........X....XX........"
  SPRITE2 "...X....XX..X...X......."
  SPRITE2 ".....X....XX...XXX......"
@@ -359,7 +391,7 @@ ENDMACRO
                         ; random workspace noise left over from the BBC Micro
                         ; assembly process
 
- SPRITE4 ".....***...."
+ SPRITE4 ".....***...."     ; A Trumble looking to the right
  SPRITE4 "..*.*****..."
  SPRITE4 "..***/*/**.."
  SPRITE4 ".**********."
@@ -385,7 +417,7 @@ ENDMACRO
                         ; random workspace noise left over from the BBC Micro
                         ; assembly process
 
- SPRITE4 "............"
+ SPRITE4 "............"     ; A Trumble looking to the left
  SPRITE4 "............"
  SPRITE4 "......**...."
  SPRITE4 "..**.****..."
