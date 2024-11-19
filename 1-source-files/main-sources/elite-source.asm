@@ -71,7 +71,11 @@ ENDIF
  Q% = _MAX_COMMANDER    ; Set Q% to TRUE to max out the default commander, FALSE
                         ; for the standard default commander
 
- USA% = TRUE            ; Strangely, GMA86 PAL does not change this ???
+ USA% = TRUE            ; Set USA% to FALSE to introduce a timing loop to bring
+                        ; PAL machines in line with NTSC machines (interestingly
+                        ; both the GMA85 NTSC and GMA86 PAL versions have this
+                        ; set to TRUE, so the timing loop is not included in
+                        ; either version)
 
  NOST = 12              ; The number of stardust particles in normal space (this
                         ; goes down to 3 in witchspace)
@@ -210,22 +214,37 @@ ENDIF
 
  BULBCOL = $E0          ; ???
 
- sfxplas = 0            ; ???
- sfxelas = 1
- sfxhit = 2
- sfxexpl = 3
- sfxwhosh = 4
- sfxbeep = 5
- sfxboop = 6
- sfxhyp1 = 7
- sfxeng = 8
- sfxecm = 9
- sfxblas = 10
- sfxalas = 11
- sfxmlas = 12
- sfxbomb = 13
- sfxtrib = 14
- sfxelas2 = 15
+ sfxplas = 0            ; Sound 0  = Pulse lasers fired by us
+
+ sfxelas = 1            ; Sound 1  = Being hit by lasers 1
+
+ sfxhit = 2             ; Sound 2  = Other ship exploding
+
+ sfxexpl = 3            ; Sound 3  = We died / Collision
+
+ sfxwhosh = 4           ; Sound 4  = Missile launched / Ship launch
+
+ sfxbeep = 5            ; Sound 5  = Short, high beep
+
+ sfxboop = 6            ; Sound 6  = Long, low beep
+
+ sfxhyp1 = 7            ; Sound 7  = Hyperspace drive engaged 1
+
+ sfxeng = 8             ; Sound 8  = This sound is not defined or used
+
+ sfxecm = 9             ; Sound 9  = E.C.M. on
+
+ sfxblas = 10           ; Sound 10 = Beam lasers fired by us
+
+ sfxalas = 11           ; Sound 11 = Military lasers fired by us
+
+ sfxmlas = 12           ; Sound 12 = Mining lasers fired by us
+
+ sfxbomb = 13           ; Sound 13 = Energy bomb
+
+ sfxtrib = 14           ; Sound 14 = Trumbles dying
+
+ sfxelas2 = 15          ; Sound 15 = Being hit by lasers 2
 
  NRU% = 0               ; The number of planetary systems with extended system
                         ; description overrides in the RUTOK table
@@ -2087,11 +2106,17 @@ ENDIF
 
 .MUTOKOLD
 
- SKIP 1                 ; ???
+ SKIP 1                 ; Used to store the previous value of MUTOK, so we can
+                        ; track whether the docking music configuration changes
 
 .MUPLA
 
- SKIP 1                 ; ???
+ SKIP 1                 ; A flag to record whether any music is currently
+                        ; playing
+                        ;
+                        ;   * 0 = no music is currently playing
+                        ;
+                        ;   * $FF = music is currently playing
 
 .DFLAG
 
@@ -2195,7 +2220,14 @@ ENDIF
 
 .MUTOK
 
- SKIP 1                 ; M Toggle docking music ???
+ SKIP 1                 ; Docking music configuration setting
+                        ;
+                        ;   * 0 = docking music is enabled (default)
+                        ;
+                        ;   * $FF = docking music is disabled
+                        ;
+                        ; Toggled by pressing "M" when paused, see the DKS3
+                        ; routine for details
 
 .DISK
 
@@ -2207,29 +2239,64 @@ ENDIF
 
 .PLTOG
 
- SKIP 1                 ; P Toggle planet surface lines ???
+ SKIP 1                 ; Planet details configuration setting
+                        ;
+                        ;   * 0 = planets are drawn as plain circles (default)
+                        ;
+                        ;   * $FF = planets are drawn with craters and meridians
+                        ;
+                        ; Toggled by pressing "P" when paused, see the DKS3
+                        ; routine for details
 
 .MUFOR
 
- SKIP 1                 ; C music possible/not possible ???
+ SKIP 1                 ; Configuration setting that controls whether the
+                        ; docking music can be enabled or disabled
+                        ;
+                        ;   * 0 = docking music can be toggled (default)
+                        ;
+                        ;   * $FF = docking music cannot be toggled
+                        ;
+                        ; Toggled by pressing "C" when paused, see the DKS3
+                        ; routine for details
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
-.L1D11
+.MUSWAP
 
- SKIP 1                 ; E swap tunes ???
+ SKIP 1                 ; Swap tunes configuration setting
+                        ;
+                        ;   * 0 = default tunes for docking and title music
+                        ;
+                        ;   * $FF = swap the docking and title music
+                        ;
+                        ; Toggled by pressing "E" when paused, see the DKS3
+                        ; routine for details
 
 ENDIF
 
 .MUSILLY
 
- SKIP 1                 ; B switch on/off sounds during music ???
+ SKIP 1                 ; Sounds during music configuration setting
+                        ;
+                        ;   * 0 = sounds are not played during music (default)
+                        ;
+                        ;   * $FF = sounds are played during music
+                        ;
+                        ; Toggled by pressing "B" when paused, see the DKS3
+                        ; routine for details
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
 .MULIE
 
- SKIP 1                 ; ???
+ SKIP 1                 ; A flag to record whether the RESET routine is
+                        ; currently being run, in which case the music
+                        ; configuration variables may be in a state of flux
+                        ;
+                        ;   * 0 = the RESET routine is not being run
+                        ;
+                        ;   * $FF = the RESET routine is in-progress
 
 ENDIF
 
@@ -3086,7 +3153,7 @@ ENDIF
  LDA #0                 ; The "cancel docking computer" key is bring pressed,
  STA auto               ; so turn it off by setting auto to 0
 
- JSR stopbd             ; ???
+ JSR stopbd             ; Stop playing the docking music (if it is playing)
 
 .MA78
 
@@ -3134,11 +3201,23 @@ ENDIF
  AND DKCMP              ; computer fitted, keep going, otherwise jump down to
  BEQ MA68               ; MA68 to skip the following
 
- EOR KLO+$29            ; ???
- BEQ MA68
- STA auto
- JSR startbd
- \kill phantom Cs
+ EOR KLO+$29            ; If "X" is also being pressed, then the "C" we just
+ BEQ MA68               ; detected is likely to be a ghost key press, caused by
+                        ; the player actually holding down "A", "S" and "X"
+                        ; (i.e. up, down and fire)
+                        ;
+                        ; Ghost key presses can occur on the Commodore 64 when
+                        ; three keys are held down that form a right angle in
+                        ; the keyboard scan matrix, in which case a fourth key
+                        ; can also appear to be "pressed"
+                        ;
+                        ; There is a comment in the original source of "kill
+                        ; phantom Cs" that seems to confirm this
+
+ STA auto               ; Set auto to the non-zero value of A, so the docking
+                        ; computer is activated
+
+ JSR startbd            ; Start playing the docking music
 
 .MA68
 
@@ -3648,7 +3727,7 @@ ENDIF
 
 .GOIN
 
- JSR stopbd             ; ???
+ JSR stopbd             ; Stop playing the docking music (if it is playing)
 
                         ; If we arrive here, we just docked successfully
 
@@ -4040,8 +4119,7 @@ ENDIF
                         ; instruction as the bomb is still going off
 
  JSR BOMBOFF            ; Our energy bomb has finished going off, so call
-                        ; BOMBOFF to draw the ???, which
-                        ; erases it from the screen
+                        ; BOMBOFF to turn off the bomb effect ???
 
 .MA77
 
@@ -4600,8 +4678,14 @@ ENDIF
 ;
 ;       Name: BOMBOFF
 ;       Type: Subroutine
-;   Category: ???
-;    Summary: ???
+;   Category: Drawing the screen
+;    Summary: Switch off the energy bomb effect
+;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   A                   A is set to 0
 ;
 ; ******************************************************************************
 
@@ -25262,8 +25346,13 @@ ENDIF
 
 .PL25
 
- LDA PLTOG              ; ???
- BEQ PL20 ;sob!
+ LDA PLTOG              ; If PLTOG is zero then planet details are not enabled,
+ BEQ PL20               ; so jump to PL20 to return from the subroutine
+                        ;
+                        ; In the original source the jump instruction is
+                        ; accompanied by a comment "sob!", which perhaps shows
+                        ; how sad the authors were to have to disable craters
+                        ; and meridians by default on the Commodore 64
 
  LDA TYPE               ; If the planet type is 128 then it has an equator and
  CMP #128               ; a meridian, so this jumps to PL26 if this is not a
@@ -27703,16 +27792,34 @@ ENDIF
 
  LDA #4
 
+; ******************************************************************************
+;
+;       Name: SETL1
+;       Type: Subroutine
+;   Category: Utility routines
+;    Summary: ???
+;
+; ******************************************************************************
+
 .SETL1
 
  SEI
  STA L1M
  LDA l1
- AND #$F8
+ AND #%11111000
  ORA L1M
  STA l1
  CLI
  RTS
+
+; ******************************************************************************
+;
+;       Name: L1M
+;       Type: Variable
+;   Category: Utility routines
+;    Summary: ???
+;
+; ******************************************************************************
 
 .L1M
 
@@ -28374,11 +28481,16 @@ ENDIF
 
 .RES2
 
- JSR stopbd             ; ???
- LDA BOMB
- BPL BOMBOK
- JSR BOMBOFF
- STA BOMB
+ JSR stopbd             ; Stop playing the docking music (if it is playing)
+
+ LDA BOMB               ; If the energy bomb has been set off, then BOMB will be
+ BPL BOMBOK             ; negative, so this skips the following instructions if
+                        ; our energy bomb is not going off
+
+ JSR BOMBOFF            ; Switch off the energy bomb effect
+
+ STA BOMB               ; The call to BOMBOFF sets A = 0, so this zeroes BOMB to
+                        ; switch off the energy bomb explosion
 
 .BOMBOK
 
@@ -30312,7 +30424,7 @@ ENDIF
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- JSR startat            ; ???
+ JSR startat            ; Start playing the title music
 
 ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
 
@@ -30344,7 +30456,7 @@ ENDIF
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- JSR startat            ; ???
+ JSR startat            ; Start playing the title music
 
 ENDIF
 
@@ -30587,8 +30699,11 @@ ENDIF
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- LDA #$FF               ; ???
- STA MULIE
+ LDA #$FF               ; Set MULIE to $FF to indicate that the RESET routine is
+ STA MULIE              ; in-progress, so we don't try to stop any music that
+                        ; may be playing (as RESET updates the music variables,
+                        ; so trying to update the music variables will lead to
+                        ; unpredictable behaviour)
 
 ENDIF
 
@@ -30597,8 +30712,9 @@ ENDIF
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- LDA #0                 ; ???
- STA MULIE
+ LDA #0                 ; Set MULIE to 0 to indicate that the RESET routine is
+ STA MULIE              ; no longer being run, so the stopbd routine can work
+                        ; again
 
 ENDIF
 
@@ -33188,10 +33304,10 @@ ENDIF
 
 .nosillytog
 
- LDA MUTOK
- CMP MUTOKOLD
- BEQ P%+5
- JSR MUTOKCH
+ LDA MUTOK              ; If the value of MUTOK has changed (i.e. it does not
+ CMP MUTOKOLD           ; match the value in MUTOKOLD) then the docking music
+ BEQ P%+5               ; has either been enabled or disabled, so call call
+ JSR MUTOKCH            ; MUTOKCH to ???
 
  CPX #$33               ; If "S" is not being pressed, jump to DK7
  BNE DK7
@@ -34028,6 +34144,12 @@ ENDMACRO
 ;
 ; This uses the same shift-and-subtract algorithm as TIS2.
 ;
+; ------------------------------------------------------------------------------
+;
+; Other entry points:
+;
+;   itsoff              Contains an RTS
+;
 ; ******************************************************************************
 
 .DVIDT
@@ -34081,10 +34203,10 @@ ENDMACRO
 
 ; ******************************************************************************
 ;
-;       Name: startbd
+;       Name: startat
 ;       Type: Subroutine
-;   Category: ???
-;    Summary: ???
+;   Category: Sound
+;    Summary: Start playing the title music, if configured
 ;
 ; ******************************************************************************
 
@@ -34092,57 +34214,123 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
 .startat
 
- LDA #$63               ; ???
- LDX #$C1
- BNE L920D
+ LDA #LO(THEME-1)       ; Set (A X) to THEME-1, which is the address before
+ LDX #HI(THEME-1)       ; the start of the title music at THEME
+
+ BNE startat2           ; Jump to startat2 to play the title music (this BNE is
+                        ; effectively a JMP as X is never zero)
 
 ENDIF
+
+; ******************************************************************************
+;
+;       Name: startbd
+;       Type: Subroutine
+;   Category: Sound
+;    Summary: Start playing the docking music, if configured
+;
+; ------------------------------------------------------------------------------
+;
+; Other entry points:
+;
+;   april16             Start playing the docking music, irrespective of the
+;                       current configuration settings
+;
+;   startat2            Start playing the music at address (A X) + 1
+;
+; ******************************************************************************
 
 .startbd
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- BIT L1D11
- BMI startat
- LDA #$2C
- LDX #$B7
+ BIT MUSWAP             ; If bit 7 of MUSWAP is set then the tunes have been
+ BMI startat            ; swapped, so jump to startat to set (A X) to the
+                        ; address of the title music to play when docking
 
-.L920D
+ LDA #LO(musicstart)    ; Set (A X) = musicstart, the address before the start
+ LDX #HI(musicstart)    ; of the docking music
 
- STA $B4D0
- STX $B4D1
+.startat2
+
+ STA value5             ; Set value5(1 0) = (A X)
+ STX value5+1           ;
+                        ; So value5 contains the address before the start of the
+                        ; music we want to play
 
 ENDIF
 
- BIT MUPLA
- BMI itsoff
- BIT MUFOR
- BMI april16
- BIT MUTOK
- BMI itsoff
+ BIT MUPLA              ; If bit 7 of MUPLA is set then there is already music
+ BMI itsoff             ; playing so we don't want to start any more, so jump to
+                        ; itsoff to return from the subroutine (as itsoff
+                        ; contains an RTS)
+
+ BIT MUFOR              ; If bit 7 of MUFOR is set then the docking music is
+ BMI april16            ; configured so that it cannot be disabled, so skip the
+                        ; following check for MUTOK
+
+ BIT MUTOK              ; If bit 7 of MUTOK is set then the docking music is
+ BMI itsoff             ; disabled, so jump to itsoff to return from the
+                        ; subroutine without playing the docking music (as
+                        ; itsoff contains an RTS)
 
 .april16
 
- LDA #5
+ LDA #5                 ; ???
  JSR SETL1
+
  JSR BDENTRY
- LDA #$FF
+
+ LDA #$FF               ; Set MUPLA to $FF to indicate that music is now playing
  STA MUPLA
- BNE coffeeex
+
+ BNE coffeeex           ; Jump to coffeeex to restore the memory configuration
+                        ; and return from the subroutine (this BNE is
+                        ; effectively a JMP as A is never zero)
+
+; ******************************************************************************
+;
+;       Name: MUTOKCH
+;       Type: Subroutine
+;   Category: Sound
+;    Summary: Process a change in the docking music configuration setting
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   A                   The new value of MUTOK
+;
+; ******************************************************************************
 
 .MUTOKCH
 
- STA MUTOKOLD
- EOR #$FF
- AND auto
- BMI april16
+ STA MUTOKOLD           ; Store the new value of MUTOK in MUTOKOLD so we can
+                        ; check whether it changes again
+
+ EOR #$FF               ; If MUTOK = 0 and bit 7 of auto is set, then the
+ AND auto               ; docking music has just been enabled and the docking
+ BMI april16            ; computer is running, so jump to april16 to start
+                        ; playing the docking music
+
+                        ; Otherwise either the docking music has just been
+                        ; disabled and/or the docking computer is not runnning,
+                        ; so fall through into stopbd to stop playing the
+                        ; docking music
 
 ; ******************************************************************************
 ;
 ;       Name: stopbd
 ;       Type: Subroutine
-;   Category: ???
-;    Summary: ???
+;   Category: Sound
+;    Summary: Stop playing the docking music
+;
+; ------------------------------------------------------------------------------
+;
+; Other entry points:
+;
+;   coffeeex            Restore the memory configuration and return from the
+;                       subroutine
 ;
 ; ******************************************************************************
 
@@ -34150,23 +34338,34 @@ ENDIF
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- BIT MULIE              ; ???
- BMI itsoff
+ BIT MULIE              ; If bit 7 of MULIE is set then the RESET routine is
+ BMI itsoff             ; currently being run
+                        ;
+                        ; This means the music configuration variables may be in
+                        ; a state of flux as they are updated by the RESET
+                        ; routine, so if this is the case, jump to itsoff to
+                        ; return from the subroutine (as itsoff contains an RTS)
 
 ENDIF
 
- BIT MUFOR
- BMI startbd
+ BIT MUFOR              ; If bit 7 of MUFOR is set then the docking music is
+ BMI startbd            ; configured so that it cannot be disabled, so jump to
+                        ; startbd to start playing the docking music instead
 
 .stopat
 
- BIT MUPLA
- BPL itsoff
- JSR SOFLUSH
+ BIT MUPLA              ; If bit 7 of MUPLA is clear then no music is currently
+ BPL itsoff             ; playing, so jump to itsoff to return from the
+                        ; subroutine (as itsoff contains an RTS)
+
+ JSR SOFLUSH            ; ???
+
  LDA #5
  JSR SETL1
- LDA #0
+
+ LDA #0                 ; Set MUPLA to 0 to indicate that no music is playing
  STA MUPLA
+
  LDX #$18
  SEI
 
@@ -41078,12 +41277,22 @@ ENDIF
  BNE COMIRQ3
  TYA
  PHA
- BIT MUPLA
- BPL SOINT
- JSR BDirqhere
- BIT MUSILLY
- BMI SOINT
- JMP coffee
+
+ BIT MUPLA              ; If bit 7 of MUPLA is clear then there is no music
+ BPL SOINT              ; currently playing, so jump to SOINT to make the sound
+                        ; effect
+
+ JSR BDirqhere          ; ???
+
+ BIT MUSILLY            ; If bit 7 of MUSILLY is set then sounds are configured
+ BMI SOINT              ; to be played during music, and we know that music is
+                        ; already playing, so jump to SOINT to make the sound
+                        ; effect
+
+ JMP coffee             ; Otherwise sounds are configured not to play during
+                        ; music, and we know that music is playins, so jmp to
+                        ; coffee to return from the interrupt handler without
+                        ; making the sound effect
 
 ; ******************************************************************************
 ;
@@ -41092,6 +41301,12 @@ ENDIF
 ;   Category: Sound
 ;    Summary: Process the contents of the sound buffer and send it to the sound
 ;             chip
+;
+; ------------------------------------------------------------------------------
+;
+; Other entry points:
+;
+;   coffee            Return from the interrupt handler
 ;
 ; ******************************************************************************
 
@@ -44286,7 +44501,18 @@ ENDIF
 
  EQUB 0
 
+; ******************************************************************************
+;
+;       Name: value5
+;       Type: Subroutine
+;   Category: Sound
+;    Summary: ???
+;
+; ******************************************************************************
+
 IF _GMA85_NTSC OR _GMA86_PAL
+
+.value5
 
  EQUW $8888
 
@@ -44321,11 +44547,11 @@ ENDIF
 
 .BDirqhere
 
- LDY  #0
- CPY  counter
- BEQ  BDskip1
- DEC  counter
- JMP  BDlab1
+ LDY #0
+ CPY counter
+ BEQ BDskip1
+ DEC counter
+ JMP BDlab1
 
 .BDskip1
 
@@ -44370,9 +44596,9 @@ ENDIF
 
 .BDRO1
 
- JSR  BDlab3
- JSR  BDlab4
- JMP  BDskip1
+ JSR BDlab3
+ JSR BDlab4
+ JMP BDskip1
 
 ; ******************************************************************************
 ;
@@ -44385,9 +44611,9 @@ ENDIF
 
 .BDRO2
 
- JSR  BDlab5
- JSR  BDlab6
- JMP  BDskip1
+ JSR BDlab5
+ JSR BDlab6
+ JMP BDskip1
 
 ; ******************************************************************************
 ;
@@ -44400,9 +44626,9 @@ ENDIF
 
 .BDRO3
 
- JSR  BDlab7
- JSR  BDlab8
- JMP  BDskip1
+ JSR BDlab7
+ JSR BDlab8
+ JMP BDskip1
 
 ; ******************************************************************************
 ;
@@ -44415,11 +44641,11 @@ ENDIF
 
 .BDRO4
 
- JSR  BDlab3
- JSR  BDlab5
- JSR  BDlab4
- JSR  BDlab6
- JMP  BDskip1
+ JSR BDlab3
+ JSR BDlab5
+ JSR BDlab4
+ JSR BDlab6
+ JMP BDskip1
 
 ; ******************************************************************************
 ;
@@ -44432,13 +44658,13 @@ ENDIF
 
 .BDRO5
 
- JSR  BDlab3
- JSR  BDlab5
- JSR  BDlab7
- JSR  BDlab4
- JSR  BDlab6
- JSR  BDlab8
- JMP  BDskip1
+ JSR BDlab3
+ JSR BDlab5
+ JSR BDlab7
+ JSR BDlab4
+ JSR BDlab6
+ JSR BDlab8
+ JMP BDskip1
 
 ; ******************************************************************************
 ;
@@ -44451,8 +44677,8 @@ ENDIF
 
 .BDRO6
 
- INC  value0
- JMP  BDskip1
+ INC value0
+ JMP BDskip1
 
 ; ******************************************************************************
 ;
@@ -44484,9 +44710,9 @@ ENDIF
 
 .BDRO8
 
- LDA  value4
- STA  counter
- JMP  BDirqhere
+ LDA value4
+ STA counter
+ JMP BDirqhere
 
 ; ******************************************************************************
 ;
@@ -44499,19 +44725,19 @@ ENDIF
 
 .BDRO7
 
- JSR  BDlab19
- STA  $D405
- JSR  BDlab19
- STA  $D40C
- JSR  BDlab19
- STA  $D413
- JSR  BDlab19
- STA  $D406
- JSR  BDlab19
- STA  $D40D
- JSR  BDlab19
- STA  $D414
- JMP  BDskip1
+ JSR BDlab19
+ STA $D405
+ JSR BDlab19
+ STA $D40C
+ JSR BDlab19
+ STA $D413
+ JSR BDlab19
+ STA $D406
+ JSR BDlab19
+ STA $D40D
+ JSR BDlab19
+ STA $D414
+ JMP BDskip1
 
 ; ******************************************************************************
 ;
@@ -44526,11 +44752,11 @@ ENDIF
 
  LDA #0
  STA BDBUFF
- LDA  BDdataptr3   ;Repeat
- STA  BDdataptr1
- LDA  BDdataptr4
- STA  BDdataptr2
- JMP  BDskip1
+ LDA BDdataptr3   ;Repeat
+ STA BDdataptr1
+ LDA BDdataptr4
+ STA BDdataptr2
+ JMP BDskip1
 
 ; ******************************************************************************
 ;
@@ -44543,19 +44769,19 @@ ENDIF
 
 .BDRO10
 
- JSR  BDlab19
- STA  $D402
- JSR  BDlab19
- STA  $D403
- JSR  BDlab19
- STA  $D409
- JSR  BDlab19
- STA  $D40A
- JSR  BDlab19
- STA  $D410
- JSR  BDlab19
- STA  $D411
- JMP  BDskip1
+ JSR BDlab19
+ STA $D402
+ JSR BDlab19
+ STA $D403
+ JSR BDlab19
+ STA $D409
+ JSR BDlab19
+ STA $D40A
+ JSR BDlab19
+ STA $D410
+ JSR BDlab19
+ STA $D411
+ JMP BDskip1
 
 ; ******************************************************************************
 ;
@@ -44581,9 +44807,9 @@ ENDIF
 
 .BDRO12
 
- JSR  BDlab19
- STA  value4
- JMP  BDskip1
+ JSR BDlab19
+ STA value4
+ JMP BDskip1
 
 ; ******************************************************************************
 ;
@@ -44596,13 +44822,13 @@ ENDIF
 
 .BDRO13
 
- JSR  BDlab19
- STA  value1
- JSR  BDlab19
- STA  value2
- JSR  BDlab19
- STA  value3
- JMP  BDskip1
+ JSR BDlab19
+ STA value1
+ JSR BDlab19
+ STA value2
+ JSR BDlab19
+ STA value3
+ JMP BDskip1
 
 ; ******************************************************************************
 ;
@@ -44615,13 +44841,13 @@ ENDIF
 
 .BDRO14
 
- JSR  BDlab19
- STA  $D418
- JSR  BDlab19
- STA  $D417
- JSR  BDlab19
- STA  $D416
- JMP  BDskip1
+ JSR BDlab19
+ STA $D418
+ JSR BDlab19
+ STA $D417
+ JSR BDlab19
+ STA $D416
+ JMP BDskip1
 
 ; ******************************************************************************
 ;
@@ -44634,9 +44860,9 @@ ENDIF
 
 .BDlab4
 
- LDA  value1
- STY  $D404
- STA  $D404
+ LDA value1
+ STY $D404
+ STA $D404
  RTS
 
 ; ******************************************************************************
@@ -44650,9 +44876,9 @@ ENDIF
 
 .BDlab6
 
- LDA  value2
- STY  $D40B
- STA  $D40B
+ LDA value2
+ STY $D40B
+ STA $D40B
  RTS
 
 ; ******************************************************************************
@@ -44666,9 +44892,9 @@ ENDIF
 
 .BDlab8
 
- LDA  value3
- STY  $D412
- STA  $D412
+ LDA value3
+ STY $D412
+ STA $D412
  RTS
 
 ; ******************************************************************************
@@ -44682,13 +44908,13 @@ ENDIF
 
 .BDlab19
 
- INC  BDdataptr1
- BNE  BDskipme1
- INC  BDdataptr1+1
+ INC BDdataptr1
+ BNE BDskipme1
+ INC BDdataptr1+1
 
 .BDskipme1
 
- LDA  (BDdataptr1),Y
+ LDA (BDdataptr1),Y
  RTS
 
 ; ******************************************************************************
@@ -44702,10 +44928,10 @@ ENDIF
 
 .BDlab3
 
- JSR  BDlab19
- STA  $D401
- JSR  BDlab19
- STA  $D400
+ JSR BDlab19
+ STA $D401
+ JSR BDlab19
+ STA $D400
  RTS
 
 ; ******************************************************************************
@@ -44719,21 +44945,21 @@ ENDIF
 
 .BDlab5
 
- JSR  BDlab19
- STA  $D408
- STA  voice2lo1
- STA  voice2lo2
- JSR  BDlab19
- STA  $D407
- STA  voice2hi1
- STA  voice2hi2
+ JSR BDlab19
+ STA $D408
+ STA voice2lo1
+ STA voice2lo2
+ JSR BDlab19
+ STA $D407
+ STA voice2hi1
+ STA voice2hi2
  CLC
  CLD
- LDA  #$20
- ADC  voice2hi2
- STA  voice2hi2
- BCC  BDruts1
- INC  voice2lo2
+ LDA #$20
+ ADC voice2hi2
+ STA voice2hi2
+ BCC BDruts1
+ INC voice2lo2
 
 .BDruts1
 
@@ -44750,31 +44976,31 @@ ENDIF
 
 .BDlab7
 
- JSR  BDlab19
- STA  $D40F
- STA  voice3lo1
- STA  voice3lo2
- JSR  BDlab19
- STA  $D40E
- STA  voice3hi1
- STA  voice3hi2
+ JSR BDlab19
+ STA $D40F
+ STA voice3lo1
+ STA voice3lo2
+ JSR BDlab19
+ STA $D40E
+ STA voice3hi1
+ STA voice3hi2
  CLC
  CLD
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- LDA  #$25
+ LDA #$25
 
 ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
 
- LDA  #$20
+ LDA #$20
 
 ENDIF
 
- ADC  voice3hi2
- STA  voice3hi2
- BCC  BDruts2
- INC  voice3lo2
+ ADC voice3hi2
+ STA voice3hi2
+ BCC BDruts2
+ INC voice3lo2
 
 .BDruts2
 
@@ -44791,46 +45017,52 @@ ENDIF
 
 .BDENTRY
 
- LDA  #0
+ LDA #0
  STA BDBUFF
- STA  counter
- STA  vibrato2
- STA  vibrato3
- LDX  #$18
+ STA counter
+ STA vibrato2
+ STA vibrato3
+ LDX #$18
 
 .BDloop2
 
- STA  $D400,X
+ STA $D400,X
  DEX
- BNE  BDloop2
+ BNE BDloop2
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- LDA $B4D0
+ LDA value5             ; Set A to the low byte of value5, which is set to the
+                        ; address before the start of the tune that is
+                        ; configured to play for docking
 
 ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
 
- LDA  #LO(musicstart)
+ LDA #LO(musicstart)    ; Set A to the low byte of musicstart, which is the
+                        ; address before the start of the docking music
 
 ENDIF
 
- STA  BDdataptr1
- STA  BDdataptr3
+ STA BDdataptr1
+ STA BDdataptr3
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- LDA $B4D1
+ LDA value5+1           ; Set A to the high byte of value5, which is set to the
+                        ; address before the start of the tune that is
+                        ; configured to play for docking
 
 ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
 
- LDA  #HI(musicstart)
+ LDA #HI(musicstart)    ; Set A to the high byte of musicstart, which is the
+                        ; address before the start of the docking music
 
 ENDIF
 
- STA  BDdataptr2
- STA  BDdataptr4
- LDA  #$0F
- STA  $D418
+ STA BDdataptr2
+ STA BDdataptr4
+ LDA #$0F
+ STA $D418
 ;SEI
  RTS  ;<<
  \ point IRQ to start
@@ -44841,15 +45073,15 @@ ENDIF
 ;CLI
 ;BRK  ; re enter monitor!
  \........
- LDA  #0
- STA  vibrato2
- LDA  #$AE
- STA  BDbeqmod1+1
- LDA  voice2lo2
- STA  $D408
- LDA  voice2hi2
- STA  $D407
- JMP  BDlab21
+ LDA #0
+ STA vibrato2
+ LDA #$AE
+ STA BDbeqmod1+1
+ LDA voice2lo2
+ STA $D408
+ LDA voice2hi2
+ STA $D407
+ JMP BDlab21
 
 ; ******************************************************************************
 ;
@@ -44862,24 +45094,24 @@ ENDIF
 
 .BDlab24
 
- LDA  #0
- STA  vibrato2
- LDA  #$98
- STA  BDbeqmod1+1
- LDA  voice2lo1
- STA  $D408
- LDA  voice2hi1
- STA  $D407
- JMP  BDlab21
- LDA  #0
- STA  vibrato3
- LDA  #$E2
- STA  BDbeqmod2+1
- LDA  voice3lo2
- STA  $D40F
- lda  voice3hi2
- STA  $D40E
- JMP  BDlab21
+ LDA #0
+ STA vibrato2
+ LDA #$98
+ STA BDbeqmod1+1
+ LDA voice2lo1
+ STA $D408
+ LDA voice2hi1
+ STA $D407
+ JMP BDlab21
+ LDA #0
+ STA vibrato3
+ LDA #$E2
+ STA BDbeqmod2+1
+ LDA voice3lo2
+ STA $D40F
+ LDA voice3hi2
+ STA $D40E
+ JMP BDlab21
 
 ; ******************************************************************************
 ;
@@ -44892,15 +45124,15 @@ ENDIF
 
 .BDlab23
 
- LDA  #0
- STA  vibrato3
- LDA  #$CC
- STA  BDbeqmod2+1
- LDA  voice3lo1
- STA  $D40F
- LDA  voice3hi1
- STA  $D40E
- JMP  BDlab21
+ LDA #0
+ STA vibrato3
+ LDA #$CC
+ STA BDbeqmod2+1
+ LDA voice3lo1
+ STA $D40F
+ LDA voice3hi1
+ STA $D40E
+ JMP BDlab21
 
 ; ******************************************************************************
 ;
@@ -44913,40 +45145,40 @@ ENDIF
 
 .BDlab1
 
- INC  vibrato3
+ INC vibrato3
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- LDA  #5
+ LDA #5
 
 ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
 
- LDA  #6
+ LDA #6
 
 ENDIF
 
- CMP  vibrato3
+ CMP vibrato3
 
 .BDbeqmod2
 
- BEQ  BDlab23
- INC  vibrato2
+ BEQ BDlab23
+ INC vibrato2
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- LDA  #4
+ LDA #4
 
 ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
 
- LDA  #5
+ LDA #5
 
 ENDIF
 
- CMP  vibrato2
+ CMP vibrato2
 
 .BDbeqmod1
 
- BEQ  BDlab24
+ BEQ BDlab24
 
 ; ******************************************************************************
 ;
@@ -44959,28 +45191,28 @@ ENDIF
 
 .BDlab21
 
- LDX  counter
+ LDX counter
 
 IF _GMA85_NTSC OR _GMA86_PAL
 
- CPX  #0
+ CPX #0
 
 ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
 
- CPX  #2
+ CPX #2
 
 ENDIF
 
- BNE  BDexitirq
- LDX  value1
+ BNE BDexitirq
+ LDX value1
  DEX
- STX  $D404
- LDX  value2
+ STX $D404
+ LDX value2
  DEX
- STX  $D40B
- LDX  value3
+ STX $D40B
+ LDX value3
  DEX
- STX  $D412
+ STX $D412
 
 .BDexitirq
 
@@ -45044,6 +45276,15 @@ ENDIF
 
  EQUB HI(BDRO15)
 
+; ******************************************************************************
+;
+;       Name: COMUDAT
+;       Type: Variable
+;   Category: Sound
+;    Summary: Music data from the C.COMUDAT file
+;
+; ******************************************************************************
+
 IF _GMA85_NTSC OR _GMA86_PAL
 
  INCBIN "1-source-files/music/gma/C.COMUDAT.bin"
@@ -45053,6 +45294,10 @@ ELIF _SOURCE_DISC_FILES OR _SOURCE_DISK_BUILD
  INCBIN "1-source-files/music/source-disk/C.COMUDAT.bin"
 
 ENDIF
+
+.THEME
+
+ SKIP 0
 
 IF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
 
