@@ -196,16 +196,22 @@ ENDIF
 
  YINT = $27             ; Internal key number for key "Y" (Y/N)
 
- RED = $55              ; Colours Masks for Dials ???
- YELLOW = $AA
- GREEN = $FF
+ RED = $55              ; Four multicolour bitmap mode pixels of colour 1
+                        ; (red) for the dashboard dials
+
+ YELLOW = $AA           ; Four multicolour bitmap mode pixels of colour 2
+                        ; (yellow) for the dashboard dials
+
+ GREEN = $FF            ; Four multicolour bitmap mode pixels of colour 3
+                        ; (green) for the dashboard dials
 
  RED2 = $27             ; Colours for Missile Blobs ???
  GREEN2 = $57
  YELLOW2 = $87
  BLACK2 = $B7
 
- MAG2 = $40             ; Colour for player input ???
+ MAG2 = $40             ; Colour 4 for violet text, for player input in the text
+                        ; view
 
  BLUE = YELLOW          ; ???
  CYAN = YELLOW
@@ -343,11 +349,11 @@ ENDIF
                         ; memory-mapped to the 29 bytes from $D400 to $D41C (see
                         ; page 461 of the Programmer's Reference Guide)
 
- CIA = $DC00            ; Registers for the first CIA I/O interface chip, which
+ CIA = $DC00            ; Registers for the CIA 1 I/O interface chip, which
                         ; are memory-mapped to the 16 bytes from $DC00 to $DC0F
                         ; (see page 428 of the Programmer's Reference Guide)
 
- CIA2 = $DD00           ; Registers for the second CIA I/O interface chip, which
+ CIA2 = $DD00           ; Registers for the CIA 2 I/O interface chip, which
                         ; are memory-mapped to the 16 bytes from $DD00 to $DD0F
                         ; (see page 428 of the Programmer's Reference Guide)
 
@@ -409,8 +415,6 @@ ENDIF
  ORG $0000
 
 .ZP
-
- SKIP 0                 ; The start of the zero page workspace
 
  SKIP 2                 ; These bytes appear to be unused
 
@@ -1003,81 +1007,100 @@ ENDIF
 
  SKIP 1                 ; Temporary storage, used in a number of places
 
- P2 = T+1               ; ???
- Q2 = T+2
- R2 = T+3
- S2 = T+4
- T2 = T+5
+.P2
 
- SKIP 6
+ SKIP 1                 ; Temporary storage, used in place of variable P in the
+                        ; line-drawing routines
 
- .BDdataptr1
+.Q2
 
- SKIP 1                 ; ???
+ SKIP 1                 ; Temporary storage, used in place of variable Q in the
+                        ; line-drawing routines
+
+.R2
+
+ SKIP 1                 ; Temporary storage, used in place of variable R in the
+                        ; line-drawing routines
+
+.S2
+
+ SKIP 1                 ; Temporary storage, used in place of variable S in the
+                        ; line-drawing routines
+
+.T2
+
+ SKIP 1                 ; Temporary storage, used in place of variable T in the
+                        ; line-drawing routines
+
+ SKIP 1                 ; This byte appears to be unused
 
 ; Data pointers
 
- .BDdataptr2
+.BDdataptr1
 
  SKIP 1                 ; ???
 
- .BDdataptr3
+.BDdataptr2
 
  SKIP 1                 ; ???
 
- .BDdataptr4
+.BDdataptr3
 
  SKIP 1                 ; ???
 
- .counter
+.BDdataptr4
+
+ SKIP 1                 ; ???
+
+.counter
 
  SKIP 1                 ; main counter ???
 
 ; Vibrato
 
- .vibrato2
+.vibrato2
 
  SKIP 1                 ; ???
 
- .vibrato3
+.vibrato3
 
  SKIP 1                 ; ???
 
 ; voice notes
 
- .voice2lo1
+.voice2lo1
 
  SKIP 1                 ; ???
 
- .voice2hi1
+.voice2hi1
 
  SKIP 1                 ; ???
 
- .voice2lo2
+.voice2lo2
 
  SKIP 1                 ; ???
 
- .voice2hi2
+.voice2hi2
 
  SKIP 1                 ; ???
 
- .voice3lo1
+.voice3lo1
 
  SKIP 1                 ; ???
 
- .voice3hi1
+.voice3hi1
 
  SKIP 1                 ; ???
 
- .voice3lo2
+.voice3lo2
 
  SKIP 1                 ; ???
 
- .voice3hi2
+.voice3hi2
 
  SKIP 1                 ; ???
 
- .BDBUFF
+.BDBUFF
 
  SKIP 1                 ; ???
 
@@ -1166,7 +1189,11 @@ ENDIF
 
 .KL
 
- SKIP 17                ; ??? (KY1 etc. are elsewhere)
+ SKIP 1                 ; If a key is being pressed that is not in the keyboard
+                        ; table at KYTB, it can be stored here (as seen in
+                        ; routine DK4, for example)
+
+ SKIP 16                ; These bytes appear to be unused
 
 .FRIN
 
@@ -1319,7 +1346,8 @@ ENDIF
 
  SKIP 1                 ; This flag is unused in this version of Elite. In the
                         ; other versions, setting HFX to a non-zero value makes
-                        ; the hyperspace rings multi-coloured, but ???
+                        ; the hyperspace rings multi-coloured, but that effect
+                        ; is not used in this version
 
 .EV
 
@@ -1921,7 +1949,7 @@ ENDIF
 
 .COL2
 
- SKIP 1                 ; ???
+ SKIP 1                 ; The text colour of the next character to draw in CHPR
 
 .frump
 
@@ -1938,7 +1966,8 @@ ENDIF
 
 .TRIBCT
 
- SKIP 1                 ; ???
+ SKIP 1                 ; Contains the number of Trumble sprites that we are
+                        ; showing on-screen, in the range 0 to 6
 
 .TRIBVX
 
@@ -2121,10 +2150,10 @@ ENDIF
  SKIP 1                 ; The colour of the dot on the compass
                         ;
                         ;   * #YELLOW = the object in the compass is in front of
-                        ;     us, so the dot is yellow ???
+                        ;     us, so the dot is yellow
                         ;
                         ;   * #GREEN = the object in the compass is behind us,
-                        ;     so the dot is green ???
+                        ;     so the dot is green
 
 .MUTOKOLD
 
@@ -2142,7 +2171,7 @@ ENDIF
 
 .DFLAG
 
- EQUB 0                 ; This byte appears to be unused
+ SKIP 1                 ; This byte appears to be unused
 
 .DNOIZ
 
@@ -2253,15 +2282,18 @@ ENDIF
 
 .DISK
 
- SKIP 1                 ; The configuration setting for toggle key "T", which
-                        ; isn't actually used but is still updated by pressing
-                        ; "T" while the game is paused. This is a configuration
-                        ; option from some non-BBC versions of Elite that lets
-                        ; you switch between tape and disc
+ SKIP 1                 ; Current media configuration setting
+                        ;
+                        ;   * 0 = tape (default)
+                        ;
+                        ;   * $FF = disk
+                        ;
+                        ; Toggled by pressing "D" when paused, see the DK4
+                        ; routine for details
 
 .PLTOG
 
- SKIP 1                 ; Planet details configuration setting
+ SKIP 1                 ; Planetary details configuration setting
                         ;
                         ;   * 0 = planets are drawn as plain circles (default)
                         ;
@@ -2336,7 +2368,7 @@ ENDIF
 
                         ; The configuration keys in the same order as their
                         ; configuration bytes (starting from DAMP), using their
-                        ; internal key numbers ???
+                        ; internal key numbers as returned by the RDKEY routine
 
  EQUB $01               ; RUN/STOP
  EQUB $36               ; A
@@ -2377,18 +2409,27 @@ ENDIF
 
  CLD                    ; Clear the D flag to make sure we are in binary mode
 
- LDX #2                 ; ???
+ LDX #2                 ; We now copy the contents of zero page between $0002
+                        ; and $00FF to the page at $CE00, so set an index in X
+                        ; to start from byte $0002
+                        ;
+                        ; We do this so we can use the SWAPPZERO routine to swap
+                        ; zero page with the page at $CE00 when saving or
+                        ; loading commander files
 
 .ZONKPZERO
 
- LDA $0000,X
- STA $CE00,X
- INX
- BNE ZONKPZERO ; shove over loader prog
+ LDA $0000,X            ; Copy the X-th byte of zero page to the X-th byte of
+ STA $CE00,X            ; $CE00
+
+ INX                    ; Increment the loop counter
+
+ BNE ZONKPZERO          ; Loop back until we have copied all of zero page
 
  JSR DEEOR              ; Decrypt the main game code between $1300 and $9FFF
 
- JSR COLD               ; ???
+ JSR COLD               ; Configure memory, set up interrupt handlers and
+                        ; configure the VIC-II, SID and CIA chips
 
 ;JSR Checksum           ; This instruction is commented out in the original
                         ; source
@@ -2505,9 +2546,18 @@ ENDIF
                         ; herring", so this would appear to be a red herring
                         ; aimed at confusing any crackers
 
+; ******************************************************************************
+;
+;       Name: G%
+;       Type: Variable
+;   Category: Utility routines
+;    Summary: Denotes the start of the main game code, from ELITE A to ELITE K
+;
+; ******************************************************************************
+
 .G%
 
-                        ; The game code is scrambled from here to F% (or, as the
+ SKIP 0                 ; The game code is scrambled from here to F% (or, as the
                         ; original source code puts it, "mutilated")
 
 ; ******************************************************************************
@@ -2765,20 +2815,42 @@ ENDIF
 ;       Name: MVTRIBS
 ;       Type: Variable
 ;   Category: Missions
-;    Summary: ???
+;    Summary: Move the Trumble sprites around on-screen
 ;
 ; ******************************************************************************
 
 .MVTRIBS
 
- LDA MCNT
- AND #7
- CMP TRIBCT
+ LDA MCNT               ; We want to move one Trumble sprite on each iteration
+ AND #7                 ; around the main loop, so set A to the main loop
+                        ; counter mod 8, so A counts up from 0 to 7 and repeats
+                        ; as we iterate around the main loop
+
+ CMP TRIBCT             ; If A < TRIBCT then skip the following instruction
  BCC P%+5
- JMP NOMVETR
-;STA T
- ASL A
- TAY
+
+ JMP NOMVETR            ; Jump to NOMVETR to return to the main game loop
+                        ; without moving any sprites
+
+;STA T                  ; This instruction is commented out in the original
+                        ; source
+
+                        ; TRIBCT contains the number of Trumble sprites being
+                        ; shown on-screen, in the range 0 to 6, and we only
+                        ; call MVTRIBS when TRIBCT is non-zero, so it must be
+                        ; in the range 1 to 6
+                        ;
+                        ; We also know that A < TRIBCT, so if we get here then
+                        ; we know A must be in the range 0 to TRIBCT - 1, with
+                        ; a maximum value of 5
+                        ;
+                        ; We can therefore move sprite number A, and this will
+                        ; ensure we work through the visible Trumble sprites,
+                        ; updating one per iteration, with each sprite being
+                        ; moved every eight uterations around the main loop
+
+ ASL A                  ; Set Y = A * 2 so we can use it as an index into the
+ TAY                    ; two-byte tables at TRIBVX, TRIBVXH and TRIBXH
 
  LDA #%101              ; Call SETL1 to set the 6510 input/output port to the
  JSR SETL1              ; following:
@@ -2795,7 +2867,7 @@ ENDIF
                         ; See the memory map at the top of page 264 in the
                         ; Programmer's Reference Guide
 
- JSR DORND
+ JSR DORND              ; ???
  CMP #235
  BCC MVTR1
  AND #3
@@ -2868,7 +2940,7 @@ ENDIF
                         ; See the memory map at the top of page 265 in the
                         ; Programmer's Reference Guide
 
- JMP NOMVETR
+ JMP NOMVETR            ; Jump to NOMVETR to return to the main game loop
 
 ; ******************************************************************************
 ;
@@ -2905,9 +2977,12 @@ ENDIF
  STA RAND               ; Store the seed in the first byte of the four-byte
                         ; random number seed that's stored in RAND
 
- LDA TRIBCT             ; ???
- BEQ NOMVETR
- JMP MVTRIBS
+ LDA TRIBCT             ; If TRIBCT is non-zero then we have some Trumbles in
+ BEQ NOMVETR            ; the hold, so jump to MVTRIBS to move their sprites
+ JMP MVTRIBS            ; around the screenm if applicable
+                        ;
+                        ; The MVTRIBS routine jumps back to NOMVETR when it has
+                        ; finished moving Trumbles around
 
 .NOMVETR
 
@@ -3080,7 +3155,7 @@ ENDIF
 ;   * Space and "?" to speed up and slow down
 ;   * "U", "T" and "M" to disarm, arm and fire missiles
 ;   * "C=" to fire an energy bomb
-;   * "<-" to launch an escape pod
+;   * Left arrow to launch an escape pod
 ;   * "J" to initiate an in-system jump
 ;   * "E" to deploy E.C.M. anti-missile countermeasures
 ;   * "C" to use the docking computer
@@ -3163,7 +3238,7 @@ ENDIF
 
  LDA MSTG               ; If MSTG = $FF then there is no target lock, so jump to
  BMI MA64               ; MA64 to skip the following (also skipping the checks
-                        ; for "C=", "<-", "J" and "E")
+                        ; for "C=", left arrow, "J" and "E")
 
  JSR FRMIS              ; The "fire missile" key is being pressed and we have
                         ; a missile lock, so call the FRMIS routine to fire
@@ -3774,9 +3849,9 @@ ENDIF
 
 .GOIN
 
- JSR stopbd             ; Stop playing the docking music (if it is playing)
-
                         ; If we arrive here, we just docked successfully
+
+ JSR stopbd             ; Stop playing the docking music (if it is playing)
 
  JMP DOENTRY            ; Go to the docking bay (i.e. show the ship hangar)
 
@@ -18536,7 +18611,7 @@ ENDIF
 
 .BAY2
 
- LDA #$10               ; ???
+ LDA #$10               ; Switch the text colour to white
  STA COL2
 
  LDA #f9                ; Jump into the main loop at FRCE, setting the key
@@ -18583,7 +18658,7 @@ ENDIF
 
 .gnum
 
- LDA #MAG2              ; Switch to ???
+ LDA #MAG2              ; Switch the text colour to violet
  STA COL2
 
  LDX #0                 ; We will build the number entered in R, so initialise
@@ -18660,7 +18735,7 @@ ENDIF
 
 .OUT
 
- LDA #$10               ; Switch to ???
+ LDA #$10               ; Switch the text colour to white
  STA COL2
 
  LDA R                  ; Set A to the result we have been building in R
@@ -23297,7 +23372,8 @@ ENDIF
 ;       Name: SWAPPZERO
 ;       Type: Subroutine
 ;   Category: Utility routines
-;    Summary: A routine that swaps bytes in and out of zero page
+;    Summary: A routine that swaps zero page with the page at $CE00, so that
+;             zero page changes made by kernal routines can be reversed
 ;
 ; ******************************************************************************
 
@@ -23306,12 +23382,12 @@ IF _GMA85_NTSC OR _GMA86_PAL
 .SWAPPZERO
 
  LDX #K3+1              ; This routine starts copying zero page from $0015 and
-                        ; up, using X as an index ???
+                        ; up, using X as an index
 
 .SWPZL
 
- LDA ZP,X               ; ???
- LDY $CE00,X
+ LDA ZP,X               ; Swap the X-th byte of zero page with the X-th byte of
+ LDY $CE00,X            ; $CE00
  STA $CE00,X
  STY ZP,X
 
@@ -25441,8 +25517,8 @@ ENDIF
 
 .PL25
 
- LDA PLTOG              ; If PLTOG is zero then planet details are not enabled,
- BEQ PL20               ; so jump to PL20 to return from the subroutine
+ LDA PLTOG              ; If PLTOG is zero then planetary details are not
+ BEQ PL20               ; enabled, so jump to PL20 to return from the subroutine
                         ;
                         ; In the original source the jump instruction is
                         ; accompanied by a comment "sob!", which perhaps shows
@@ -27830,7 +27906,8 @@ ENDIF
 ;       Name: SWAPPZERO
 ;       Type: Subroutine
 ;   Category: Utility routines
-;    Summary: A routine that swaps bytes in and out of zero page
+;    Summary: A routine that swaps zero page with the page at $CE00, so that
+;             zero page changes made by kernal routines can be reversed
 ;
 ; ******************************************************************************
 
@@ -27839,12 +27916,12 @@ IF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
 .SWAPPZERO
 
  LDX #K3+1              ; This routine starts copying zero page from $0015 and
-                        ; up, using X as an index ???
+                        ; up, using X as an index
 
 .SWPZL
 
- LDA ZP,X               ; ???
- LDY $CE00,X
+ LDA ZP,X               ; Swap the X-th byte of zero page with the X-th byte of
+ LDY $CE00,X            ; $CE00
  STA $CE00,X
  STY ZP,X
 
@@ -28702,7 +28779,7 @@ ENDIF
 
  STA ALP1               ; Reset ALP1 (magnitude of roll angle alpha) to 3
 
- LDA #$10               ; ???
+ LDA #$10               ; Switch the text colour to white
  STA COL2
 
  LDA #0                 ; Set dontclip to 0 ???
@@ -28980,7 +29057,7 @@ ENDIF
  LDA RAND               ; Calculate the next two values f2 and f3 in the feeder
  ROL A                  ; sequence:
  TAX                    ;
- ADC RAND+2             ;   * f2 = (f1 << 1) MOD 256 + C flag on entry
+ ADC RAND+2             ;   * f2 = (f1 << 1) mod 256 + C flag on entry
  STA RAND               ;   * f3 = f0 + f2 + (1 if bit 7 of f1 is set)
  STX RAND+2             ;   * C flag is set according to the f3 calculation
 
@@ -31354,7 +31431,7 @@ ENDIF
 
 .MT26
 
- LDA #MAG2              ; Switch to magenta in the trade view
+ LDA #MAG2              ; Switch the text colour to violet
  STA COL2
 
  LDY #8                 ; Wait for 8/50 of a second (0.16 seconds)
@@ -31419,7 +31496,7 @@ ENDIF
 
  STA INWK+5,Y           ; Store the return character in the Y-th byte of INWK+5
 
- LDA #$10               ; ???
+ LDA #$10               ; Switch the text colour to white
  STA COL2
 
  LDA #12                ; Print a newline and return from the subroutine using a
@@ -31427,7 +31504,7 @@ ENDIF
 
 .OSW04
 
- LDA #$10               ; ???
+ LDA #$10               ; Switch the text colour to white
  STA COL2
 
  SEC                    ; Set the C flag as ESCAPE was pressed
@@ -31807,8 +31884,13 @@ ENDIF
 ;LDA #0                 ; These instructions are commented out in the original
 ;JSR QUS1               ; source
 
- JSR KERNALSETUP        ; ???
- LDA #LO(NA%+8)
+ JSR KERNALSETUP        ; Set up memory so we can use the kernal routines, which
+                        ; includes swapping the contents of zero page with the
+                        ; page at $CE00 (so the kernal routines get a zero page
+                        ; that works for them, and any changes they make do not
+                        ; corrupt the game's zero page variables)
+
+ LDA #LO(NA%+8)         ; ???
  STA $FD ; SC
  LDA #HI(NA%+8)
  STA $FE ; SC+1
@@ -31843,11 +31925,29 @@ ENDIF
                         ; See the memory map at the top of page 265 in the
                         ; Programmer's Reference Guide
 
- CLI
- JSR SWAPPZERO
- PLP
- CLI
- BCS saveerror
+ CLI                    ; Enable interrupts again
+
+ JSR SWAPPZERO          ; The call to KERNALSETUP above swapped the contents of
+                        ; zero page with the page at $CE00, to ensure the kernal
+                        ; routines ran with their copy of zero page rather than
+                        ; the game's zero page
+                        ;
+                        ; We are done using the kernal routines, so now we swap
+                        ; them back so the kernal's zero page is moved to $CE00
+                        ; again, ready for next time, and the game's zero page
+                        ; variables are once again set up, ready for the game
+                        ; code to use
+
+ PLP                    ; Retrieve the processor flags that we stashed after the
+                        ; call to KERNALSVE above
+
+ CLI                    ; Enable interrupts to make sure the PHP doesn't disable
+                        ; interrupts (which it could feasibly do by restoring a
+                        ; set I flag)
+
+ BCS saveerror          ; If KERNALSVE returns with the C flag set then this
+                        ; indicates that a save error occurred, so jump to
+                        ; saveerror to process this
 
  JSR DFAULT             ; Call DFAULT to reset the current commander data block
                         ; to the last saved commander
@@ -31903,7 +32003,15 @@ ENDIF
 
 .KERNALSETUP
 
- JSR SWAPPZERO          ; ???
+ JSR SWAPPZERO          ; Swap the contents of zero page with the page at $CE00,
+                        ; which we filled with the contents of zero page when we
+                        ; started the game
+                        ;
+                        ; This ensures that the kernal routines get a zero page
+                        ; that works for them, and we can repeat the swap once
+                        ; we are done with the kernal routines to ensure any
+                        ; changes they make do not corrupt the game's zero page
+                        ; variables
 
  LDA #%110              ; Set A to pass to the call to SETL1 so we page the
                         ; kernal ROM and I/O into the memory map
@@ -32032,8 +32140,13 @@ ENDIF
 
 .LOD
 
- JSR KERNALSETUP        ; ???
- LDA #0
+ JSR KERNALSETUP        ; Set up memory so we can use the kernal routines, which
+                        ; includes swapping the contents of zero page with the
+                        ; page at $CE00 (so the kernal routines get a zero page
+                        ; that works for them, and any changes they make do not
+                        ; corrupt the game's zero page variables)
+
+ LDA #0                 ; ???
  LDX #LO(TAP%)
  LDY #HI(TAP%)
  JSR KERNALLOAD
@@ -32063,11 +32176,29 @@ ENDIF
                         ; See the memory map at the top of page 265 in the
                         ; Programmer's Reference Guide
 
- CLI
- JSR SWAPPZERO
- PLP
- CLI
- BCS tapeerror
+ CLI                    ; Enable interrupts again
+
+ JSR SWAPPZERO          ; The call to KERNALSETUP above swapped the contents of
+                        ; zero page with the page at $CE00, to ensure the kernal
+                        ; routines ran with their copy of zero page rather than
+                        ; the game's zero page
+                        ;
+                        ; We are done using the kernal routines, so now we swap
+                        ; them back so the kernal's zero page is moved to $CE00
+                        ; again, ready for next time, and the game's zero page
+                        ; variables are once again set up, ready for the game
+                        ; code to use
+
+ PLP                    ; Retrieve the processor flags that we stashed after the
+                        ; call to KERNALLOAD above
+
+ CLI                    ; Enable interrupts to make sure the PHP doesn't disable
+                        ; interrupts (which it could feasibly do by restoring a
+                        ; set I flag)
+
+ BCS tapeerror          ; If KERNALLOAD returns with the C flag set then this
+                        ; indicates that a load error occurred, so jump to
+                        ; tapeerror to process this
 
  LDA TAP%               ; If the first byte of the loaded file has bit 7 set,
  BMI ELT2F              ; jump to ELT2F, as this is an invalid commander file
@@ -32450,33 +32581,286 @@ ENDIF
 ; ******************************************************************************
 ;
 ;       Name: KEYLOOK
-;       Type: Variable
+;       Type: Workspace
 ;   Category: Keyboard
 ;    Summary: The key logger
+;
+; ------------------------------------------------------------------------------
+;
+; In the BBC Micro versions of Elite, the key logger is separate from the lookup
+; tables that are used to convert internal key numbers into flight controls. In
+; the Commodore 64 version, the key logger is merged with the lookup table into
+; the KEYLOOK table.
+;
+; The KEYLOOK table has one byte for each key in the Commodore 64 keyboard
+; matrix, and it is laid out in the same order. The keyboard matrix is exposed
+; to our code via port A on the CIA 1 interface chip, through the memory-mapped
+; locations $DC00 and $DC01. To read a key, you first set the column to scan by
+; writing to $DC00, and the details of any key that is bring pressed in that
+; column are returned in $DC01 (see the RDKEY routine for details).
+;
+; The keyboard matrix layout can be seen at https://sta.c64.org/cbm64kbdlay.html
+;
+; The KEYLOOK table mirrors the structure of the keyboard matrix, though it's
+; reversed so that KEYLOOK reads the keyboard matrix from the bottom corner of
+; the above diagram, working right to left and down to up.
+;
+; The RDKEY routine scans the keyboard matrix and sets each entry in KEYLOOK
+; according to whether that key is being pressed. The entries that map to the
+; flight keys have labels KY1 through KY7 for the main flight controls, and
+; KY12 to KY20 for the secondary controls, so the main game code can check
+; whether a key is being pressed by simply checking for non-zero values in the
+; relevant KY entries.
+;
+; The index of a key in the KEYLOOK table is referred to as the "internal key
+; number" throughout this documentation.
+;
+; Note that the initial content of the KEYLOOK table is a simple repeated string
+; of "123456789ABCDEF0", as this was used in the original source code to create
+; the table during assembly. These initial values have no meaning.
 ;
 ; ******************************************************************************
 
 .KEYLOOK
 
- EQUS "123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF01234567"
+ SKIP 0                 ; KEYLOOK and KLO share the same address
 
- KLO = KEYLOOK          ; ???
- KY1 = KLO+9
- KY2 = KLO+4
- KY3 = KLO+$11
- KY4 = KLO+$14
- KY5 = KLO+$29
- KY6 = KLO+$33
- KY7 = KLO+$36
- KY12 = KLO+$03
- KY13 = KLO+$07
- KY14 = KLO+$2A
- KY15 = KLO+$22
- KY16 = KLO+$1C
- KY17 = KLO+$32
- KY18 = KLO+$1E
- KY19 = KLO+$2C
- KY20 = KLO+$17
+.KLO
+
+ EQUS "1"               ; The key logger in the BBC Micro version has a spare
+                        ; byte at the start for storing the last key press, so
+                        ; we also include a spare byte here so the KLO logger
+                        ; in the Commodore 64 version behaves in a similar way
+                        ; to the KL key logger in the BBC Micro
+
+ EQUS "2"               ; RUN/STOP
+
+ EQUS "3"               ; Q
+
+.KY12
+
+ EQUS "4"               ; "C=" is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+
+.KY2
+
+ EQUS "5"               ; Space is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+
+ EQUS "6"               ; 2
+
+ EQUS "7"               ; CTRL
+
+.KY13
+
+ EQUS "8"               ; Left arrow is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+
+ EQUS "9"               ; 1
+
+.KY1
+
+ EQUS "A"               ; "?" is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+
+ EQUS "B"               ; Up arrow
+
+ EQUS "C"               ; =
+
+ EQUS "D"               ; Right SHIFT
+
+ EQUS "E"               ; CLR/HOME
+
+ EQUS "F"               ; ;
+
+ EQUS "0"               ; *
+
+ EQUS "1"               ; £
+
+.KY3
+
+ EQUS "2"               ; "<" is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+
+ EQUS "3"               ; @
+
+ EQUS "4"               ; :
+
+.KY4
+
+ EQUS "5"               ; ">" is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+
+ EQUS "6"               ; -
+
+ EQUS "7"               ; L
+
+.KY20
+
+ EQUS "8"               ; "P" is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+
+ EQUS "9"               ; +
+
+ EQUS "A"               ; N
+
+ EQUS "B"               ; O
+
+ EQUS "C"               ; K
+
+.KY16
+
+ EQUS "D"               ; "M" is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+
+ EQUS "E"               ; 0
+
+.KY18
+
+ EQUS "F"               ; "J" is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+
+ EQUS "0"               ; I
+
+ EQUS "1"               ; 9
+
+ EQUS "2"               ; V
+
+.KY15
+
+ EQUS "3"               ; "U" is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+
+ EQUS "4"               ; H
+
+ EQUS "5"               ; B
+
+ EQUS "6"               ; 8
+
+ EQUS "7"               ; G
+
+ EQUS "8"               ; Y
+
+ EQUS "9"               ; 7
+
+.KY5
+
+ EQUS "A"               ; "X" is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+
+.KY14
+
+ EQUS "B"               ; "T" is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+
+ EQUS "C"               ; F
+
+.KY19
+
+ EQUS "D"               ; "C" is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+
+ EQUS "E"               ; 6
+
+ EQUS "F"               ; D
+
+ EQUS "0"               ; R
+
+ EQUS "1"               ; 5
+
+ EQUS "2"               ; Left SHIFT
+
+.KY17
+
+ EQUS "3"               ; "E" is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+
+.KY6
+
+ EQUS "4"               ; "S" is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+
+ EQUS "5"               ; Z
+
+ EQUS "6"               ; 4
+
+.KY7
+
+ EQUS "7"               ; "A" is being pressed
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
+                        ;
+                        ; This is also set when the joystick fire button has
+                        ; been pressed
+
+ EQUS "8"               ; W
+
+ EQUS "9"               ; 3
+
+ EQUS "A"               ; Cursor up/down
+
+ EQUS "B"               ; F5
+
+ EQUS "C"               ; F3
+
+ EQUS "D"               ; F1
+
+ EQUS "E"               ; F7
+
+ EQUS "F"               ; Cursor left/right
+
+ EQUS "0"               ; RETURN
+
+ EQUS "1"               ; INS/DEL
+
+ EQUS "234567"          ; These bytes appear to be unused
 
 ; ******************************************************************************
 ;
@@ -33097,13 +33481,19 @@ ENDIF
 ; Specifically, this routine toggles the configuration settings for the
 ; following keys:
 ;
-;   * CAPS LOCK toggles keyboard flight damping (0)
+;   * RUN/STOP toggles keyboard flight damping (0)
 ;   * A toggles keyboard auto-recentre (1)
 ;   * X toggles author names on start-up screen (2)
 ;   * F toggles flashing console bars (3)
 ;   * Y toggles reverse joystick Y channel (4)
 ;   * J toggles reverse both joystick channels (5)
 ;   * K toggles keyboard and joystick (6)
+;   * M toggles docking music (7)
+;   * T toggles the current media between tape and disk (8)
+;   * P toggles planetary details (9)
+;   * C toggles whether docking music can be toggled (10)
+;   * E swaps the docking and title music (11)
+;   * B toggles whether sounds are played during music (12)
 ;
 ; The numbers in brackets are the configuration options that we pass in Y. We
 ; pass the ASCII code of the key that has been pressed in X, and the option to
@@ -33114,10 +33504,10 @@ ENDIF
 ;
 ; Arguments:
 ;
-;   X                   The ASCII code of the key that's been pressed
+;   X                   The internal number of the key that's been pressed
 ;
 ;   Y                   The number of the configuration option to check against
-;                       from the list above (i.e. Y must be from 0 to 6)
+;                       from the list above (i.e. Y must be from 0 to 12)
 ;
 ; ******************************************************************************
 
@@ -33201,8 +33591,8 @@ ENDIF
 ;
 ; ------------------------------------------------------------------------------
 ;
-; This routine zeroes the 17 key logger locations from KL to KY20, and resets
-; the 40 variable bytes from LSP to TYPE.
+; This routine zeroes the 17 key logger locations from KY1 to KY20 and the key
+; variable at KL, and resets the 40 variable bytes from LSP to TYPE.
 ;
 ; Returns:
 ;
@@ -33215,7 +33605,7 @@ ENDIF
 .U%
 
  LDA #0                 ; Set A to 0, as this means "key not pressed" in the
-                        ; key logger at KL
+                        ; key logger at KLO
 
  LDY #56                ; We want to clear the 16 key logger locations from KY1
                         ; to KY20, and we want to zero the 40 variable bytes
@@ -33228,11 +33618,10 @@ ENDIF
  DEY                    ; Decrement the counter
 
  BNE DKL3               ; And loop back for the next key, until we have just
-                        ; KL+1
+                        ; KLO+1
 
- STA KL                 ; Clear the first entry in the key logger, which is used
-                        ; for logging keys that don't appear in the keyboard
-                        ; table
+ STA KL                 ; Clear KL, which is used for logging keys that don't
+                        ; appear in the keyboard table
 
  RTS                    ; Return from the subroutine
 
@@ -33515,7 +33904,8 @@ ENDIF
 
  LDX thiskey            ; Fetch the key pressed from thiskey in the key logger
 
- STX KL                 ; Store X in KL, byte #0 of the key logger
+ STX KL                 ; Store X in KL, which is used to store the value of the
+                        ; last key pressed
 
  CPX #$40               ; If INST/DEL is not being pressed, jump to DK2 below,
  BNE DK2                ; otherwise let's process the configuration keys
@@ -33583,10 +33973,10 @@ ENDIF
 
 .DK7
 
- CPX #$07               ; If "<-" is not being pressed, skip over the next
+ CPX #$07               ; If left arrow is not being pressed, skip over the next
  BNE P%+5               ; instruction
 
- JMP DEATH2             ; "<-" is being pressed, so jump to DEATH2 to end
+ JMP DEATH2             ; Left arrow is being pressed, so jump to DEATH2 to end
                         ; the game
 
  CPX #$0D               ; If CLR/HOME is not being pressed, we are still paused,
@@ -35088,6 +35478,12 @@ ENDIF
 ;    Summary: Lookup table for converting a text y-coordinate to the low byte
 ;             of the address of the start of the character row
 ;
+; ------------------------------------------------------------------------------
+;
+; In the text view, screen RAM is used to determine the colour of each on-screen
+; character, so this table is used to look up the address of the colour
+; information for the start of a specific text row.
+;
 ; ******************************************************************************
 
 .celllookl
@@ -35104,7 +35500,13 @@ ENDIF
 ;       Type: Variable
 ;   Category: Drawing pixels
 ;    Summary: Lookup table for converting a text y-coordinate to the high byte
-;             of the address of the start of the character row
+;             of the address of the start of the character row in screen RAM
+;
+; ------------------------------------------------------------------------------
+;
+; In the text view, screen RAM is used to determine the colour of each on-screen
+; character, so this table is used to look up the address of the colour
+; information for the start of a specific text row.
 ;
 ; ******************************************************************************
 
@@ -40792,11 +41194,16 @@ ENDIF
  TAX                    ; Copy A into X, so X is now in the range 0 to 7
 
  LDA TRIBTA,X           ; Look up the X-th entry in the TRIBTA table, which will
- STA TRIBCT             ; change X from 7 to 6, but leave X alone otherwise
+                        ; change X from 7 to 6, but leave X alone otherwise
                         ; (this is a pretty inefficient way to do this, so
                         ; presumably the TRIBTA table approach was used during
                         ; development to fine-tune the relationship between
                         ; Trumble counts and the number of sprites)
+
+ STA TRIBCT             ; Store A in TRIBCT to record the number of Trumble
+                        ; sprites to show on-screen, which is in the range 0 to
+                        ; 6 (as the six sprites from 2 to 7 are allocated to the
+                        ; Trumbles)
 
  LDA TRIBMA,X           ; The TRIBMA table contains sprite-enable flags for use
                         ; with VIC register $15, where the byte at position X
@@ -42187,7 +42594,8 @@ ENDIF
 ;       Name: COLD
 ;       Type: Subroutine
 ;   Category: Loader
-;    Summary: Configure memory and set up NMI and character handlers ???
+;    Summary: Configure memory, set up interrupt handlers and configure the
+;             VIC-II, SID and CIA chips
 ;
 ; ******************************************************************************
 
@@ -42234,7 +42642,7 @@ ENDIF
                         ; See the memory map at the top of page 264 in the
                         ; Programmer's Reference Guide
 
- SEI                    ; Disable interrupts while we configure the VIC-II, CIA2
+ SEI                    ; Disable interrupts while we configure the VIC-II, CIA
                         ; and SID chips and update the interrupt handlers
 
 IF NOT(USA%)
@@ -43731,12 +44139,12 @@ ENDIF
 ;
 ;   COMY                The screen pixel y-coordinate of the dash
 ;
-;   COMC                The colour and thickness of the dash: ???
+;   COMC                The colour and thickness of the dash:
 ;
-;                         * $F0 = a double-height dash in yellow/white, for when
+;                         * #YELLOW = a double-height dash in yellow, for when
 ;                           the object in the compass is in front of us
 ;
-;                         * $FF = a single-height dash in green/cyan, for when
+;                         * #GREEN = a single-height dash in green, for when
 ;                           the object in the compass is behind us
 ;
 ; ******************************************************************************
@@ -44208,14 +44616,23 @@ ENDIF
  STA (SC),Y
  DEY
  BPL RRL1
- LDY YC
- LDA celllookl,Y
- STA SC
- LDA celllookh,Y
- STA SC+1
- LDY XC
- LDA COL2
- STA (SC),Y
+
+ LDY YC                 ; Set SC(1 0) to the address of the start of the current
+ LDA celllookl,Y        ; text row in screen RAM, by looking up the address from
+ STA SC                 ; the celllookl and celllookh tables for the row given
+ LDA celllookh,Y        ; in YC
+ STA SC+1               ;
+                        ; In the text view, screen RAM is used to determine the
+                        ; colour of each on-screen character, so SC(1 0) is now
+                        ; set to the address of the colour information for the
+                        ; start of the current text row
+
+ LDY XC                 ; Set the contents of SC(1 0) + XC to COL2
+ LDA COL2               ;
+ STA (SC),Y             ; This sets the XC-th byte in SC(1 0) to COL2, which
+                        ; sets the colour information for the XC-th character in
+                        ; the current text row to COL2 - in other words, this
+                        ; sets the colour of the character we just drew to COL2
 
 .RR4
 
