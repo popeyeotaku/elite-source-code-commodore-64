@@ -196,29 +196,64 @@ ENDIF
 
  YINT = $27             ; Internal key number for key "Y" (Y/N)
 
- RED = $55              ; Four multicolour bitmap mode pixels of colour 1
-                        ; (red) for the dashboard dials
+ RED = %01010101        ; Four multicolour bitmap mode pixels of colour %01,
+                        ; which is mapped to the danger colour for the dashboard
+                        ; dials, or red on the scanner, via the colour mapping
+                        ; in sdump (top nibble)
 
- YELLOW = $AA           ; Four multicolour bitmap mode pixels of colour 2
-                        ; (yellow) for the dashboard dials
+ YELLOW = %10101010     ; Four multicolour bitmap mode pixels of colour %10,
+                        ; which is mapped to the normal indicator colour for
+                        ; the dashboard dials, or yellow on the scanner, via the
+                        ; colour mapping in sdump (bottom nibble)
 
- GREEN = $FF            ; Four multicolour bitmap mode pixels of colour 3
-                        ; (green) for the dashboard dials
+ GREEN = %11111111      ; Four multicolour bitmap mode pixels of colour %11,
+                        ; which is mostly mapped to green for the notched lines
+                        ; on the dashboard, or light green on the scanner, via
+                        ; the colour mapping in cdump (bottom nibble)
 
- RED2 = $27             ; Colours for Missile Blobs ???
- GREEN2 = $57
- YELLOW2 = $87
- BLACK2 = $B7
+ WHITE = %01011010      ; Four multicolour bitmap mode pixels of colours %01,
+                        ; %01, %10 and %10, for showing Thargoids on the scanner
+                        ; with a striped design of red and yellow
 
- MAG2 = $40             ; Colour 4 for violet text, for player input in the text
+ BLUE = YELLOW          ; Ship that are set to a scanner colour of BLUE in the
+                        ; scacol table will actually be shown in yellow
+
+ CYAN = YELLOW          ; Ship that are set to a scanner colour of CYAN in the
+                        ; scacol table will actually be shown in yellow
+
+ MAG = YELLOW           ; Ship that are set to a scanner colour of MAG in the
+                        ; scacol table will actually be shown in yellow
+
+ RED2 = $27             ; A multicolour bitmap mode palette byte for screen RAM
+                        ; that sets red (2) for %01 in the bitmap and yellow (7)
+                        ; for %10 in the bitmap, for displaying a red missile
+                        ; indicator
+
+ GREEN2 = $57           ; A multicolour bitmap mode palette byte for screen RAM
+                        ; that sets green (5) for %01 in the bitmap and yellow
+                        ; (7) for %10 in the bitmap, for displaying a green
+                        ; missile indicator
+
+ YELLOW2 = $87          ; A multicolour bitmap mode palette byte for screen RAM
+                        ; that sets orange (8) for %01 in the bitmap and yellow
+                        ; (7) for %10 in the bitmap, for displaying an orange
+                        ; missile indicator
+
+ BLACK2 = $B7           ; A multicolour bitmap mode palette byte for screen RAM
+                        ; that sets dark grey ($B) for %01 in the bitmap and
+                        ; yellow (7) for %10 in the bitmap, for displaying an
+                        ; empty missile indicator
+
+ MAG2 = $40             ; A multicolour text mode palette byte for screen RAM
+                        ; that displays purple (4) foreground text on a black
+                        ; (0) background for showing player input in the text
                         ; view
 
- BLUE = YELLOW          ; ???
- CYAN = YELLOW
- MAG = YELLOW
- WHITE = $5A
-
- BULBCOL = $E0          ; ???
+ BULBCOL = $E0          ; A multicolour bitmap mode palette byte that is EOR'd
+                        ; into screen RAM to toggle the E.C.M. and space station
+                        ; indicator bulbs in light blue ($E), as the "E" and "S"
+                        ; are in colour %01, and this is initially set to black
+                        ; in the colour mapping in sdump
 
  sfxplas = 0            ; Sound 0  = Pulse lasers fired by us
 
@@ -329,14 +364,14 @@ ENDIF
  DLOC% = SCBASE+18*8*40 ; The address in the screen bitmap of the start of the
                         ; dashboard
 
- ECELL = SCBASE+$2400+23*40+11  ; The address in the screen bitmap of the E.C.M.
-                                ; indicator bulb ("E")
+ ECELL = SCBASE+$2400+23*40+11  ; The address in screen RAM of the colour byte
+                                ; for the E.C.M. indicator bulb ("E")
 
- SCELL = SCBASE+$2400+23*40+28  ; The address in the screen bitmap of the space
-                                ; station indicator ("S")
+ SCELL = SCBASE+$2400+23*40+28  ; The address in screen RAM of the colour byte
+                                ; for the space station indicator bulb ("S")
 
- MCELL = SCBASE+$2400+24*40+6   ; The address in the screen bitmap of the first
-                                ; missile indicator
+ MCELL = SCBASE+$2400+24*40+6   ; The address in screen RAM of the colour byte
+                                ; for the first missile indicator
 
  TAP% = $CF00           ; The staging area where we copy files after loading and
                         ; before saving
@@ -390,16 +425,16 @@ ENDIF
 
  LS% = $FFC0            ; The start of the descending ship line heap
 
- KERNALSVE = $FFD8      ; The kernal call to save a file to a device
+ KERNALSVE = $FFD8      ; The Kernal function to save a file to a device
 
- KERNALSETLFS = $FFBA   ; The kernal call to set the logical, first, and second
-                        ; addresses for file access
+ KERNALSETLFS = $FFBA   ; The Kernal function to set the logical, first, and
+                        ; second addresses for file access
 
- KERNALSETNAM = $FFBD   ; The kernal call to set a filename
+ KERNALSETNAM = $FFBD   ; The Kernal function to set a filename
 
- KERNALSETMSG = $FF90   ; The kernal call to control kernal messages
+ KERNALSETMSG = $FF90   ; The Kernal function to control Kernal messages
 
- KERNALLOAD = $FFD5     ; The kernal call to load a file from a device
+ KERNALLOAD = $FFD5     ; The Kernal function to load a file from a device
 
 ; ******************************************************************************
 ;
@@ -23373,7 +23408,7 @@ ENDIF
 ;       Type: Subroutine
 ;   Category: Utility routines
 ;    Summary: A routine that swaps zero page with the page at $CE00, so that
-;             zero page changes made by kernal routines can be reversed
+;             zero page changes made by Kernal functions can be reversed
 ;
 ; ******************************************************************************
 
@@ -27907,7 +27942,7 @@ ENDIF
 ;       Type: Subroutine
 ;   Category: Utility routines
 ;    Summary: A routine that swaps zero page with the page at $CE00, so that
-;             zero page changes made by kernal routines can be reversed
+;             zero page changes made by Kernal functions can be reversed
 ;
 ; ******************************************************************************
 
@@ -31884,11 +31919,11 @@ ENDIF
 ;LDA #0                 ; These instructions are commented out in the original
 ;JSR QUS1               ; source
 
- JSR KERNALSETUP        ; Set up memory so we can use the kernal routines, which
-                        ; includes swapping the contents of zero page with the
-                        ; page at $CE00 (so the kernal routines get a zero page
-                        ; that works for them, and any changes they make do not
-                        ; corrupt the game's zero page variables)
+ JSR KERNALSETUP        ; Set up memory so we can use the Kernal functions,
+                        ; which includes swapping the contents of zero page with
+                        ; the page at $CE00 (so the Kernal functions get a zero
+                        ; page that works for them, and any changes they make do
+                        ; not corrupt the game's zero page variables)
 
  LDA #LO(NA%+8)         ; ???
  STA $FD ; SC
@@ -31928,12 +31963,12 @@ ENDIF
  CLI                    ; Enable interrupts again
 
  JSR SWAPPZERO          ; The call to KERNALSETUP above swapped the contents of
-                        ; zero page with the page at $CE00, to ensure the kernal
+                        ; zero page with the page at $CE00, to ensure the Kernal
                         ; routines ran with their copy of zero page rather than
                         ; the game's zero page
                         ;
-                        ; We are done using the kernal routines, so now we swap
-                        ; them back so the kernal's zero page is moved to $CE00
+                        ; We are done using the Kernal functions, so now we swap
+                        ; them back so the Kernal's zero page is moved to $CE00
                         ; again, ready for next time, and the game's zero page
                         ; variables are once again set up, ready for the game
                         ; code to use
@@ -32007,14 +32042,14 @@ ENDIF
                         ; which we filled with the contents of zero page when we
                         ; started the game
                         ;
-                        ; This ensures that the kernal routines get a zero page
+                        ; This ensures that the Kernal functions get a zero page
                         ; that works for them, and we can repeat the swap once
-                        ; we are done with the kernal routines to ensure any
+                        ; we are done with the Kernal functions to ensure any
                         ; changes they make do not corrupt the game's zero page
                         ; variables
 
  LDA #%110              ; Set A to pass to the call to SETL1 so we page the
-                        ; kernal ROM and I/O into the memory map
+                        ; Kernal ROM and I/O into the memory map
 
  SEI                    ; Disable interrupts so we can scan the keyboard
                         ; without being hijacked
@@ -32030,7 +32065,7 @@ ENDIF
                         ; the I/O memory map at $D000-$DFFF, which gets mapped
                         ; to registers in the VIC-II video controller chip, the
                         ; SID sound chip, the two CIA I/O chips, and so on, and
-                        ; $E000-$FFFF, which gets mapped to the kernal ROM
+                        ; $E000-$FFFF, which gets mapped to the Kernal ROM
                         ;
                         ; See the memory map at the bottom of page 264 in the
                         ; Programmer's Reference Guide
@@ -32140,11 +32175,11 @@ ENDIF
 
 .LOD
 
- JSR KERNALSETUP        ; Set up memory so we can use the kernal routines, which
-                        ; includes swapping the contents of zero page with the
-                        ; page at $CE00 (so the kernal routines get a zero page
-                        ; that works for them, and any changes they make do not
-                        ; corrupt the game's zero page variables)
+ JSR KERNALSETUP        ; Set up memory so we can use the Kernal functions,
+                        ; which includes swapping the contents of zero page with
+                        ; the page at $CE00 (so the Kernal functions get a zero
+                        ; page that works for them, and any changes they make do
+                        ; not corrupt the game's zero page variables)
 
  LDA #0                 ; ???
  LDX #LO(TAP%)
@@ -32179,12 +32214,12 @@ ENDIF
  CLI                    ; Enable interrupts again
 
  JSR SWAPPZERO          ; The call to KERNALSETUP above swapped the contents of
-                        ; zero page with the page at $CE00, to ensure the kernal
+                        ; zero page with the page at $CE00, to ensure the Kernal
                         ; routines ran with their copy of zero page rather than
                         ; the game's zero page
                         ;
-                        ; We are done using the kernal routines, so now we swap
-                        ; them back so the kernal's zero page is moved to $CE00
+                        ; We are done using the Kernal functions, so now we swap
+                        ; them back so the Kernal's zero page is moved to $CE00
                         ; again, ready for next time, and the game's zero page
                         ; variables are once again set up, ready for the game
                         ; code to use
@@ -33489,7 +33524,7 @@ ENDIF
 ;   * J toggles reverse both joystick channels (5)
 ;   * K toggles keyboard and joystick (6)
 ;   * M toggles docking music (7)
-;   * T toggles the current media between tape and disk (8)
+;   * T toggles current media between tape and disk (8)
 ;   * P toggles planetary details (9)
 ;   * C toggles whether docking music can be toggled (10)
 ;   * E swaps the docking and title music (11)
