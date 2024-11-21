@@ -362,7 +362,7 @@ ENDIF
  SCBASE = $4000         ; The address of the screen bitmap
 
  DLOC% = SCBASE+18*8*40 ; The address in the screen bitmap of the start of the
-                        ; dashboard
+                        ; dashboard (which starts character row 18)
 
  ECELL = SCBASE+$2400+23*40+11  ; The address in screen RAM of the colour byte
                                 ; for the E.C.M. indicator bulb ("E")
@@ -1017,8 +1017,15 @@ ENDIF
 
 .dontclip
 
- SKIP 1                 ; This is set to 0 in the RES2 routine, but the value is
-                        ; never actually read
+ SKIP 1                 ; A flag that contols whether the LL145 routine clips
+                        ; lines to the dimensions of the space view (which we
+                        ; want to disable in the Short-range Chart, as there is
+                        ; no dashboard and the chart needs to use the whole
+                        ; screen)
+                        ;
+                        ;   * Bit 7 clear = clipping is enabled
+                        ;
+                        ;   * Bit 7 set = clipping is disabled
 
 .Yx2M1
 
@@ -2851,7 +2858,8 @@ ENDIF
 ;       Name: SPMASK
 ;       Type: Variable
 ;   Category: Missions
-;    Summary: Masks for 
+;    Summary: Masks for updating sprite bits in VIC+$10 for the top bit of the
+;             9-bit x-coordinates of the Trumble sprites
 ;
 ; ******************************************************************************
 
@@ -2974,7 +2982,9 @@ ENDIF
  STA TRIBVX,Y           ; entry from the TRIBDIRH and TRIBDIR tables
  LDA TRIBDIRH,X         ;
  STA TRIBVXH,Y          ; These tables contain four 16-bit directions, so this
-                        ; randomly sets (TRIBVXH TRIBVX) to 0, 1, -1 or 0
+                        ; randomly sets (TRIBVXH TRIBVX) to 0, 1, -1 or 0 (so
+                        ; there's a 50% chance of no horizontal movement, and a
+                        ; 25% chance of movement left or right)
                         ;
                         ; (TRIBVXH TRIBVX) now contains the updated x-axis
                         ; velocity of Trumble Y, i.e. the amount that it moves
@@ -2987,7 +2997,9 @@ ENDIF
                         ; to move in
 
  LDA TRIBDIR,X          ; Set TRIBVX+1 for Trumble sprite Y to the X-th entry
- STA TRIBVX+1,Y         ; from the TRIBDIR table
+ STA TRIBVX+1,Y         ; from the TRIBDIR table (so there's a 50% chance of no
+                        ; vertical movement, and a 25% chance of movement up or
+                        ; down)
                         ;
                         ; TRIBVX+1 now contains the updated y-axis velocity of
                         ; Trumble Y, i.e. the amount that it moves vertically in
@@ -3443,10 +3455,13 @@ ENDIF
                         ; any more (or it never was), so skip the following
                         ; instruction
 
- LDY #$D0               ; ???
- STY moonflower
- LDY #sfxbomb
- JSR NOISE
+ LDY #%11010000         ; Set bit 4 of moonflower so the screen flickers between
+ STY moonflower         ; multicolour and standard mode, as the IRQ handler sets
+                        ; VIC+$16 to the value of moonflower, and bit 4 of
+                        ; VIC+$16 configures multicolour mode when set
+
+ LDY #sfxbomb           ; Call the NOISE routine with Y = sfxbomb to make the
+ JSR NOISE              ; sound of the energy bomb going off
 
 .MA76
 
@@ -3563,26 +3578,46 @@ ENDIF
  STA LAS
  STA LAS2
 
- LDY #sfxplas           ; ???
- PLA
- PHA
- BMI bmorarm
- CMP #Mlas
- BNE P%+4
- LDY #sfxmlas
- BNE custard
+                        ; We now set Y to the correct sound to pass to the NOISE
+                        ; routine to make the sound of the laser firing
+
+ LDY #sfxplas           ; Set Y to the sound of a pulse laser firing
+
+ PLA                    ; Set A to the current view's laser power, which we
+ PHA                    ; stored on the stack above (and leave the value on
+                        ; the stack)
+
+ BMI bmorarm            ; If A >= 128, jump to bmorarm to check whether this is
+                        ; a beam laser or a military laser
+
+ CMP #Mlas              ; If A is not the power for a mining laser, skip the
+ BNE P%+4               ; following instruction (and then jump to custard with
+                        ; Y still set to the sound of a pulse laser firing)
+
+ LDY #sfxmlas           ; Set Y to the sound of a mining laser firing
+
+ BNE custard            ; Jump to custard to make the sound in Y, i.e. a pulse
+                        ; or minig laser (this BNE is effectively a JMP as
+                        ; either Y is never zero, or we jumped here with a BNE)
 
 .bmorarm
 
- CMP #Armlas
- BEQ P%+5
- LDY #sfxblas
- EQUB $2C
- LDY #sfxalas
+ CMP #Armlas            ; If this is a military laser, skip the following two
+ BEQ P%+5               ; instructions to set Y to the sound of a mlitary laser
+
+ LDY #sfxblas           ; This is not a military laser, so it must be a beam
+                        ; laser, so set Y to the sound of a beam laser firing
+
+ EQUB $2C               ; Skip the next instruction by turning it into
+                        ; $2C $A0 $0B, or BIT $0BA0, which does nothing apart
+                        ; from affect the flags
+
+ LDY #sfxalas           ; Set Y to the sound of a military laser firing
 
 .custard
 
- JSR NOISE
+ JSR NOISE              ; Call NOISE to make the sound of the appropriate laser
+                        ; firing (pulse, beam, mining or military)
 
  JSR LASLI              ; Call LASLI to draw the laser lines
 
@@ -4422,7 +4457,7 @@ ENDIF
                         ; instruction as the bomb is still going off
 
  JSR BOMBOFF            ; Our energy bomb has finished going off, so call
-                        ; BOMBOFF to turn off the bomb effect ???
+                        ; BOMBOFF to turn off the bomb effect
 
 .MA77
 
@@ -5017,11 +5052,16 @@ ENDIF
 
 .BOMBOFF
 
- LDA #$C0
- STA moonflower
- LDA #0
- STA welcome
- RTS
+ LDA #%11000000         ; Clear bit 4 of moonflower so the screen no longer
+ STA moonflower         ; flickers between multicolour and standard mode, but
+                        ; instead stays in standard mode
+
+ LDA #0                 ; Set welcome to 0 to stop the background colour from
+ STA welcome            ; flashing different colours (as 0 represents black, and
+                        ; the energy bomb flashes between black and the colour
+                        ; in welcome)
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
@@ -6976,8 +7016,14 @@ ENDIF
 
 .TWFR
 
- EQUD $1F3F7FFF         ; ???
- EQUD $0103070F
+ EQUB %11111111
+ EQUB %01111111
+ EQUB %00111111
+ EQUB %00011111
+ EQUB %00001111
+ EQUB %00000111
+ EQUB %00000011
+ EQUB %00000001
 
 ; ******************************************************************************
 ;
@@ -7141,12 +7187,15 @@ ENDIF
                         ; that we need to draw into, as an offset from the start
                         ; of the row, we clear bits 0-2
 
- CLC                    ; ???
- ADC ylookupl,Y
- STA SC
- LDA ylookuph,Y
- ADC #0
+ CLC                    ; The ylookup table lets us look up the 16-bit address
+ ADC ylookupl,Y         ; of the start of a character row containing a specific
+ STA SC                 ; pixel, so this fetches the address for the start of
+ LDA ylookuph,Y         ; the character row containing the y-coordinate in Y,
+ ADC #0                 ; and adds it to the row offset we just calculated in A
  STA SC+1
+
+                        ; So SC(1 0) now contains the address of the first pixel
+                        ; in the character block containing the (x, y)
 
  TYA                    ; Set Y = Y AND %111
  AND #%00000111
@@ -10184,10 +10233,14 @@ ENDIF
 
 .DIALS
 
- LDA #LO(DLOC%+$F0)     ; ???
- STA SC
- LDA #HI(DLOC%+$F0)
- STA SC+1
+ LDA #LO(DLOC%+8*30)    ; Set SC(1 0) to the screen bitmap address for the
+ STA SC                 ; character block containing the left end of the top
+ LDA #HI(DLOC%+8*30)    ; indicator in the right part of the dashboard, the one
+ STA SC+1               ; showing our speed
+                        ;
+                        ; DLOC% is the screen address of the dashboard (which
+                        ; starts on character row 18) so this sets the address
+                        ; to character 30 on that row
 
  JSR PZW                ; Call PZW to set A to the colour for dangerous values
                         ; and X to the colour for safe values
@@ -10412,10 +10465,14 @@ ENDIF
 ;
 ; ******************************************************************************
 
- LDA #LO(DLOC%+$30)     ; ???
- STA SC
- LDA #HI(DLOC%+$30)
- STA SC+1
+ LDA #LO(DLOC%+8*6)     ; Set SC(1 0) to the screen bitmap address for the
+ STA SC                 ; character block containing the left end of the top
+ LDA #HI(DLOC%+8*6)     ; indicator in the left part of the dashboard, the one
+ STA SC+1               ; showing the forward shield
+                        ;
+                        ; DLOC% is the screen address of the dashboard (which
+                        ; starts on character row 18) so this sets the address
+                        ; to character 8 on that row
 
  LDA #YELLOW            ; Set K (the colour we should show for high values) to
  STA K                  ; yellow
@@ -10805,9 +10862,19 @@ ENDIF
                         ; drawing blank characters after this one until we reach
                         ; the end of the indicator row
 
- LDA CTWOS,X            ; ???
+ LDA CTWOS,X            ; CTWOS is a table of ready-made 2-pixel multicolour
+                        ; bitmap mode bytes
+                        ;
+                        ; This fetches a 2-pixel multicolour bitmap mode byte
+                        ; with the pixel position at 2 * X, so the pixel is at
+                        ; the offset that we want for our vertical bar
 
- AND #YELLOW
+ AND #YELLOW            ; The 4-pixel multicolour bitmap mode colour byte in
+                        ; YELLOW represents four pixels of colour %10 (3), which
+                        ; is yellow in the dashboard palette. We AND this with A
+                        ; so that we only keep the pixel that matches the
+                        ; position of the vertical bar (i.e. A is acting as a
+                        ; mask on the 4-pixel colour byte)
 
  JMP DLL12              ; Jump to DLL12 to skip the code for drawing a blank,
                         ; and move on to drawing the indicator
@@ -13579,7 +13646,8 @@ ENDIF
 
 .LL164
 
- JSR HYPNOISE           ; ???
+ JSR HYPNOISE           ; Call HYPNOISE to make the sound of the hyperspace
+                        ; drive being engaged
 
  LDA #4                 ; Set the step size for the hyperspace rings to 4, so
                         ; there are more sections in the rings and they are
@@ -17109,13 +17177,13 @@ ENDIF
 
 .sightcol
 
- EQUB 7                 ; Pulse lasers have ??? sights
+ EQUB 7                 ; Pulse lasers have yellow sights
 
- EQUB 7                 ; Beam lasers have ??? sights
+ EQUB 7                 ; Beam lasers have yellow sights
 
- EQUB 13                ; Military lasers have ??? sights
+ EQUB 13                ; Military lasers have light green sights
 
- EQUB 4                 ; Mining lasers have ??? sights
+ EQUB 4                 ; Mining lasers have purple sights
 
 ; ******************************************************************************
 ;
@@ -17217,7 +17285,8 @@ ENDIF
 ;
 ; ******************************************************************************
 
- ORG C% ; $7300 in source disk, $6A00 in gma85 ???
+ ORG C%                 ; Set the assembly address for the second block of game
+                        ; code (ELITE C onwards), which is defined in C%
 
  CODE_D% = P%
 
@@ -18226,9 +18295,8 @@ ENDIF
 ;LDA #CYAN              ; These instructions are commented out in the original
 ;JSR DOCOL              ; source
 
- LDA #16                ; Switch to the mode 1 palette for the trade view, which
- JSR DOVDU19            ; is yellow (colour 1), magenta (colour 2) and white
-                        ; (colour 3) ???
+ LDA #16                ; Switch to the palette for the trade view, though this
+ JSR DOVDU19            ; doesn't actually do anything in this version of Elite
 
  LDA #7                 ; Move the text cursor to column 7
  JSR DOXC
@@ -18839,7 +18907,7 @@ ENDIF
 
 .gnum
 
- LDA #MAG2              ; Switch the text colour to violet
+ LDA #MAG2              ; Switch the text colour to purple
  STA COL2
 
  LDX #0                 ; We will build the number entered in R, so initialise
@@ -19563,14 +19631,20 @@ ENDIF
  STA Yx2M1              ; to cover the size of the chart part of the Short-range
                         ; Chart view
 
- STA dontclip           ; ???
+ STA dontclip           ; Set dontclip to 199 (which has bit 7 set) to disable
+                        ; line-clipping in the LL145 routine
+                        ;
+                        ; This allows the Short-range Chart to take up the whole
+                        ; of the screen, rather than being clipped to the
+                        ; dimensions of the space view (which we don't want to
+                        ; do as there is no dashboard in the chart view)
 
  LDA #128               ; Clear the top part of the screen, draw a white border,
  JSR TT66               ; and set the current view type in QQ11 to 128 (Short-
                         ; range Chart)
 
- LDA #16                ; ???
- JSR DOVDU19
+ LDA #16                ; Switch to the palette for the trade view, though this
+ JSR DOVDU19            ; doesn't actually do anything in this version of Elite
 
 ;LDA #CYAN              ; These instructions are commented out in the original
 ;JSR DOCOL              ; source
@@ -19807,10 +19881,12 @@ ENDIF
  JMP TT182              ; Otherwise jump back up to TT182 to process the next
                         ; system
 
- LDA #0                 ; ???
- STA dontclip
- LDA #2*Y-1
- STA Yx2M1
+ LDA #0                 ; Set dontclip to 0 to enable line-clipping in the LL145
+ STA dontclip           ; routine, as we only disable this for the Short-range
+                        ; Chart
+
+ LDA #2*Y-1             ; Set Yx2M1 to the number of pixel lines in the space
+ STA Yx2M1              ; view
 
  RTS                    ; Return from the subroutine
 
@@ -20265,13 +20341,19 @@ ENDIF
  BPL sob                ; Loop back to copy the next byte until we have copied
                         ; all six seed bytes
 
- LDA #7                 ; ???
+ LDA #7                 ; Move the text cursor to column 7
  JSR DOXC
- LDA #23
- LDY QQ11
- BNE P%+4
+
+ LDA #23                ; Set A = 23 to use as the text row for views other
+                        ; than the space view
+
+ LDY QQ11               ; If QQ11 = 0 then this is the space view, so set A = 17
+ BNE P%+4               ; to use as the text row
  LDA #17
- JSR DOYC
+
+ JSR DOYC               ; Move the text cursor to row 17 (in the space view) or
+                        ; 23 (otherwise), which is in the middle of the bottom
+                        ; text row)
 
  LDA #0                 ; Set QQ17 = 0 to switch to ALL CAPS
  STA QQ17
@@ -24498,7 +24580,10 @@ ENDIF
 
 .FLFLLS
 
- LDY #199               ; ???
+ LDY #199               ; Set Y to the screen height of (which is 200 pixels) so
+                        ; we can draw suns on the entire screen (so we can draw
+                        ; systems on the Short-range Chart, which uses the
+                        ; entire screen height)
 
  LDA #0                 ; Set A to 0 so we can zero-fill the LSO block
 
@@ -28119,7 +28204,7 @@ ENDIF
 ;       Name: NOSPRITES
 ;       Type: Subroutine
 ;   Category: Missions
-;    Summary: ???
+;    Summary: Disable all sprites and remove them from the screen
 ;
 ; ******************************************************************************
 
@@ -28963,8 +29048,9 @@ ENDIF
  LDA #$10               ; Switch the text colour to white
  STA COL2
 
- LDA #0                 ; Set dontclip to 0 ???
- STA dontclip
+ LDA #0                 ; Set dontclip to 0 to enable line-clipping in the LL145
+ STA dontclip           ; routine, as we only disable this for the Short-range
+                        ; Chart
 
  LDA #2*Y-1             ; Set Yx2M1 to the number of pixel lines in the space
  STA Yx2M1              ; view
@@ -29926,8 +30012,9 @@ ENDIF
 
 .NOLASCT
 
- LDA QQ11               ; ???
- BNE P%+5
+ LDA QQ11               ; If QQ11 is non-zero then this is not the space view,
+ BNE P%+5               ; so skip the following instruction as only the space
+                        ; view has the dashboard
 
  JSR DIALS              ; Call DIALS to update the dashboard
 
@@ -30146,7 +30233,7 @@ ENDIF
  BNE P%+5               ; Buy Cargo screen, returning from the subroutine using
  JMP TT219              ; a tail call
 
- CMP #$12               ; ???
+ CMP #$12               ; If "@" was not pressed, skip to nosave
  BNE nosave
 
  JSR SVE                ; "@" was pressed, so call SVE to show the disc access
@@ -30706,7 +30793,8 @@ ENDIF
                         ; move everything about, as well as decrementing the
                         ; value in LASCT
 
- JSR NOSPRITES          ; ???
+ JSR NOSPRITES          ; Call NOSPRITES to disable all sprites and remove them
+                        ; from the screen
 
 .D2
 
@@ -31151,8 +31239,8 @@ ENDIF
 
  JSR ZEKTRAN            ; Call ZEKTRAN to clear the key logger
 
- LDA #32                ; Set the mode 1 palette to yellow (colour 1), white
- JSR DOVDU19            ; (colour 2) and cyan (colour 3)
+ LDA #32                ; Switch to the palette for the title view, though this
+ JSR DOVDU19            ; doesn't actually do anything in this version of Elite
 
  LDA #13                ; Clear the top part of the screen, draw a white border,
  JSR TT66               ; and set the current view type in QQ11 to 13 (rotating
@@ -31612,7 +31700,7 @@ ENDIF
 
 .MT26
 
- LDA #MAG2              ; Switch the text colour to violet
+ LDA #MAG2              ; Switch the text colour to purple
  STA COL2
 
  LDY #8                 ; Wait for 8/50 of a second (0.16 seconds)
@@ -32783,18 +32871,24 @@ ENDIF
 ; The keyboard matrix layout can be seen at https://sta.c64.org/cbm64kbdlay.html
 ;
 ; The KEYLOOK table mirrors the structure of the keyboard matrix, though it's
-; reversed so that KEYLOOK reads the keyboard matrix from the bottom corner of
-; the above diagram, working right to left and down to up.
+; reversed so that KEYLOOK maps to the keyboard matrix from the bottom corner of
+; the above diagram, working right to left and down to up. (The RDKEY routine
+; is responsible for filling the KEYLOOK table, and it chooses to work through
+; the table in this direction).
 ;
 ; The RDKEY routine scans the keyboard matrix and sets each entry in KEYLOOK
 ; according to whether that key is being pressed. The entries that map to the
 ; flight keys have labels KY1 through KY7 for the main flight controls, and
 ; KY12 to KY20 for the secondary controls, so the main game code can check
 ; whether a key is being pressed by simply checking for non-zero values in the
-; relevant KY entries.
+; relevant KY entries. The order of the KY labels is strange because they are
+; the same labels as in the BBC Micro version, and the order of the keys in
+; the logger is completely different on the Commodore 64 (the labels are ordered
+; from KY1 to KY7 and KY12 to KY20 in the BBC Micro version).
 ;
 ; The index of a key in the KEYLOOK table is referred to as the "internal key
-; number" throughout this documentation.
+; number" throughout this documentation, so the "@" key has an internal key
+; number of 18 (or $12), for example, as it is stored at KEYLOOK+18.
 ;
 ; Note that the initial content of the KEYLOOK table is a simple repeated string
 ; of "123456789ABCDEF0", as this was used in the original source code to create
@@ -38474,8 +38568,10 @@ ENDIF
 
 .LL147
 
- BIT dontclip           ; ???
- BMI LL146
+ BIT dontclip           ; If bit 7 of dontclip is set then line-clipping is
+ BMI LL146              ; disabled (as this is the Short-range Chart), so jump
+                        ; to LL146 to return from the subroutine without
+                        ; clipping the line
 
  LDX #Y*2-1             ; Set X = #Y * 2 - 1. The constant #Y is 96, the
                         ; y-coordinate of the mid-point of the space view, so
@@ -41193,9 +41289,8 @@ ENDIF
 
  LDA #0                 ; Set A = 0, the type number of a space view
 
- JSR DOVDU19            ; Switch to the mode 1 palette for the space view,
-                        ; which is yellow (colour 1), red (colour 2) and cyan
-                        ; (colour 3)
+ JSR DOVDU19            ; Switch to the palette for the space view, though this
+                        ; doesn't actually do anything in this version of Elite
 
  LDY QQ11               ; If the current view is not a space view, jump up to LQ
  BNE LQ                 ; to set up a new space view
@@ -41434,7 +41529,7 @@ ENDIF
 
 .TRIBTA
 
- EQUB 0                 ; ???
+ EQUB 0
  EQUB 1
  EQUB 2
  EQUB 3
@@ -41980,13 +42075,13 @@ ENDIF
 ;       Name: HYPNOISE
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: ???
+;    Summary: Make the sound of the hyperspace drive being engaged
 ;
 ; ******************************************************************************
 
 .HYPNOISE
 
- LDY #sfxhyp1
+ LDY #sfxhyp1           ; ???
  LDA #$F5
  LDX #$F0
  JSR NOISE2
@@ -42008,12 +42103,22 @@ ENDIF
 
 .NOISE2
 
- BIT SOUR1
-;SEV
- STA XX15
+ BIT SOUR1              ; SOUR1 contains an RTS instruction, which has opcode
+                        ; $60 (or %01100000), and as the BIT instructions sets
+                        ; the V flag to bit 6 of its operand, this instruction
+                        ; sets the V flag
+                        ;
+                        ; There is no SEV instruction in the 6502, hence the
+                        ; need for this workaround
+
+ STA XX15               ; ???
  STX XX15+1
- EQUB $50
-;BVC   -Vol in A, Freq in X
+
+ EQUB $50               ; Skip the next instruction by turning it into
+                        ; $50 $B8, or BVC $B8, which does nothing because we
+                        ; set the V flag above
+
+                        ; Fall through into NOISE with the V flag set
 
 ; ******************************************************************************
 ;
@@ -42179,13 +42284,14 @@ ENDIF
 ;       Name: moonflower
 ;       Type: Variable
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: Controls the energy bomb effect by switching between multicolour
+;             and standard mode
 ;
 ; ******************************************************************************
 
 .moonflower
 
- EQUB $C0
+ EQUB %11000000   
 
 ; ******************************************************************************
 ;
@@ -42198,7 +42304,7 @@ ENDIF
 
 .caravanserai
 
- EQUB $C0
+ EQUB %11000000
 
 ; ******************************************************************************
 ;
@@ -42296,15 +42402,21 @@ ENDIF
  STA VIC+$1C ;Multicol
  LDA lotus,X
  STA VIC+$28 ;Sp1Col
- BIT BOMB
- BPL nobombef
- INC welcome
+
+ BIT BOMB               ; If bit 7 of BOMB is zero then the energy bomb is not
+ BPL nobombef           ; currently going off, so jump to nobombef to skip the
+                        ; following instruction
+
+ INC welcome            ; The energy bomb is going off, so increment welcome so
+                        ; we work our way through a range of background colours
 
 .nobombef
 
- LDA welcome,X
- STA VIC+$21
- LDA innersec,X
+ LDA welcome,X          ; Set VIC register $21 to the X-th entry in welcome, so
+ STA VIC+$21            ; we flash and change the background colour while the
+                        ; energy bomb is going off
+
+ LDA innersec,X         ; ???
  STA RASTCT
  BNE COMIRQ3
  TYA
@@ -44910,7 +45022,10 @@ ENDIF
  STX YC
  JSR BLUEBAND
  JSR zonkscanners
- JSR NOSPRITES
+
+ JSR NOSPRITES          ; Call NOSPRITES to disable all sprites and remove them
+                        ; from the screen
+
  LDY #31
  LDA #$70
 
@@ -45038,7 +45153,10 @@ ENDIF
 .nearlyxmas
 
  JSR BLUEBAND
- JSR NOSPRITES
+
+ JSR NOSPRITES          ; Call NOSPRITES to disable all sprites and remove them
+                        ; from the screen
+
  LDA #$FF
  STA DFLAG
  RTS
