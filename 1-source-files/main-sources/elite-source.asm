@@ -384,11 +384,11 @@ ENDIF
                         ; memory-mapped to the 29 bytes from $D400 to $D41C (see
                         ; page 461 of the Programmer's Reference Guide)
 
- CIA = $DC00            ; Registers for the CIA 1 I/O interface chip, which
+ CIA = $DC00            ; Registers for the CIA1 I/O interface chip, which
                         ; are memory-mapped to the 16 bytes from $DC00 to $DC0F
                         ; (see page 428 of the Programmer's Reference Guide)
 
- CIA2 = $DD00           ; Registers for the CIA 2 I/O interface chip, which
+ CIA2 = $DD00           ; Registers for the CIA2 I/O interface chip, which
                         ; are memory-mapped to the 16 bytes from $DD00 to $DD0F
                         ; (see page 428 of the Programmer's Reference Guide)
 
@@ -2000,11 +2000,17 @@ ENDIF
 
 .sprx
 
- SKIP 1                 ; ???
+ SKIP 1                 ; Contains the x-coordinate offset for the explosion
+                        ; sprite, i.e. the relative position of the sprite
+                        ; compared to the centre of the explosion, which needs
+                        ; to be set according to the size of the sprite
 
 .spry
 
- SKIP 1                 ; ???
+ SKIP 1                 ; Contains the y-coordinate offset for the explosion
+                        ; sprite, i.e. the relative position of the sprite
+                        ; compared to the centre of the explosion, which needs
+                        ; to be set according to the size of the sprite
 
 .TRIBCT
 
@@ -2196,7 +2202,7 @@ ENDIF
 ;       Type: Workspace
 ;    Address: $1D00 to $1D13
 ;   Category: Workspaces
-;    Summary: Variables used to store the game options
+;    Summary: Variables that are predominantly used to store the game options
 ;
 ; ******************************************************************************
 
@@ -2949,7 +2955,8 @@ ENDIF
                         ; "Trumble sprite Y" in the following)
                         ;
                         ; Note that Trumble Y uses sprite Y + 2, as sprites 0
-                        ; and 1 have other uses
+                        ; and 1 have other uses (they contain the laser sight
+                        ; sprite and the explosion sprite respectively)
 
  LDA #%101              ; Call SETL1 to set the 6510 input/output port to the
  JSR SETL1              ; following:
@@ -4249,9 +4256,7 @@ ENDIF
 
  CMP #(Armlas AND 127)  ; If the laser is not a military laser, jump to MA14+2
  BNE MA14+2             ; to skip the following, as only military lasers have
-                        ; any effect on the Constrictor or Cougar (or the Elite
-                        ; logo, should you ever bump into one of those out there
-                        ; in the black...)
+                        ; any effect on the Constrictor or Cougar
 
  LSR LAS                ; Divide the laser power of the current view by 4, so
  LSR LAS                ; the damage inflicted on the super-ship is a quarter of
@@ -6725,11 +6730,11 @@ ENDIF
 
  EQUD $10204080         ; These bytes appear to be unused; they contain a copy
  EQUD $01020408         ; of the TWOS variable, and the original source has a
- EQUW $4080             ; commented out label \.TWOS
+ EQUW $4080             ; commented out label .TWOS
 
  EQUD $030C30C0         ; These bytes appear to be unused; they contain a copy
                         ; of the DTWOS variable, and the original source has a
-                        ; commented out label \.DTWOS
+                        ; commented out label .DTWOS
 
 ; ******************************************************************************
 ;
@@ -24098,14 +24103,18 @@ ENDIF
 ;       Name: exlook
 ;       Type: Variable
 ;   Category: Drawing ships
-;    Summary: ???
+;    Summary: An unused block of explosion data
+;    Summary: A table to shift X left by one place when X is 0 or 1
 ;
 ; ******************************************************************************
 
 .exlook
 
- EQUB 0                 ; ???
- EQUB 2
+ EQUB %00               ; Looking up exlook,X will return X shifted left by one
+ EQUB %10               ; place, where X is 0 or 1
+                        ;
+                        ; This is used in the PTCLS2 routine to update the top
+                        ; bit of the 9-bit x-coordinate for the explosion sprite
 
 ; ******************************************************************************
 ;
@@ -24139,22 +24148,41 @@ ENDIF
                         ; See the memory map at the top of page 264 in the
                         ; Programmer's Reference Guide
 
- LDA INWK+7             ; ???
- CMP #7
- LDA #$FD
- LDX #44
- LDY #40
- BCS noexpand
- LDA #$FF
- LDX #32
- LDY #30
+                        ; We now set up sprite 1, so we can use it to show the
+                        ; explosion burst as a colourful sprite (along with the
+                        ; usual cloud of explosion particles)
+
+ LDA INWK+7             ; If z_hi >= 7 then set the following:
+ CMP #7                 ;
+ LDA #%11111101         ;   * A = %11111101
+ LDX #44                ;   * X = 44
+ LDY #40                ;   * Y = 40
+ BCS noexpand           ;
+ LDA #%11111111         ; otherwise set the following:
+ LDX #32                ;
+ LDY #30                ;   * A = %11111111
+                        ;   * X = 32
+                        ;   * Y = 30
 
 .noexpand
 
- STA VIC+$17
- STA VIC+$1D
- STX sprx
- STY spry
+ STA VIC+$17            ; Store A in VIC registers $17 and $1D, which determine
+ STA VIC+$1D            ; whether sprites are double height and double width
+                        ;
+                        ; So this set sprite 1 to be standard width and height
+                        ; when z_hi >= 7 (as bit 1 of A is clear), or double
+                        ; width and height when z_hi < 7 (as bit 1 of A is set)
+                        ;
+                        ; We are about to use sprite 1 to display the explosion
+                        ; sprite, so this means that explosions that are far
+                        ; away will show a smaller sprite than explosions that
+                        ; are closer
+
+ STX sprx               ; Store X and Y in sprx and spry, to be used as the
+ STY spry               ; x- and y-coordinate offsets for the explosion sprite
+                        ; (i.e. the relative position of the sprite compared to
+                        ; the centre of the explosion, which needs to be set
+                        ; according to the size of the sprite)
 
                         ; This part of the routine actually draws the explosion
                         ; cloud
@@ -24229,36 +24257,72 @@ ENDIF
  STY CNT                ; Set CNT to the index that points to the next vertex on
                         ; the ship line heap
 
- LDA K3+3               ; ??? draw sprite
- CLC
- ADC sprx ;32
+                        ; We now draw sprite 1, so it shows the explosion burst
+                        ; as a colourful sprite (along with the usual cloud of
+                        ; explosion particles)
+
+ LDA K3+3               ; Set (A SC) = K3(2 3) + (0 sprx)
+ CLC                    ;            = (x_hi x_lo) + x-coordinate offset
+ ADC sprx
  STA SC
  LDA K3+2
  ADC #0
- BMI yonk
- CMP #2
- BCS yonk
- TAX
- LDA K3+1
- CLC
- ADC spry ;30
+
+ BMI yonk               ; If the high byte of the result in (A SC) is negative,
+                        ; then the explosion is off the left edge of the screen,
+                        ; so jump to yonk to skip diplaying the sprite
+
+ CMP #2                 ; If A >= 2 then (A SC) >= $200 (i.e. 512), so the
+ BCS yonk               ; explosion is way past the right edge of the screen, so
+                        ; jump to yonk to skip diplaying the sprite
+
+ TAX                    ; Set (X SC) = (A SC)
+                        ;
+                        ; so (X SC) contains the 9-bit x-coordinate of the
+                        ; explosion
+
+ LDA K3+1               ; Set (A Y) = K3(0 1) + (0 spry)
+ CLC                    ;            = (y_hi y_lo) + y-coordinate offset
+ ADC spry
  TAY
  LDA K3
  ADC #0
- BNE yonk
- CPY #2*Y+50
- BCS yonk
- LDA VIC+$10
- AND #$FD
- ORA exlook,X
- STA VIC+$10
- LDX SC
- STY VIC+$3
+
+ BNE yonk               ; If the high byte of the result in (A Y) is non-zero,
+                        ; then the explosion is either off the top of bottom
+                        ; edge of the screen, so jump to yonk to skip diplaying
+                        ; the sprite
+
+ CPY #2*Y+50            ; If the low byte of the result in (A Y) is greater than
+ BCS yonk               ; the height of the space view (2 * #Y) plus 50, then
+                        ; explosion is behind the dashboard  (as it is more than
+                        ; 50 pixels below the top edge of the dashboard), so
+                        ; jump to yonk to skip diplaying the sprite
+
+                        ; If we get here then the explosion is visible in the
+                        ; space view, so we now draw sprite 1, which contains
+                        ; the explosion sprite
+
+ LDA VIC+$10            ; The 9-bit x-coordinate of the sprite is in (X SC), so
+ AND #%11111101         ; set bit 1 of VIC register $10 when X is 1, or clear
+ ORA exlook,X           ; bit 1 of VIC register $10 when X is 1 (as VIC register
+ STA VIC+$10            ; $10 contains the top bit of the x-coordinate for all
+                        ; eight sprites, with sprite 1's bit appearing in bit 1)
+                        ;
+                        ; The ORA exlook,X instruction is a neat way of setting
+                        ; bit 1 of A to the value of X, as exlook contains %00
+                        ; and %10 (you could achieve the same effect by shifting
+                        ; X to the left by one place and OR'ing that, but that
+                        ; would require quite a bit of register shuffling on the
+                        ; 6502)
+
+ LDX SC                 ; Set VIC registers $02 and $03 to the x-coordinate and
+ STY VIC+$3             ; y-coordinate of sprite 1, which are in X and Y
  STX VIC+$2
 
  LDA VIC+$15            ; Set bit 1 of VIC register $15 to enable sprite 1 so
- ORA #%00000010         ; the explosion sprite appears on-screen
- STA VIC+$15
+ ORA #%00000010         ; the explosion sprite appears on-screen in the correct
+ STA VIC+$15            ; position
 
 .yonk
 
@@ -28137,11 +28201,13 @@ ENDIF
 ; Scan the keyboard and joystick for cursor key or stick movement, and return
 ; the result as deltas (changes) in x- and y-coordinates as follows:
 ;
-;   * For joystick, X and Y are integers between -2 and +2 depending on how far
-;     the stick has moved
+;   * For joystick, X and Y are integers between -1 and +1 depending on the
+;     stick direction and if the fire button is not being pressed, or -4 and +4
+;     if the fire button is being pressed
 ;
 ;   * For keyboard, X and Y are integers between -1 and +1 depending on which
-;     keys are pressed
+;     keys are pressed and if RETURN is not being pressed, or -4 and +4 if
+;     RETURN is being pressed
 ;
 ; ------------------------------------------------------------------------------
 ;
@@ -28157,20 +28223,12 @@ ENDIF
 ;                       being pressed or joystick movement, as an integer (see
 ;                       above)
 ;
-; ------------------------------------------------------------------------------
-;
-; Other entry points:
-;
-;   TJ1                 Check for cursor key presses and return the combined
-;                       deltas for the digital joystick and cursor keys (Master
-;                       Compact only)
-;
 ; ******************************************************************************
 
 .TT17
 
  LDA QQ11               ; If this not the space view, skip the following three
- BNE TT17afterall       ; instructions to move onto the SHIFT key logic
+ BNE TT17afterall       ; instructions to move onto the cursor key logic
 
  JSR DOKEY              ; This is the space view, so scan the keyboard for
                         ; flight controls and pause keys, (or the equivalent on
@@ -28190,66 +28248,135 @@ ENDIF
  LDA JSTK               ; If the joystick is not configured, jump down to TJ1,
  BEQ TJ1                ; otherwise we move the cursor with the joystick
 
- LDA KY3                ; ???
- BIT KY4
- BPL P%+4
+                        ; We now move the cursor according to the joystick's
+                        ; position, moving the cursor much faster if the fire
+                        ; button is held down
+
+ LDA KY3                ; Set A to the status of the roll left joystick axis in
+                        ; KY4, so A is 0 if it not being "pressed" or $FF if it
+                        ; is (where $FF is -1 as a signed integer)
+
+ BIT KY4                ; If bit 7 of KY4 is set then the roll right joystick
+ BPL P%+4               ; axis is being "pressed", so set A = 1
  LDA #1
- BIT KY7
- BPL P%+4
+
+                        ; By this point A is:
+                        ;
+                        ;   * 1 if the joystick is moving right
+                        ;
+                        ;   * -1 if the joystick is moving left
+                        ;
+                        ;   * 0 if neither are being pressed
+
+ BIT KY7                ; If bit 7 of KY7 is set then the joystick fire button
+ BPL P%+4               ; is being pressed, so shift A to the left by two places
+ ASL A                  ; so it is now 4, -4 or 0
  ASL A
- ASL A
- TAX
- LDA KY5
- BIT KY6
- BPL P%+4
+
+ TAX                    ; Store the result in X, so X contains the joystick
+                        ; x-direction as a signed and scaled number
+
+ LDA KY5                ; Set A to the status of the pull up joystick axis in
+                        ; KY5, so A is 0 if it not being "pressed" or $FF if it
+                        ; is (where $FF is -1 as a signed integer)
+
+ BIT KY6                ; If bit 7 of KY4 is set then the pitch down joystick
+ BPL P%+4               ; axis is being "pressed", so set A = 1
  LDA #1
- BIT KY7
- BPL P%+4
+
+                        ; By this point A is:
+                        ;
+                        ;   * 1 if the joystick is moving up
+                        ;
+                        ;   * -1 if the joystick is moving down
+                        ;
+                        ;   * 0 if neither are being pressed
+
+ BIT KY7                ; If bit 7 of KY7 is set then the joystick fire button
+ BPL P%+4               ; is being pressed, so shift A to the left by two places
+ ASL A                  ; so it is now 4, -4 or 0
  ASL A
- ASL A
- TAY
- LDA #0
- STA KY3
- STA KY4
+
+ TAY                    ; Store the result in Y, so Y contains the joystick
+                        ; y-direction as a signed and scaled number
+
+ LDA #0                 ; Zero the pitch, roll and fire keys in the key logger
+ STA KY3                ; so they don't get processed again in this iteration of
+ STA KY4                ; the main loop
  STA KY5
  STA KY6
  STA KY7
 
- LDA thiskey            ; Fetch the key pressed from thiskey in the key logger
+ LDA thiskey            ; Fetch the key pressed from thiskey in the key logger,
+                        ; so the routine returns with the key pressed in A
 
  RTS                    ; Return from the subroutine
 
 .TJ1
 
- LDA KLO+$3E
- BEQ noxmove
- LDA #1
- ORA KLO+$31
- ORA KLO+$C
+ LDA KLO+$3E            ; If the key logger entry for cursor left/right in
+ BEQ noxmove            ; KLO+$3E is zero, then the left/right cursor key is not
+                        ; being pressed, so jump to noxmove with A = 0
+
+ LDA #1                 ; Set A = 1 to indicate movement in the x-direction
+
+ ORA KLO+$31            ; If either left SHIFT (KLO+$31) or right SHIFT (KLO+$C)
+ ORA KLO+$C             ; are being pressed, then their key logger entries will
+                        ; be $FF, so this sets A to $FF (i.e. -1) if a SHIFT key
+                        ; is being pressed
 
 .noxmove
 
- BIT KLO+$3F
- BPL P%+4
+                        ; By this point A is:
+                        ;
+                        ;   * 1 if cursor left/right is being pressed
+                        ;
+                        ;   * -1 if SHIFT-cursor left/right is being pressed
+                        ;
+                        ;   * 0 if neither are being pressed
+
+ BIT KLO+$3F            ; If bit 7 of KLO+$3F is set then the RETURN button is
+ BPL P%+4               ; being pressed, so shift A to the left by two places
+ ASL A                  ; so it is now 4, -4 or 0
  ASL A
- ASL A
- TAX
- LDA KLO+$39
- BEQ noymove
- LDA #1
- ORA KLO+$31
- ORA KLO+$C
- EOR #$FE
+
+ TAX                    ; Store the result in X, so X contains the cursor key
+                        ; x-direction as a signed and scaled number
+
+ LDA KLO+$39            ; If the key logger entry for cursor up/down in KLO+$39
+ BEQ noymove            ; is zero, then the up/down cursor key is not being
+                        ; pressed, so jump to noymove with A = 0
+
+ LDA #1                 ; Set A = 1 to indicate movement in the y-direction
+
+ ORA KLO+$31            ; If either left SHIFT (KLO+$31) or right SHIFT (KLO+$C)
+ ORA KLO+$C             ; are being pressed, then their key logger entries will
+                        ; be $FF, so this sets A to $FF (i.e. -1) if a SHIFT key
+                        ; is being pressed
+
+ EOR #%11111110         ; Flip the sign of A using a simple two's complement,
+                        ; which works because A is either 1 or -1
 
 .noymove
 
- BIT KLO+$3F
- BPL P%+4
- ASL A
- ASL A
- TAY
+                        ; By this point A is:
+                        ;
+                        ;   * -1 if cursor up/down is being pressed
+                        ;
+                        ;   * 1 if SHIFT-cursor up/down is being pressed
+                        ;
+                        ;   * 0 if neither are being pressed
 
- LDA thiskey            ; Fetch the key pressed from thiskey in the key logger
+ BIT KLO+$3F            ; If bit 7 of KLO+$3F is set then the RETURN button is
+ BPL P%+4               ; being pressed, so shift A to the left by two places
+ ASL A                  ; so it is now 4, -4 or 0
+ ASL A
+
+ TAY                    ; Store the result in Y, so Y contains the cursor key
+                        ; y-direction as a signed and scaled number
+
+ LDA thiskey            ; Fetch the key pressed from thiskey in the key logger,
+                        ; so the routine returns with the key pressed in A
 
  RTS                    ; Return from the subroutine
 
@@ -30179,35 +30306,68 @@ ENDIF
                         ; We have a lot of Trumbles in the hold, so they are
                         ; probably making a bit of a noise
 
- STA T                  ; ???
+ STA T                  ; Store the high byte of the number of Trumbles in T
 
- LDA CABTMP             ; If the cabin temperature is >= 224 then skip the next
- CMP #224               ; two LSR A instructions and leave the value of A as a
- BCS P%+4               ; high value, so the chances of the Trumbles making a
-                        ; noise in hot temperature is greater (specifically,
-                        ; this is the temperature at which the fuel scoops start
-                        ; working)
+ LDA CABTMP             ; If the cabin temperature is >= 224 then skip the ASL T
+ CMP #224               ; instruction and leave the value of A as a lower value,
+ BCS P%+4               ; so the chances of the Trumbles making a noise in hot
+                        ; temperatures is lessened (specifically, this is the
+                        ; temperature at which the fuel scoops start working)
 
- ASL T                  ; ???
- JSR DORND
- CMP T
- BCS NOSQUEEK
- JSR DORND
- ORA #$40
- TAX
- LDA #$80
- LDY CABTMP
- CPY #$E0
- BCC burnthebastards
- TXA
- AND #$F
- TAX
- LDA #$F1
+ ASL T                  ; Set T = T * 2
+
+ JSR DORND              ; Set A and X to random numbers
+
+ CMP T                  ; If A >= T then jump to NOSQUEEK to skip making any
+ BCS NOSQUEEK           ; noise, so there is a higher chance of Trumbles making
+                        ; noise when there are lots of them and the cabin
+                        ; temperature is cool enough for the fuel scoops to be
+                        ; disabled (so they start to go quieter when things get
+                        ; too hot)
+
+                        ; If we get here then we want to make the noise of
+                        ; Trumbles living in our ship
+
+ JSR DORND              ; Set X to a random number in the range 64 to 255, which
+ ORA #64                ; we will use as the frequency of the sound of Trumble
+ TAX                    ; chatter (so they make a randomly pitched noise that's
+                        ; not too high)
+
+ LDA #$80               ; Set A = $80 to pass to NOISE2 as the sustain volume
+                        ; and release length for when the cabin is relatively
+                        ; cool, so that's a sustain volume of 8 and a release
+                        ; length of 0
+                        ;
+                        ; This makes the sounds more staccato and softer
+
+ LDY CABTMP             ; If the cabin temperature is < 224, jump to
+ CPY #224               ; burnthebastards to make the noise of Trumbles lightly
+ BCC burnthebastards    ; toasting
+
+ TXA                    ; Clip X to a random number in the range 0 to 15, so the
+ AND #15                ; frequency of the Trumble chatter gets lower as the
+ TAX                    ; cabin gets hotter
+
+ LDA #$F1               ; Set A = $F1 to pass to NOISE2 as the sustain volume
+                        ; and release length for when the cabin is really hot,
+                        ; so that's a sustain volume of 15 and a release length
+                        ; of 1
+                        ;
+                        ; This makes the sounds more drawn out and louder
 
 .burnthebastards
 
- LDY #sfxtrib
- JSR NOISE2
+ LDY #sfxtrib           ; Call the NOISE2 routine with Y = sfxtrib and A and X
+ JSR NOISE2             ; set according to the cabin temperature:
+                        ;
+                        ;   * A = $80, X = 64 to 255 when the cabin is cool
+                        ;     (quieter, higher-pitched, more staccato squeaks)
+                        ;
+                        ;   * A = $F1, X = 0 to 15 when the cabin is hot
+                        ;     (louder, lower-pitched, more drawn out squeaks)
+                        ;
+                        ; This makes the sound of Trumbles either partying or
+                        ; or being slowly roasted
 
 .NOSQUEEK
 
@@ -32284,9 +32444,24 @@ ENDIF
  PHP
  SEI
  BIT CIA+$D
- LDA #1
- STA CIA+$D ; disable timer
- LDX #0
+
+ LDA #%00000001         ; Set CIA1 register $0D to enable and disable interrupts
+ STA CIA+$D             ; as follows:
+                        ;
+                        ;   * Bit 0 set = configure interrupts generated by
+                        ;                 timer A underflow
+                        ;
+                        ;   * Bits 1-4 clear = do not change configuration of
+                        ;                      other interrupts
+                        ;
+                        ;   * Bit 7 clear = disable interupts whose
+                        ;                   corresponding bits are set
+                        ;
+                        ; So this disables interrupts that are generated by
+                        ; timer A underflow, while leaving other interrupts as
+                        ; they are
+
+ LDX #0                 ; ???
  STX RASTCT
  INX
  STX VIC+$1A ;enable Raster int
@@ -32380,7 +32555,7 @@ ENDIF
 ;       Name: KERNALSETUP
 ;       Type: Subroutine
 ;   Category: Save and load
-;    Summary: ???
+;    Summary: Set up memory so we can use the Kernal functions
 ;
 ; ******************************************************************************
 
@@ -32418,27 +32593,81 @@ ENDIF
                         ; See the memory map at the bottom of page 264 in the
                         ; Programmer's Reference Guide
 
- LDA #0                 ; ???
- STA VIC+$1A
+ LDA #0                 ; Clear bits 0-3 in VIC register $1A to disable the
+ STA VIC+$1A            ; following interrupts:
+                        ;
+                        ;   * Bit 0 = raster interrupt
+                        ;
+                        ;   * Bit 1 = sprite-background collision interrupt
+                        ;
+                        ;   * Bit 2 = sprite-sprite collision interrupt
+                        ;
+                        ;   * Bit 3 = light pen interrupt
 
  CLI                    ; Allow interrupts again (or, as a comment in the
                         ; original source says, "tell Ian to go away")
 
- LDA #$81
- STA CIA+$D ; turn on IRQ
- LDA #$C0
- JSR KERNALSETMSG ;enable tape messages
- LDX DISK
- INX
- LDA filesys,X
- TAX
- LDA #1 ; <<
- LDY #0 ; FF
- JSR KERNALSETLFS ;file system
- LDA thislong
- LDX #(INWK+5)
- LDY #0
- JMP KERNALSETNAM
+ LDA #%10000001         ; Set CIA1 register $0D to enable and disable interrupts
+ STA CIA+$D             ; as follows:
+                        ;
+                        ;   * Bit 0 set = configure interrupts generated by
+                        ;                 timer A underflow
+                        ;
+                        ;   * Bits 1-4 clear = do not change configuration of
+                        ;                      other interrupts
+                        ;
+                        ;   * Bit 7 set = enable interupts whose corresponding
+                        ;                 bits are set
+                        ;
+                        ; So this enables interrupts that are generated by timer
+                        ; A underflow, while leaving other interrupts as they
+                        ; are
+
+ LDA #%11000000         ; Call SETMSG to set the system error display switch as
+ JSR KERNALSETMSG       ; follows:
+                        ;
+                        ;   * Bit 6 = display I/O error messages
+                        ;
+                        ;   * Bit 7 = display system messages
+                        ;
+                        ; This ensures that any file system errors are shown
+
+ LDX DISK               ; Set X = DISK + 1
+ INX                    ;
+                        ; DISK is $FF (i.e. -1) for disk and 0 for tape, so this
+                        ; sets X to 0 for disk and 1 for tape 
+
+ LDA filesys,X          ; Set X to the device number for the current media from
+ TAX                    ; the lookup tape at filesys, so X is now 1 for tape or
+                        ; 8 for disk
+
+ LDA #1                 ; Call SETLFS to set the file parameters as follows:
+ LDY #0                 ;
+ JSR KERNALSETLFS       ;   * A = logical number 1
+                        ;
+                        ;   * X = device number 1 (tape) or 8 (disk)
+                        ;
+                        ;   * Y = secondary address 0
+
+                        ; Before calling KERNALSETUP, the filename we want to
+                        ; work with has already been put into INWK+5 by the MT26
+                        ; routine, with the length of the filename in thislong
+                        ;
+                        ; The address of the filename is INWK+5 because the
+                        ; first five characters of INWK contain a BBC Micro
+                        ; pathname like ":0.E.", which we can ignore in the
+                        ; Commodore 64 version
+
+ LDA thislong           ; Call SETNAM to set the filename parameters as
+ LDX #(INWK+5)          ; follows:
+ LDY #0                 ;
+ JMP KERNALSETNAM       ;   * A = filename length
+                        ;
+                        ;   * (Y X) = address of filename (Y is set to zero as
+                        ;             INWK is in zero page)
+                        ;
+                        ; The call to SETNAM returns from the subroutine using
+                        ; a tail call
 
 ; ******************************************************************************
 ;
@@ -32493,14 +32722,15 @@ ENDIF
 ;       Name: filesys
 ;       Type: Variable
 ;   Category: Save and load
-;    Summary: ???
+;    Summary: A lookup table containing the device numbers for tape and disk
 ;
 ; ******************************************************************************
 
 .filesys
 
- EQUB 8
- EQUB 1
+ EQUB 8                 ; The device number for disk
+
+ EQUB 1                 ; The device number for tape
 
 ; ******************************************************************************
 ;
@@ -32534,9 +32764,24 @@ ENDIF
  LDY #HI(TAP%)
  JSR KERNALLOAD
  PHP
- LDA #1
- STA CIA+$D
- SEI
+
+ LDA #%00000001         ; Set CIA1 register $0D to enable and disable interrupts
+ STA CIA+$D             ; as follows:
+                        ;
+                        ;   * Bit 0 set = configure interrupts generated by
+                        ;                 timer A underflow
+                        ;
+                        ;   * Bits 1-4 clear = do not change configuration of
+                        ;                      other interrupts
+                        ;
+                        ;   * Bit 7 clear = disable interupts whose
+                        ;                   corresponding bits are set
+                        ;
+                        ; So this disables interrupts that are generated by
+                        ; timer A underflow, while leaving other interrupts as
+                        ; they are
+
+ SEI                    ; ???
  LDX #0
  STX RASTCT
  INX
@@ -32970,14 +33215,14 @@ ENDIF
 ;
 ; ------------------------------------------------------------------------------
 ;
-; In the BBC Micro versions of Elite, the key logger is separate from the lookup
-; tables that are used to convert internal key numbers into flight controls. In
-; the Commodore 64 version, the key logger is merged with the lookup table into
-; the KEYLOOK table.
+; KEYLOOK (also known as KLO) is the Commodore 64 version's key logger. It does
+; the same job as the KL key logger in the BBC Micro versions, but it has a very
+; different structure, with one entry for every possible key press, rather than
+; just one for each flight key.
 ;
-; The KEYLOOK table has one byte for each key in the Commodore 64 keyboard
+; Specifically, it has one byte for each key in the Commodore 64 keyboard
 ; matrix, and it is laid out in the same order. The keyboard matrix is exposed
-; to our code via port A on the CIA 1 interface chip, through the memory-mapped
+; to our code via port A on the CIA1 interface chip, through the memory-mapped
 ; locations $DC00 and $DC01. To read a key, you first set the column to scan by
 ; writing to $DC00, and the details of any key that is bring pressed in that
 ; column are returned in $DC01 (see the RDKEY routine for details).
@@ -33022,13 +33267,15 @@ ENDIF
                         ; in the Commodore 64 version behaves in a similar way
                         ; to the KL key logger in the BBC Micro
 
+                        ; KLO+$1 to KLO+$F
+
  EQUS "2"               ; RUN/STOP
 
  EQUS "3"               ; Q
 
 .KY12
 
- EQUS "4"               ; "C=" is being pressed
+ EQUS "4"               ; "C=" is being pressed (energy bomb)
                         ;
                         ;   * 0 = no
                         ;
@@ -33036,7 +33283,7 @@ ENDIF
 
 .KY2
 
- EQUS "5"               ; Space is being pressed
+ EQUS "5"               ; Space is being pressed (speed up)
                         ;
                         ;   * 0 = no
                         ;
@@ -33048,7 +33295,7 @@ ENDIF
 
 .KY13
 
- EQUS "8"               ; Left arrow is being pressed
+ EQUS "8"               ; Left arrow is being pressed (launch escape pod)
                         ;
                         ;   * 0 = no
                         ;
@@ -33058,7 +33305,7 @@ ENDIF
 
 .KY1
 
- EQUS "A"               ; "?" is being pressed
+ EQUS "A"               ; "?" is being pressed (slow down)
                         ;
                         ;   * 0 = no
                         ;
@@ -33076,11 +33323,13 @@ ENDIF
 
  EQUS "0"               ; *
 
+                        ; KLO+$10 to KLO+$1F
+
  EQUS "1"               ; £
 
 .KY3
 
- EQUS "2"               ; "<" is being pressed
+ EQUS "2"               ; "<" is being pressed (roll left)
                         ;
                         ;   * 0 = no
                         ;
@@ -33092,7 +33341,7 @@ ENDIF
 
 .KY4
 
- EQUS "5"               ; ">" is being pressed
+ EQUS "5"               ; ">" is being pressed (roll right)
                         ;
                         ;   * 0 = no
                         ;
@@ -33104,7 +33353,7 @@ ENDIF
 
 .KY20
 
- EQUS "8"               ; "P" is being pressed
+ EQUS "8"               ; "P" is being pressed (deactivate docking computer)
                         ;
                         ;   * 0 = no
                         ;
@@ -33120,7 +33369,7 @@ ENDIF
 
 .KY16
 
- EQUS "D"               ; "M" is being pressed
+ EQUS "D"               ; "M" is being pressed (fire missile)
                         ;
                         ;   * 0 = no
                         ;
@@ -33130,7 +33379,7 @@ ENDIF
 
 .KY18
 
- EQUS "F"               ; "J" is being pressed
+ EQUS "F"               ; "J" is being pressed (in-system jump)
                         ;
                         ;   * 0 = no
                         ;
@@ -33138,13 +33387,15 @@ ENDIF
 
  EQUS "0"               ; I
 
+                        ; KLO+$20 to KLO+$2F
+
  EQUS "1"               ; 9
 
  EQUS "2"               ; V
 
 .KY15
 
- EQUS "3"               ; "U" is being pressed
+ EQUS "3"               ; "U" is being pressed (unarm missile)
                         ;
                         ;   * 0 = no
                         ;
@@ -33164,7 +33415,7 @@ ENDIF
 
 .KY5
 
- EQUS "A"               ; "X" is being pressed
+ EQUS "A"               ; "X" is being pressed (pull up)
                         ;
                         ;   * 0 = no
                         ;
@@ -33172,7 +33423,7 @@ ENDIF
 
 .KY14
 
- EQUS "B"               ; "T" is being pressed
+ EQUS "B"               ; "T" is being pressed (target missile)
                         ;
                         ;   * 0 = no
                         ;
@@ -33182,7 +33433,7 @@ ENDIF
 
 .KY19
 
- EQUS "D"               ; "C" is being pressed
+ EQUS "D"               ; "C" is being pressed (activate docking computer)
                         ;
                         ;   * 0 = no
                         ;
@@ -33194,13 +33445,15 @@ ENDIF
 
  EQUS "0"               ; R
 
+                        ; KLO+$30 to KLO+$3F
+
  EQUS "1"               ; 5
 
  EQUS "2"               ; Left SHIFT
 
 .KY17
 
- EQUS "3"               ; "E" is being pressed
+ EQUS "3"               ; "E" is being pressed (activate E.C.M.)
                         ;
                         ;   * 0 = no
                         ;
@@ -33208,7 +33461,7 @@ ENDIF
 
 .KY6
 
- EQUS "4"               ; "S" is being pressed
+ EQUS "4"               ; "S" is being pressed (pitch down)
                         ;
                         ;   * 0 = no
                         ;
@@ -33220,7 +33473,7 @@ ENDIF
 
 .KY7
 
- EQUS "7"               ; "A" is being pressed
+ EQUS "7"               ; "A" is being pressed (fire lasers)
                         ;
                         ;   * 0 = no
                         ;
@@ -33247,6 +33500,8 @@ ENDIF
 
  EQUS "0"               ; RETURN
 
+                        ; KLO+$40 to KLO+$46
+
  EQUS "1"               ; INS/DEL
 
  EQUS "234567"          ; These bytes appear to be unused
@@ -33258,12 +33513,18 @@ ENDIF
 ;   Category: Keyboard
 ;    Summary: Scan the keyboard for key presses
 ;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   Y                   Y is preserved
+;
 ; ******************************************************************************
 
 .RDKEY
 
- TYA
- PHA
+ TYA                    ; Store Y on the stack so we can preserve it across
+ PHA                    ; calls to this routine
 
  LDA #%101              ; Call SETL1 to set the 6510 input/output port to the
  JSR SETL1              ; following:
@@ -33280,11 +33541,13 @@ ENDIF
                         ; See the memory map at the top of page 264 in the
                         ; Programmer's Reference Guide
 
- LDA VIC+$15            ; Clear bit 1 of VIC register $15 to disable sprite 1
- AND #%11111101         ; ???
- STA VIC+$15
+ LDA VIC+$15            ; Clear bit 1 of VIC register $15 to disable sprite 1,
+ AND #%11111101         ; so this removes the explosion sprite from the screen
+ STA VIC+$15            ; if there is one (so that the explosion burst only
+                        ; appears fleetingly at the point of explosion, and
+                        ; doesn't linger too long)
 
- JSR ZEKTRAN
+ JSR ZEKTRAN            ; ???
  LDX JSTK
  BEQ scanmatrix
  LDA CIA
@@ -33700,7 +33963,7 @@ ENDIF
  EQUB $62 + 128         ; Space     KYTB+2      Speed up
  EQUB $66 + 128         ; <         KYTB+3      Roll left
  EQUB $67 + 128         ; >         KYTB+4      Roll right
- EQUB $42 + 128         ; X         KYTB+5      Pitch up
+ EQUB $42 + 128         ; X         KYTB+5      Pull up
  EQUB $51 + 128         ; S         KYTB+6      Pitch down
  EQUB $41 + 128         ; A         KYTB+7      Fire lasers
 
@@ -35510,8 +35773,6 @@ ENDIF
 ;       Type: Variable
 ;   Category: Keyboard
 ;    Summary: Translation table from internal key number to ASCII
-;
-; ------------------------------------------------------------------------------
 ;
 ; ******************************************************************************
 
@@ -41611,6 +41872,11 @@ ENDIF
  ORA T                  ; T contains 1 if we want to show laser sights or 0 if
                         ; we don't, so this sets bit 0 of A so we show sprite 0
                         ; if there are laser sights
+                        ;
+                        ; Both T and the value from TRIBMA have bit 1 clear, so
+                        ; this will also disable the explosion sprite if it's
+                        ; being shown (which is fine as the explosion sprite is
+                        ; only shown fleetingly)
 
  STA VIC+$15            ; Set VIC register $15 to enable each of the eight
                         ; sprites, with sprite 0 enabled (bit 0) if there are
@@ -42213,6 +42479,13 @@ ENDIF
 ;   Category: Sound
 ;    Summary: ???
 ;
+; ------------------------------------------------------------------------------
+;
+; A = release length (bits 0-3), sustain volume (bits 4-7)
+; Higher values of bits 4-7 = closer explosion = louder ???
+;
+; Lower values of X = higher pitch ???
+;
 ; ******************************************************************************
 
 .NOISE2
@@ -42225,8 +42498,9 @@ ENDIF
                         ; There is no SEV instruction in the 6502, hence the
                         ; need for this workaround
 
- STA XX15               ; ???
- STX XX15+1
+ STA XX15               ; Store the sustain volume/release length in XX15 ???
+
+ STX XX15+1             ; Store the frequency in XX15+1 ???
 
  EQUB $50               ; Skip the next instruction by turning it into
                         ; $50 $B8, or BVC $B8, which does nothing because we
@@ -43086,9 +43360,43 @@ IF NOT(USA%)
 
 ENDIF
 
- LDA #3                 ; ???
- STA CIA+$D
- STA CIA2+$D ; kill CIAs  \<<
+ LDA #%00000011         ; Set CIA1 register $0D to enable and disable interrupts
+ STA CIA+$D             ; as follows:
+                        ;
+                        ;   * Bit 0 set = configure interrupts generated by
+                        ;                 timer A underflow
+                        ;
+                        ;   * Bit 1 set = configure interrupts generated by
+                        ;                 timer B underflow
+                        ;
+                        ;   * Bits 2-4 clear = do not change configuration of
+                        ;                      other interrupts
+                        ;
+                        ;   * Bit 7 clear = disable interupts whose
+                        ;                   corresponding bits are set
+                        ;
+                        ; So this disables interrupts that are generated by
+                        ; timer A underflow and timer B underflow, while leaving
+                        ; other interrupts as they are
+
+ STA CIA2+$D            ; Set CIA2 register $0D to enable and disable interrupts
+                        ; as follows:
+                        ;
+                        ;   * Bit 0 set = configure interrupts generated by
+                        ;                 timer A underflow
+                        ;
+                        ;   * Bit 1 set = configure interrupts generated by
+                        ;                 timer B underflow
+                        ;
+                        ;   * Bits 2-4 clear = do not change configuration of
+                        ;                      other interrupts
+                        ;
+                        ;   * Bit 7 clear = disable interupts whose
+                        ;                   corresponding bits are set
+                        ;
+                        ; So this disables interrupts that are generated by
+                        ; timer A underflow and timer B underflow, while leaving
+                        ; other interrupts as they are
 
 ;LDA #2                 ; These instructions are commented out in the original
 ;STA VIC+$20            ; source
@@ -43288,7 +43596,7 @@ ENDIF
 
  EQUD $3060C0C0         ; These bytes appear to be unused; they contain a copy
  EQUD $03060C18         ; of the TWOS2 variable, and the original source has a
-                        ; commented out label \.TWOS2
+                        ; commented out label .TWOS2
 
 ; ******************************************************************************
 ;
@@ -44525,11 +44833,11 @@ ENDIF
 
  EQUD $F0E0C080         ; These bytes appear to be unused; they contain a copy
  EQUW $FCF8             ; of the TWFL variable, and the original source has a
- EQUB $FE               ; commented out label \.TWFL
+ EQUB $FE               ; commented out label .TWFL
 
  EQUD $1F3F7FFF         ; These bytes appear to be unused; they contain a copy
  EQUD $0103070F         ; of the TWFR variable, and the original source has a
-                        ; commented out label \.TWFR
+                        ; commented out label .TWFR
 
 ; ******************************************************************************
 ;
