@@ -30564,9 +30564,12 @@ ENDIF
 
 .LABEL_3
 
- BIT KLO+HINT           ; ???
+ BIT KLO+HINT           ; If "H" was not pressed, skip the following instruction
  BPL P%+5
- JMP hyp
+
+ JMP hyp                ; Jump to hyp to do a hyperspace jump (if we are in
+                        ; space), returning from the subroutine using a tail
+                        ; call
 
 .NWDAV5
 
@@ -33266,16 +33269,26 @@ ENDIF
                         ; we also include a spare byte here so the KLO logger
                         ; in the Commodore 64 version behaves in a similar way
                         ; to the KL key logger in the BBC Micro
+                        ;
+                        ; The Commodore 64 version doesn't use this byte, but
+                        ; instead it stores the last-pressed key in the KL and
+                        ; thi8skey variables
 
-                        ; KLO+$1 to KLO+$F
+ EQUS "2"               ; RUN/STOP is being pressed (KLO+$1)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "2"               ; RUN/STOP
-
- EQUS "3"               ; Q
+ EQUS "3"               ; "Q" is being pressed (KLO+$2)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
 .KY12
 
- EQUS "4"               ; "C=" is being pressed (energy bomb)
+ EQUS "4"               ; "C=" is being pressed (energy bomb, KLO+$3)
                         ;
                         ;   * 0 = no
                         ;
@@ -33283,139 +33296,249 @@ ENDIF
 
 .KY2
 
- EQUS "5"               ; Space is being pressed (speed up)
+ EQUS "5"               ; Space is being pressed (speed up, KLO+$4)
                         ;
                         ;   * 0 = no
                         ;
                         ;   * Non-zero = yes
 
- EQUS "6"               ; 2
+ EQUS "6"               ; "2" is being pressed (KLO+$5)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "7"               ; CTRL
+ EQUS "7"               ; CTRL is being pressed (KLO+$6)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
 .KY13
 
- EQUS "8"               ; Left arrow is being pressed (launch escape pod)
+ EQUS "8"               ; Left arrow is being pressed (launch escape pod,
+                        ; KLO+$7)
                         ;
                         ;   * 0 = no
                         ;
                         ;   * Non-zero = yes
 
- EQUS "9"               ; 1
+ EQUS "9"               ; "1" is being pressed (KLO+$8)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
 .KY1
 
- EQUS "A"               ; "?" is being pressed (slow down)
+ EQUS "A"               ; "?" is being pressed (slow down, KLO+$9)
                         ;
                         ;   * 0 = no
                         ;
                         ;   * Non-zero = yes
 
- EQUS "B"               ; Up arrow
+ EQUS "B"               ; Up arrow is being pressed (KLO+$A)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "C"               ; =
+ EQUS "C"               ; "=" is being pressed (KLO+$B)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "D"               ; Right SHIFT
+ EQUS "D"               ; Right SHIFT is being pressed (KLO+$C)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "E"               ; CLR/HOME
+ EQUS "E"               ; CLR/HOME is being pressed (KLO+$D)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "F"               ; ;
+ EQUS "F"               ; ";" is being pressed (KLO+$E)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "0"               ; *
+ EQUS "0"               ; "*" is being pressed (KLO+$F)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
-                        ; KLO+$10 to KLO+$1F
-
- EQUS "1"               ; £
+ EQUS "1"               ; "£" is being pressed (KLO+$10)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
 .KY3
 
- EQUS "2"               ; "<" is being pressed (roll left)
+ EQUS "2"               ; "<" is being pressed (roll left, KYO+$11)
                         ;
                         ;   * 0 = no
                         ;
                         ;   * Non-zero = yes
 
- EQUS "3"               ; @
+ EQUS "3"               ; "@" is being pressed (KLO+$12)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "4"               ; :
+ EQUS "4"               ; ":" is being pressed (KLO+$13)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
 .KY4
 
- EQUS "5"               ; ">" is being pressed (roll right)
+ EQUS "5"               ; ">" is being pressed (roll right, KLO+$14)
                         ;
                         ;   * 0 = no
                         ;
                         ;   * Non-zero = yes
 
- EQUS "6"               ; -
+ EQUS "6"               ; "-" is being pressed (KLO+$15)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "7"               ; L
+ EQUS "7"               ; "L" is being pressed (KLO+$16)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
 .KY20
 
- EQUS "8"               ; "P" is being pressed (deactivate docking computer)
+ EQUS "8"               ; "P" is being pressed (deactivate docking computer,
+                        ; KLO+$17)
                         ;
                         ;   * 0 = no
                         ;
                         ;   * Non-zero = yes
 
- EQUS "9"               ; +
+ EQUS "9"               ; "+" is being pressed (KLO+$18)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "A"               ; N
+ EQUS "A"               ; "N" is being pressed (KLO+$19)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "B"               ; O
+ EQUS "B"               ; "O" is being pressed (KLO+$1A)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "C"               ; K
+ EQUS "C"               ; "K" is being pressed (KLO+$1B)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
 .KY16
 
- EQUS "D"               ; "M" is being pressed (fire missile)
+ EQUS "D"               ; "M" is being pressed (fire missile, KLO+$1C)
                         ;
                         ;   * 0 = no
                         ;
                         ;   * Non-zero = yes
 
- EQUS "E"               ; 0
+ EQUS "E"               ; "0" is being pressed (KLO+$1D)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
 .KY18
 
- EQUS "F"               ; "J" is being pressed (in-system jump)
+ EQUS "F"               ; "J" is being pressed (in-system jump, KLO+$1E)
                         ;
                         ;   * 0 = no
                         ;
                         ;   * Non-zero = yes
 
- EQUS "0"               ; I
+ EQUS "0"               ; "I" is being pressed (KLO+$1F)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
-                        ; KLO+$20 to KLO+$2F
+ EQUS "1"               ; "9" is being pressed (KLO+$20)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "1"               ; 9
-
- EQUS "2"               ; V
+ EQUS "2"               ; "V" is being pressed (KLO+$21)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
 .KY15
 
- EQUS "3"               ; "U" is being pressed (unarm missile)
+ EQUS "3"               ; "U" is being pressed (unarm missile, KLO+$22)
                         ;
                         ;   * 0 = no
                         ;
                         ;   * Non-zero = yes
 
- EQUS "4"               ; H
+ EQUS "4"               ; "H" is being pressed (KLO+$23)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "5"               ; B
+ EQUS "5"               ; "B" is being pressed (KLO+$24)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "6"               ; 8
+ EQUS "6"               ; "8" is being pressed (KLO+$25)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "7"               ; G
+ EQUS "7"               ; "G" is being pressed (KLO+$26)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "8"               ; Y
+ EQUS "8"               ; "Y" is being pressed (KLO+$27)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "9"               ; 7
+ EQUS "9"               ; "7" is being pressed (KLO+$28)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
 .KY5
 
- EQUS "A"               ; "X" is being pressed (pull up)
+ EQUS "A"               ; "X" is being pressed (pull up, KLO+$29)
                         ;
                         ;   * 0 = no
                         ;
@@ -33423,37 +33546,60 @@ ENDIF
 
 .KY14
 
- EQUS "B"               ; "T" is being pressed (target missile)
+ EQUS "B"               ; "T" is being pressed (target missile, KLO+$2A)
                         ;
                         ;   * 0 = no
                         ;
                         ;   * Non-zero = yes
 
- EQUS "C"               ; F
+ EQUS "C"               ; "F" is being pressed (KLO+$2B)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
 .KY19
 
- EQUS "D"               ; "C" is being pressed (activate docking computer)
+ EQUS "D"               ; "C" is being pressed (activate docking computer,
+                        ; KLO+$2C)
                         ;
                         ;   * 0 = no
                         ;
                         ;   * Non-zero = yes
 
- EQUS "E"               ; 6
+ EQUS "E"               ; "6" is being pressed (KLO+$2D)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "F"               ; D
+ EQUS "F"               ; "D" is being pressed (KLO+$2E)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "0"               ; R
+ EQUS "0"               ; "R" is being pressed (KLO+$2F)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
-                        ; KLO+$30 to KLO+$3F
+ EQUS "1"               ; "5" is being pressed (KLO+$30)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "1"               ; 5
-
- EQUS "2"               ; Left SHIFT
+ EQUS "2"               ; Left SHIFT is being pressed (KLO+$31)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
 .KY17
 
- EQUS "3"               ; "E" is being pressed (activate E.C.M.)
+ EQUS "3"               ; "E" is being pressed (activate E.C.M., KLO+$32)
                         ;
                         ;   * 0 = no
                         ;
@@ -33461,19 +33607,27 @@ ENDIF
 
 .KY6
 
- EQUS "4"               ; "S" is being pressed (pitch down)
+ EQUS "4"               ; "S" is being pressed (pitch down, KLO+$33)
                         ;
                         ;   * 0 = no
                         ;
                         ;   * Non-zero = yes
 
- EQUS "5"               ; Z
+ EQUS "5"               ; "Z" is being pressed (KLO+$34)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "6"               ; 4
+ EQUS "6"               ; "4" is being pressed (KLO+$35)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
 .KY7
 
- EQUS "7"               ; "A" is being pressed (fire lasers)
+ EQUS "7"               ; "A" is being pressed (fire lasers, KLO+$36)
                         ;
                         ;   * 0 = no
                         ;
@@ -33482,27 +33636,65 @@ ENDIF
                         ; This is also set when the joystick fire button has
                         ; been pressed
 
- EQUS "8"               ; W
+ EQUS "8"               ; "W" is being pressed (KLO+$37)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "9"               ; 3
+ EQUS "9"               ; "3" is being pressed (KLO+$38)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "A"               ; Cursor up/down
+ EQUS "A"               ; Cursor up/down is being pressed (KLO+$39)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "B"               ; F5
+ EQUS "B"               ; F5 is being pressed (KLO+$3A)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "C"               ; F3
+ EQUS "C"               ; F3 is being pressed (KLO+$3B)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "D"               ; F1
+ EQUS "D"               ; F1 is being pressed (KLO+$3C)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "E"               ; F7
+ EQUS "E"               ; F7 is being pressed (KLO+$3D)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "F"               ; Cursor left/right
+ EQUS "F"               ; Cursor left/right is being pressed (KLO+$3E)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
- EQUS "0"               ; RETURN
+ EQUS "0"               ; RETURN is being pressed (KLO+$3F)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
-                        ; KLO+$40 to KLO+$46
-
- EQUS "1"               ; INS/DEL
+ EQUS "1"               ; INS/DEL is being pressed (KLO+$40)
+                        ;
+                        ;   * 0 = no
+                        ;
+                        ;   * Non-zero = yes
 
  EQUS "234567"          ; These bytes appear to be unused
 
