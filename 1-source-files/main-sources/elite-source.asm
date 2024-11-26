@@ -43320,8 +43320,8 @@ ENDIF
  LDA SFXATK,Y           ; Store the attack attack and decay length for sound
  STA SOATK,X            ; effect Y in the SOATK entry for voice X
 
- LDA SFXVCH,Y           ; Store the ??? for sound effect Y in the SOVCH entry
- STA SOVCH,X            ; for voice X
+ LDA SFXVCH,Y           ; Store the volume change rate for sound effect Y in the
+ STA SOVCH,X            ; SOVCH entry for voice X
 
  INY                    ; Increment the sound effect number in Y
 
@@ -43403,8 +43403,9 @@ ENDIF
 
 .innersec
 
- EQUB 1
- EQUB 0
+ EQUB 1                 ; Lookup value to change 0 to 1
+
+ EQUB 0                 ; Lookup value to change 1 to 0
 
 ; ******************************************************************************
 ;
@@ -44036,7 +44037,7 @@ ENDIF
                         ; reached the end of its counter, so we need to
                         ; terminate it
 
- LDX SEVENS,Y
+ LDX SEVENS,Y           ; ???
  LDA SOCR,Y
  AND #$FE
  STA SID+4,X
