@@ -867,6 +867,7 @@ ENDIF
                         ;   6   = Death screen
                         ;   8   = Status Mode screen (key "9")
                         ;         Inventory screen (key "0")
+                        ;   13  = Rotating ship view (title or mission screen)
                         ;   16  = Market Price screen (key "8")
                         ;   32  = Equip Ship screen (key "4")
                         ;   64  = Long-range Chart (key "5")
@@ -3466,10 +3467,14 @@ ENDIF
                         ; any more (or it never was), so skip the following
                         ; instruction
 
- LDY #%11010000         ; Set bit 4 of moonflower so the screen flickers between
- STY moonflower         ; multicolour and standard mode, as the IRQ handler sets
-                        ; VIC+$16 to the value of moonflower, and bit 4 of
-                        ; VIC+$16 configures multicolour mode when set
+ LDY #%11010000         ; Set bit 4 of moonflower so the screen jumps from
+ STY moonflower         ; standard bitmap mode to multicolour bitmap mode, as
+                        ; the IRQ handler sets VIC+$16 to the value of
+                        ; moonflower, and bit 4 of VIC+$16 controls multicolour
+                        ; mode
+                        ;
+                        ; This makes the space view turn into a coloured mess of
+                        ; double-width pixels while the energy bomb is going off
 
  LDY #sfxbomb           ; Call the NOISE routine with Y = sfxbomb to make the
  JSR NOISE              ; sound of the energy bomb going off
@@ -5061,9 +5066,9 @@ ENDIF
 
 .BOMBOFF
 
- LDA #%11000000         ; Clear bit 4 of moonflower so the screen no longer
- STA moonflower         ; flickers between multicolour and standard mode, but
-                        ; instead stays in standard mode
+ LDA #%11000000         ; Clear bit 4 of moonflower so the screen returns to
+ STA moonflower         ; standard bitmap mode, so the space view goes back to
+                        ; its normal monochrome, small-pixel appearance
 
  LDA #0                 ; Set welcome to 0 to stop the background colour from
  STA welcome            ; flashing different colours (as 0 represents black, and
@@ -43335,7 +43340,8 @@ ENDIF
 ;       Name: RASTCT
 ;       Type: Variable
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: The current raster count, which flips between 0 and 1 on each call
+;             to the COMIRQ1 interrupt handler (0 = space view, 1 = dashboard)
 ;
 ; ******************************************************************************
 
@@ -43348,33 +43354,48 @@ ENDIF
 ;       Name: zebop
 ;       Type: Variable
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: The value for VIC register $18 to set the screen RAM address for a
+;             raster count of 0 in the interrupt routine (i.e. the space view)
 ;
 ; ******************************************************************************
 
 .zebop
 
- EQUB $81
+ EQUB $81               ; Determines the address of screen RAM to use for colour
+                        ; data in the upper portion of the screen (this sets the
+                        ; address of screen RAM to $6000 and does not change)
 
 ; ******************************************************************************
 ;
 ;       Name: abraxas
 ;       Type: Variable
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: The value for VIC register $18 to set the screen RAM address for a
+;             raster count of 1 in the interrupt routine (i.e. the dashboard)
 ;
 ; ******************************************************************************
 
 .abraxas
 
- EQUB $81
+ EQUB $81               ; Determines the address of screen RAM to use for colour
+                        ; data the lower portion of the screen, where the
+                        ; dashboard lives in the space view:
+                        ;
+                        ;   * When abraxas is $81, the colour of the lower part
+                        ;     of the screen is determined by screen RAM at $6000
+                        ;     (i.e. when the dashboard is not being shown)
+                        ;
+                        ;   * When abraxas is $91, the colour of the lower part
+                        ;     of the screen is determined by screen RAM at $6400
+                        ;     (i.e. when the dashboard is being shown)
 
 ; ******************************************************************************
 ;
 ;       Name: innersec
 ;       Type: Variable
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: A table for converting the value of X from 0 to 1 or from 1 to 0,
+;             for use when flipping RASCT between 0 and 1 on each interrupt
 ;
 ; ******************************************************************************
 
@@ -43388,14 +43409,16 @@ ENDIF
 ;       Name: shango
 ;       Type: Variable
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: The raster lines that fire the raster interrupt, so it fires at
+;             the top of the screen (51) and the top of the dashboard (51 + 143)
 ;
 ; ******************************************************************************
 
 .shango
 
- EQUB 51+143
- EQUB 51
+ EQUB 51 + 143          ; The raster line at the top of the dashboard
+
+ EQUB 51                ; The raster line at the top of the visible screen
 
 ; ******************************************************************************
 ;
@@ -43409,117 +43432,320 @@ ENDIF
 
 .moonflower
 
- EQUB %11000000   
+ EQUB %11000000         ; The bitmap mode for the upper part of the screen
 
 ; ******************************************************************************
 ;
 ;       Name: caravanserai
 ;       Type: Variable
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: Controls whether multicolour or standard bitmap mode is used for
+;             the lower part of the screen (i.e. the dashboard)
 ;
 ; ******************************************************************************
 
 .caravanserai
 
- EQUB %11000000
+ EQUB %11000000         ; The bitmap mode for the lower part of the screen
 
 ; ******************************************************************************
 ;
 ;       Name: santana
 ;       Type: Variable
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: Controls whether sprite 1 (the explosion sprite) is drawn in
+;             single colour or multicolour mode
 ;
 ; ******************************************************************************
 
 .santana
 
- EQUB $FE
- EQUB $FC
+ EQUB %11111110         ; Multicolour mode for the upper part of the screen
+
+ EQUB %11111100         ; Single colour mode for the lower part of the screen
 
 ; ******************************************************************************
 ;
 ;       Name: lotus
 ;       Type: Variable
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: The colour of the explosion sprite in the upper and lower parts of
+;             the screen
 ;
 ; ******************************************************************************
 
 .lotus
 
- EQUB 2
- EQUB 0
+ EQUB 2         ; Colour 2 (red) for %10 bit pairs in the upper part of the
+                ; screen
+
+ EQUB 0         ; Colour 0 (transparent) for set bits in the lower part of the
+                ; screen
 
 ; ******************************************************************************
 ;
 ;       Name: welcome
 ;       Type: Variable
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: The background colour for the upper and lower parts of the screen,
+;             used by the energy bomd to flash the screen's background colour
 ;
 ; ******************************************************************************
 
 .welcome
 
- EQUB 0
- EQUB 0
+ EQUB 0                 ; The background colour for the upper part of the screen
+
+ EQUB 0                 ; The background colour for the lower part of the screen
+
+; ******************************************************************************
+;
+;       Name: SOUL3b
+;       Type: Subroutine
+;   Category: Sound
+;    Summary: Check whether this is the last voice when making sound effects in
+;             the interrupt routine, and return from the interrupt if it is
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   Y                   The voice number that is currently being processed in
+;                       the interrupt routine at SOINT (0 to 2)
+;
+; ******************************************************************************
+
+.SOUL3b
+
+ DEY                    ; Decrement the voice number
+
+ BPL SOUL8              ; If we have not yet processed all three voices then Y
+                        ; will still be positive (i.e. 0, 1 or 2), so jump to
+                        ; SOUL8 to process this voice
+
+                        ; If we get here then we have processed all three voices
+                        ; in the sound effects interrupt routine, so we now need
+                        ; to return from the interrupt
+
+ PLA                    ; Retrieve the value of Y we stored on the stack at the
+ TAY                    ; start of the music section of the interrupt routine,
+                        ; so it is preserved
+
+                        ; Fall through into COMIRQ3 to restore the A and X
+                        ; registers and the correct memory configuration, and
+                        ; return from the interrupt
 
 ; ******************************************************************************
 ;
 ;       Name: COMIRQ1
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: The split screen and sound interrupt handler (the IRQ interrupt
+;             service hardware vector at $FFFE points here)
 ;
 ; ******************************************************************************
 
-.SOUL3b
-
- DEY
- BPL SOUL8
- PLA
- TAY
-
 .COMIRQ3
 
- PLA
- TAX
- LDA l1
- AND #$F8
- ORA L1M
- STA l1
- PLA
- RTI
+                        ; If we get here then we want to return from the
+                        ; interrupt, so we first have to restore the registers
+                        ; we want to preserve, and restore the correct memory
+                        ; configuration
+
+ PLA                    ; Retrieve the value of X we stored on the stack at the
+ TAX                    ; start of the interrupt routine, so it is preserved
+
+ LDA l1                 ; Set bits 0 to 2 of the port register at location l1
+ AND #%11111000         ; ($0001) to bits 0 to 2 of L1M, leaving bits 3 to 7
+ ORA L1M                ; unchanged
+ STA l1                 ;
+                        ; This sets LORAM, HIRAM and CHAREN to the values in
+                        ; L1M, which ensures we return memory to the same
+                        ; configuration as when we entered the interrupt routine
+
+ PLA                    ; Retrieve the value of A we stored on the stack at the
+                        ; start of the interrupt routine, so it is preserved
+
+ RTI                    ; Return from the interrupt
 
 .COMIRQ1
 
- PHA
- LDA l1
- AND #$F8
- ORA #5
- STA l1
- \Page in I/O
+ PHA                    ; Store A on the stack, so we can preserve it across
+                        ; calls to the interrupt handler
+
+ LDA l1                 ; Set bits 0 to 2 of the 6510 port register at location
+ AND #%11111000         ; l1 to %101 to set the input/output port to the
+ ORA #%00000101         ; following:
+ STA l1                 ;
+                        ;   * LORAM = 1
+                        ;   * HIRAM = 0
+                        ;   * CHAREN = 1
+                        ;
+                        ; This sets the entire 64K memory map to RAM except for
+                        ; the I/O memory map at $D000-$DFFF, which gets mapped
+                        ; to registers in the VIC-II video controller chip, the
+                        ; SID sound chip, the two CIA I/O chips, and so on
+                        ;
+                        ; See the memory map at the top of page 264 in the
+                        ; Programmer's Reference Guide
 
 .iansint
 
- LDA VIC+$19
- ORA #128
- STA VIC+$19
- TXA
- PHA
- LDX RASTCT
- LDA zebop,X
- STA VIC+$18
- LDA moonflower,X
- STA VIC+$16 ;Mode Change
- LDA shango,X
- STA VIC+$12 ;Raster
- LDA santana,X
- STA VIC+$1C ;Multicol
- LDA lotus,X
- STA VIC+$28 ;Sp1Col
+ LDA VIC+$19            ; Set bit 7 of VIC register $19, to acknowledge any IRQ
+ ORA #%10000000         ; interrupts that are pending
+ STA VIC+$19            ;
+                        ; I'm not sure why we acknowledge IRQ interrupts by
+                        ; setting bit 7 rather than setting bit 0 to acknowledge
+                        ; the raster interrupt, but perhaps this prevents any
+                        ; pending IRQ interrupts from being triggered and
+                        ; messing up the timing of the split screen and sound
+                        ; interrupt routines
+
+ TXA                    ; Store X on the stack, so we can preserve it across
+ PHA                    ; calls to the interrupt handler
+
+ LDX RASTCT             ; Set X to the current raster count
+                        ;
+                        ; The code below flips this on each interrupt between
+                        ; the two values in innersec, which are set to 0 and 1,
+                        ; so X oscillates between 0 and 1 each time the
+                        ; interrupt routine is called
+                        ;
+                        ; The COMIRQ1 interrupt handler is called when the
+                        ; raster interrupt is triggered, which happens when the
+                        ; VIC-II starts to draw the raster lines defined in the
+                        ; shango variable (see below)
+                        ;
+                        ; These raster lines coincide with the top of the screen
+                        ; and the top of the dashboard, so this routine gets
+                        ; called twice on each screen redraw, once when the
+                        ; raster starts drawing the top of the screen, and again
+                        ; when the raster returns to the top of the dashboard
+                        ;
+                        ; When the interrupt routine is called at the top of the
+                        ; screen, the value of RASCT is 0, so the various VIC-II
+                        ; registers in the following get set up for the upper
+                        ; part of the screen; this includes setting the raster
+                        ; interrupt to fire at the top of the dashboard. RASCT
+                        ; is flipped to a value of 1 after the upper part of the
+                        ; screen has been configured
+                        ;
+                        ; When the raster reaches the top of the dashboard, the
+                        ; interrupt routine is called and RASCT is still 1, so
+                        ; the screen is configured for the dashboard (if there
+                        ; is one); this includes setting the raster interrupt to
+                        ; fire at the top of the screen once again. RASCT is
+                        ; flipped back to a value of 0 after the lower part of
+                        ; the screen has been configured, ready for the whole
+                        ; process to repeat
+                        ;
+                        ; So, in the following:
+                        ;
+                        ;   * X = RASCT = 0 indicates that we are drawing the
+                        ;                   upper part of the screen
+                        ;
+                        ;   * X = RASCT = 1 indicates that we are drawing the
+                        ;                   lower part of the screen
+
+ LDA zebop,X            ; Set VIC register $18 to the value in zebop (when
+ STA VIC+$18            ; X = 0, for the upper part of the screen) or abraxas
+                        ; (when X = 1, for the lower part of the screen)
+                        ;
+                        ; zebop is always set to $81, which will set the address
+                        ; of screen RAM to offset $2000 within the VIC-II bank
+                        ; at $4000 (so the screen's colour data is at $6000)
+                        ;
+                        ; abraxas is $81 by default, in which case this will
+                        ; also set screen RAM to $6000, but the wantdials
+                        ; routine sets it to $91 when we need to display the
+                        ; space view and the dashboard, which sets the address
+                        ; of screen RAM to offset $2400 within the VIC-II bank
+                        ; at $4000 (so the screen's colour data is at $6400)
+                        ;
+                        ; In other words:
+                        ;
+                        ;   * When abraxas is $81, the colour of the lower part
+                        ;     of the screen is determined by screen RAM at $6000
+                        ;     (i.e. when the dashboard is not being shown)
+                        ;
+                        ;   * When abraxas is $91, the colour of the lower part
+                        ;     of the screen is determined by screen RAM at $6400
+                        ;     (i.e. when the dashboard is being shown)
+                        ;
+                        ; This enables us to colour the dashboard independently
+                        ; from the corresponding lower part of the text view
+
+ LDA moonflower,X       ; Set VIC register $16 to the value in moonflower (when
+ STA VIC+$16            ; X = 0, for the upper part of the screen) or
+                        ; caravanserai (when X = 1, for the lower part of the
+                        ; screen)
+                        ;
+                        ; moonflower has bit 4 clear by default, so this sets
+                        ; the upper part of the screen to standard bitmap mode,
+                        ; for the space and text views
+                        ;
+                        ; Bit 4 of moonflower gets set in part 3 of the main
+                        ; flight loop when the energy bomb is set off, which
+                        ; changes the space view into multicolour bitmap mode
+                        ; for the duration of the explosion; this makes the
+                        ; space view turn into a coloured mess of double-width
+                        ; pixels while the energy bomb is going off
+                        ;
+                        ; Bit 4 of moonflower gets cleared again in the BOMBOFF
+                        ; routine, which is called once the energy bomb has
+                        ; finished exploding
+                        ;
+                        ; caravanserai has bit 4 clear by default, which sets
+                        ; the lower part of the screen to standard bitmap mode,
+                        ; but the wantdials routine sets bit 4 when we need to
+                        ; display the space view and the dashboard, so this
+                        ; ensures that the dashboard in the lower part of the
+                        ; screen is shown in multicolour bitmap mode
+
+ LDA shango,X           ; Set VIC register $12 to the X-th entry in shango,
+ STA VIC+$12            ; which configures a raster interrupt to fire when the
+                        ; VIC-II reaches the relevant line
+                        ;
+                        ; When X = 0, we are currently configuring the VIC-II
+                        ; for the upper part of the screen, so this sets the
+                        ; next interrupt to fire at line 51 + 143, which is at
+                        ; the top of the dashboard
+                        ;
+                        ; When X = 1, we are currently configuring the VIC-II
+                        ; for the lower part of the screen, this sets the next
+                        ; interrupt to fire at line 51, which is at the top of
+                        ; the visible screen
+                        ;
+                        ; So this ensures that thet the interrupt routine will
+                        ; be called once the raster reaches the next line at
+                        ; which we need to reconfigure the VIC-II
+
+ LDA santana,X          ; Set VIC register $12 to the X-th entry in santana,
+ STA VIC+$1C            ; so it sets bit 1 of the register for the upper part of
+                        ; the screen, and clears it again for the lower part
+                        ;
+                        ; This switches sprite 1, the explosion sprite, between
+                        ; multicolour in the upper part of the screen and single
+                        ; colour in the bottom part
+
+ LDA lotus,X            ; Set VIC register $28 to the X-th entry in lotus, so
+ STA VIC+$28            ; this sets the colour of sprite 1 to red (colour 2)
+                        ; when it's in the upper part of the screen, and to
+                        ; colour 0 in the lower part of the screen
+                        ;
+                        ; As we just switched sprite 1 between multicolour and
+                        ; single colour mode (for the upper and lower parts of
+                        ; the screen respectively), this means the explosion
+                        ; sprite appears in multicolour in the space view (as
+                        ; VIC+$28 is used to define the colour of %10 bits in
+                        ; the bitmap, so those are shown in red), but in the
+                        ; lower part of the screen the sprite is single colour
+                        ; with any set bits mapped to colour 0, making the
+                        ; sprite transparent
+                        ;
+                        ; In other words, this restricts the explosion sprite
+                        ; to appear in the space view only, so explosions don't
+                        ; occur in front of the dashboard
 
  BIT BOMB               ; If bit 7 of BOMB is zero then the energy bomb is not
  BPL nobombef           ; currently going off, so jump to nobombef to skip the
@@ -43531,25 +43757,45 @@ ENDIF
 .nobombef
 
  LDA welcome,X          ; Set VIC register $21 to the X-th entry in welcome, so
- STA VIC+$21            ; we flash and change the background colour while the
-                        ; energy bomb is going off
+ STA VIC+$21            ; we change the background colour of the space view
+                        ; through a whole range of colours while the energy bomb
+                        ; is going off
+                        ;
+                        ; The value of welcome+1 is never changed, so the colour
+                        ; change only applies to the upper part of the screen,
+                        ; i.e. the space view
+                        ;
+                        ; The value of welcome gets set to 0 in the BOMBOFF
+                        ; routine, which is called once the energy bomb has
+                        ; finished exploding, so this stops the background
+                        ; colour from changing
 
- LDA innersec,X         ; ???
- STA RASTCT
- BNE COMIRQ3
- TYA
- PHA
+ LDA innersec,X         ; Set RASCT to the X-th entry from innersec, so this
+ STA RASTCT             ; flips the value of RASCT from 0 to 1 or from 1 to 0
+
+ BNE COMIRQ3            ; If we just flipped RASCT from 0 to 1 then jump to
+                        ; COMIRQ3 to return from the interrupt handler
+
+                        ; We now play the background music, if configured
+                        ;
+                        ; The BNE above means that we only do the following
+                        ; every other call to the interrupt handler, which is
+                        ; once per frame (so that's 60 or 50 times a second,
+                        ; depending on whether this is an NTSC or PAL machine)
+
+ TYA                    ; Store Y on the stack, so we can preserve it across
+ PHA                    ; calls to the interrupt handler
 
  BIT MUPLA              ; If bit 7 of MUPLA is clear then there is no music
- BPL SOINT              ; currently playing, so jump to SOINT to make the sound
-                        ; effect
+ BPL SOINT              ; currently playing, so jump to SOINT to make any sound
+                        ; effects that are in progress
 
- JSR BDirqhere          ; ???
+ JSR BDirqhere          ; Play the background music for this frame
 
  BIT MUSILLY            ; If bit 7 of MUSILLY is set then sounds are configured
  BMI SOINT              ; to be played during music, and we know that music is
-                        ; already playing, so jump to SOINT to make the sound
-                        ; effect
+                        ; already playing, so jump to SOINT to make any sound
+                        ; effects that are in progress
 
  JMP coffee             ; Otherwise sounds are configured not to play during
                         ; music, and we know that music is playins, so jmp to
@@ -43562,7 +43808,7 @@ ENDIF
 ;       Type: Subroutine
 ;   Category: Sound
 ;    Summary: Process the contents of the sound buffer and send it to the sound
-;             chip
+;             chip, to make sound effects as part of the interrupt routine
 ;
 ; ------------------------------------------------------------------------------
 ;
@@ -43574,7 +43820,9 @@ ENDIF
 
 .SOINT
 
- LDY #2                 ; ???
+ LDY #2                 ; We are going to work our way through the three voices,
+                        ; so set a voice counter in Y to go from 2 to 0, for
+                        ; voices 3 to 1
 
 .SOUL8
 
@@ -43585,12 +43833,14 @@ ENDIF
  LDA SOFRCH,Y
  BEQ SOUL5
  BNE SOUX2
-;EQUB $2C
+
+;EQUB $2C               ; This instruction is commented out in the original
+                        ; source
 
 .SOUL4
 
  LDA SEVENS,Y
- STA SOUX3+1 ; %%
+ STA SOUX3+1
  LDA #0
  LDX #6
 
@@ -43671,25 +43921,45 @@ ENDIF
 
  DEY
  BMI P%+5
- JMP SOUL8 ;**
+ JMP SOUL8
  LDA PULSEW
  EOR #4
  STA PULSEW
-;LDA #1
-;STA intcnt
+
+;LDA #1                 ; These instructions are commented out in the original
+;STA intcnt             ; source
+
+; ******************************************************************************
+;
+;       Name: coffee
+;       Type: Subroutine
+;   Category: Sound
+;    Summary: Return from the interrupt routine, for when we are making sound
+;             effects
+;
+; ******************************************************************************
 
 .coffee
 
- PLA
- TAY
- PLA
- TAX
- LDA l1
- AND #$F8
- ORA L1M
- STA l1
- PLA
- RTI
+ PLA                    ; Retrieve the value of Y we stored on the stack at the
+ TAY                    ; start of the music section of the interrupt routine,
+                        ; so it is preserved
+
+ PLA                    ; Retrieve the value of X we stored on the stack at the
+ TAX                    ; start of the interrupt routine, so it is preserved
+
+ LDA l1                 ; Set bits 0 to 2 of the port register at location l1
+ AND #%11111000         ; ($0001) to bits 0 to 2 of L1M, leaving bits 3 to 7
+ ORA L1M                ; unchanged
+ STA l1                 ;
+                        ; This sets LORAM, HIRAM and CHAREN to the values in
+                        ; L1M, which ensures we return memory to the same
+                        ; configuration as when we entered the interrupt routine
+
+ PLA                    ; Retrieve the value of A we stored on the stack at the
+                        ; start of the interrupt routine, so it is preserved
+
+ RTI                    ; Return from the interrupt
 
 ; ******************************************************************************
 ;
