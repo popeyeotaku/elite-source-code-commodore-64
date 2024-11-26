@@ -42660,16 +42660,9 @@ ENDIF
 ; This routine contains an RTS so we can return from the SFRMIS subroutine with
 ; a branch instruction.
 ;
-; It also contains the DEMON label, which implements the demo in the 6502
-; Second Processor version, so this acts as a stub for the JSR DEMON call during
-; conversion of the 6502 Second Processor version into the later Commodore 64,
-; Apple II and BBC Master versions.
-;
-; ------------------------------------------------------------------------------
-;
-; Other entry points:
-;
-;   DEMON               Contains an RTS
+; It also contains the DEMON label, which is left over from the 6502 Second
+; Processor version, where it implements the demo (there is no demo in this
+; version of Elite).
 ;
 ; ******************************************************************************
 
@@ -42701,9 +42694,9 @@ ENDIF
 
  JSR ECBLB              ; Update the E.C.M. indicator bulb on the dashboard
 
- LDY #sfxecm            ; Call the NOISEOFF routine with A = sfxecm to make the
- JMP NOISEOFF           ; sound of the E.C.M. being turned off and return from
-                        ; the subroutine using a tail call
+ LDY #sfxecm            ; Call the NOISEOFF routine with A = sfxecm to turn off
+ JMP NOISEOFF           ; the sound of the E.C.M. and return from the subroutine
+                        ; using a tail call
 
 ; ******************************************************************************
 ;
@@ -42992,27 +42985,47 @@ ENDIF
 ;       Name: NOISEOFF
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: ???
+;    Summary: Turn off a specific sound effect in whichever voice it is
+;             currently playing in
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   Y                   The number of the sound effect to turn off
 ;
 ; ******************************************************************************
 
 .NOISEOFF
 
- LDX #3
- INY
- STY XX15+2
+ LDX #3                 ; Set X = 3 to use as a counter to work through the
+                        ; three voices, so we can match the voice that is
+                        ; currently playing the sound effect in Y
+
+ INY                    ; Set XX15+2 to the number of the sound effect we want
+ STY XX15+2             ; to turn off, plus 1
 
 .SOUL1
 
- DEX
- BMI SOUR1
- LDA SOFLG,X
- AND #63
- CMP XX15+2
- BNE SOUL1
- LDA #1
- STA SOCNT,X
- RTS
+ DEX                    ; Decrement X to work through the voices, so we start
+                        ; from 2 and go down to 0
+
+ BMI SOUR1              ; If X is negative then we have checked all three
+                        ; voices, jump to SOUR1 to return from the subroutine
+                        ; (as SOUR1 contains an RTS)
+
+ LDA SOFLG,X            ; Set A to bits 0-5 of SOFLG for voice X
+ AND #%00111111
+
+ CMP XX15+2             ; If this doesn't match the incremented sound effect
+ BNE SOUL1              ; number in XX15+2, loop back to check the next voice
+
+ LDA #1                 ; If we get here then voice X is playing the sound
+ STA SOCNT,X            ; effect we want to stop, so set the SOCNT entry for
+                        ; this voice to 1, to run down the sound's counter and
+                        ; stop the sound
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
@@ -43025,16 +43038,28 @@ ENDIF
 
 .HYPNOISE
 
- LDY #sfxhyp1           ; ???
- LDA #$F5
- LDX #$F0
- JSR NOISE2
- LDY #sfxwhosh
- JSR NOISE
- LDY #1
+ LDY #sfxhyp1           ; Call the NOISE2 routine with Y = sfxhyp1, a frequency
+ LDA #$F5               ; of 240 in X, and A set as follows:
+ LDX #240               ;
+ JSR NOISE2             ;   * Low nibble of A = release length of 5
+                        ;
+                        ;   * High nibble of A = sustain volume of 15
+
+ LDY #sfxwhosh          ; Call the NOISE routine with Y = sfxwhosh to make the
+ JSR NOISE              ; sound of the ship launching
+
+ LDY #1                 ; Wait for 1 vertical sync (1/50 = 0.02 seconds)
  JSR DELAY
- LDY #(sfxhyp1+128)
- BNE NOISE
+
+ LDY #(sfxhyp1+128)     ; Call the NOISE routine with Y = sfxhyp1 + 128, which
+ BNE NOISE              ; makes the sfxhyp1 hyperspace effect, but without first
+                        ; checking to see if it is already playing (so the
+                        ; effect can layer on top of the first sound effect we
+                        ; made above)
+                        ;
+                        ; The call to NOISE returns from the subroutine using a
+                        ; tail call (this BNE is effectively a JMP as Y is never
+                        ; zero)
 
 ; ******************************************************************************
 ;
@@ -43091,6 +43116,12 @@ ENDIF
 ;
 ;   Y                   The number of the sound effect to be made
 ;
+;                       If bit 7 is set (i.e. Y = 128 + sound effect number)
+;                       then it will play the sound effect without first
+;                       checking to see if it is already playing, so the sound
+;                       effect can be made on more than one voice at the same
+;                       time
+;
 ;   V flag              If set, use the values in XX15 and XX15+1 to determine
 ;                       the release length, sustain volume and frequency
 ;
@@ -43107,86 +43138,197 @@ ENDIF
 
 .NOISE
 
- CLV
- LDA DNOIZ
- BNE SOUR1
- LDX #2
- INY
+ CLV                    ; Clear the V flag, unless we fell into this routine
+                        ; from the NOISE2 routine, in which case this
+                        ; instruction is skipped (and V remains set)
+
+ LDA DNOIZ              ; If DNOIZ is non-zero, then sound is disabled, so
+ BNE SOUR1              ; return from the subroutine (as SOUR1 contains an RTS)
+
+ LDX #2                 ; Set X = 2 so we can loop through all three voices,
+                        ; from voice 2 down to voice 0
+
+ INY                    ; Set XX15+2 = sound effect number in Y + 1
  STY XX15+2
  DEY
- LDA SFXPR,Y
- LSR A
- BCS SOUX9 ;dont flush
+
+ LDA SFXPR,Y            ; If bit 0 of SFXPR value for this sound effect is set,
+ LSR A                  ; then we don't need to check the three voice channels
+ BCS SOUX9              ; to see if any of them are already playing this sound
+                        ; effect, so jumo to SOUX9 to skip the following
+                        ;
+                        ; If NOISE was called with a sound effect of 128 + sound
+                        ; effect number, this lookup will be fairly random, as
+                        ; it is fetching values from game code
+
+                        ; Bit 1 of SFXPR for this sound effect is clear, so now
+                        ; we check to see if this sound effect is already
+                        ; playing, and if it is, we jump to SOUX6 with the voice
+                        ; number in X
 
 .SOUX7
 
- LDA SOFLG,X
- AND #63
- CMP XX15+2
- BEQ SOUX6
- DEX
- BPL SOUX7
+ LDA SOFLG,X            ; Set A to bits 0-5 of SOFLG for voice X, which contains
+ AND #%00111111         ; the sound effect number currently playing in voice X,
+                        ; incremented by 1
+
+ CMP XX15+2             ; If this matches the incremented sound effect number
+ BEQ SOUX6              ; in XX15+2, then the sound effect is already playing on
+                        ; voice X, so jump to SOUX6 to play the new sound effect
+                        ; using the same voice
+
+ DEX                    ; Decrement the voice number in X
+
+ BPL SOUX7              ; Loop back to check the next voice, until we have
+                        ; checked them all
 
 .SOUX9
 
- LDX #0
- LDA SOPR
- CMP SOPR+1
+                        ; The sound effect is not already being played, so now
+                        ; we find out which voice currently has the lowest
+                        ; priority, which is stored in the SOPR table
+
+ LDX #0                 ; Set X = 0 to denote voice voice 1
+
+ LDA SOPR               ; If SOPR < SOPR+1, jump to SOUX1 as voice 1 currently
+ CMP SOPR+1             ; has a lower priority than voice 2
  BCC SOUX1
- INX
- LDA SOPR+1
+
+ INX                    ; Voice 1 has a higher priority than voice 2, so set
+                        ; X = 1 to denote voice 2
+
+ LDA SOPR+1             ; Set A to the priority of voice 2
 
 .SOUX1
 
- CMP SOPR+2
- BCC P%+4
- LDX #2
+ CMP SOPR+2             ; If A < SOPR+2, then the priority in A is a lower
+ BCC P%+4               ; priority than voice 3, so skip the following
+                        ; instruction to keep the value of X unchanged
+
+ LDX #2                 ; Set X = 2 so we make the sound effect in voice 3
+                        ;
+                        ; So if we jumped here because voice 1 has a lower
+                        ; priority than voice 2, we set X as follows:
+                        ;
+                        ;   * X = 0 to choose voice 1 as the lowest priority
+                        ;           if voice 1 is lower priority than voice 3
+                        ;           as v1 < v3 and v1 < v2
+                        ;
+                        ;   * X = 2 to choose voice 3 as the lowest priority
+                        ;           if voice 1 is higher priority than voice 3
+                        ;           as v1 > v3 and v1 < v2
+                        ;
+                        ; If we fell through from above because voice 1 has a
+                        ; higher priority than voice 2, then we set X as follows:
+                        ;
+                        ;   * X = 1 to choose voice 2 as the lowest priority
+                        ;           if voice 2 is lower priority than voice 3
+                        ;           as v2 < v3 and v1 > v2
+                        ;
+                        ;   * X = 2 to choose voice 3 as the lowest priority
+                        ;           if voice 2 is higher priority than voice 3
+                        ;           as v2 > v3 and v1 > v2
+                        ;
+                        ; The result is that X now contains the voice with the
+                        ; lowest priority in the SOPR table, so this is where we
+                        ; make our new sound effect
 
 .SOUX6
 
- \X contains ch no.
- TYA
- AND #127
- TAY
- LDA SFXPR,Y
- CMP SOPR,X
- BCC SOUR1
- SEI
- STA SOPR,X
- BVS SOUX4
- LDA SFXSUS,Y
- EQUB $CD
-;CMP abs
+                        ; By this point X contains the voice number for our new
+                        ; sound effect, where X = 0, 1 or 2 (for voices 1 to 3)
+
+ TYA                    ; Clear bit 0 of Y, so that if NOISE was called with a
+ AND #%01111111         ; sound effect of 128 + sound effect number, the 128
+ TAY                    ; part is now cleared from Y, so Y now contains the
+                        ; sound effect number that we want to make
+
+ LDA SFXPR,Y            ; If sound effect Y's priority in SFXPR is less than
+ CMP SOPR,X             ; the current priority of voice X in SOPR+X, then the
+ BCC SOUR1              ; sound currently playing in voice X is a higher
+                        ; priority than the new sound, so jump to SOUR1 to
+                        ; return from the subroutine (as SOUR1 contains an RTS)
+
+ SEI                    ; Disable interrupts while we make the sound effect
+
+ STA SOPR,X             ; Store the priority of the sound effect we are making
+                        ; in the SOPR entry for voice X, so we can use this to
+                        ; check the priority if we want to make sounds in this
+                        ; voice in future
+
+ BVS SOUX4              ; If the V flag is set then we got here via NOISE2, in
+                        ; which case the release length and sustain volume were
+                        ; passed to the routine in XX15, so skip to SOUX4 to
+                        ; set A to this value
+
+ LDA SFXSUS,Y           ; Set A to the release length and sustain volume for
+                        ; sound effect Y
+
+ EQUB $CD               ; Skip the next instruction by turning it into
+                        ; $CD $A5 $6B, or CMP $6BA5, which does nothing apart
+                        ; from affect the C and Z flags
+                        ;
+                        ; This is similar to the EQUB $2C trick that we see
+                        ; throughout Elite, but that uses a BIT opcode to skip
+                        ; an instruction, and that would change the value of the
+                        ; V flag (which we are using), so here we change the
+                        ; next instruction into a CMP instead, as that doesn't
+                        ; affect the V flag
 
 .SOUX4
 
- LDA XX15
- STA SOSUS,X
- LDA SFXCNT,Y
- STA SOCNT,X
- LDA SFXFRCH,Y
- STA SOFRCH,X
- LDA SFXCR,Y
- STA SOCR,X
- BVS SOUX5
- LDA SFXFQ,Y
- EQUB $CD
+ LDA XX15               ; Set A to XX15, which contains the release length and
+                        ; sustain volume that were passed here via NOISE2 (we
+                        ; only run this instruction if the V flag is set)
+
+ STA SOSUS,X            ; Store the release length and sustain volume in A into
+                        ; the SOSUS entry for voice X
+
+ LDA SFXCNT,Y           ; Store the counter ??? for sound effect Y in the SOCNT
+ STA SOCNT,X            ; entry for voice X
+
+ LDA SFXFRCH,Y          ; Store the ??? for sound effect Y in the SOFRCH entry
+ STA SOFRCH,X           ; for voice X
+
+ LDA SFXCR,Y            ; Store the ??? for sound effect Y in the SOCR entry for
+ STA SOCR,X             ; voice X
+
+ BVS SOUX5              ; If the V flag is set then we got here via NOISE2, in
+                        ; which case the frequency was passed to the routine in
+                        ; XX15+1, so skip to SOUX5 to set A to this value
+
+ LDA SFXFQ,Y            ; Set A to the frequency for sound effect Y
+
+ EQUB $CD               ; Skip the next instruction by turning it into
+                        ; $CD $A5 $6C, or CMP $6CA5, which does nothing apart
+                        ; from affect the C and Z flags
 
 .SOUX5
 
- LDA XX15+1
- STA SOFRQ,X
- LDA SFXATK,Y
- STA SOATK,X
- LDA SFXVCH,Y
- STA SOVCH,X
- INY
- TYA
- ORA #128
- STA SOFLG,X
- CLI
- SEC
- RTS
+ LDA XX15+1             ; Set A to XX15+1, which contains the frequency that was
+                        ; passed here via NOISE2 (we only run this instruction
+                        ; if the V flag is set)
+
+ STA SOFRQ,X            ; Store the frequency in A into the SOFRQ entry for
+                        ; voice X
+
+ LDA SFXATK,Y           ; Store the attack ??? for sound effect Y in the SOATK
+ STA SOATK,X            ; entry for voice X
+
+ LDA SFXVCH,Y           ; Store the ??? for sound effect Y in the SOVCH entry
+ STA SOVCH,X            ; for voice X
+
+ INY                    ; Increment the sound effect number in Y
+
+ TYA                    ; Store the incremented sound effect number in the low
+ ORA #%10000000         ; bits of the SOFLG entry for voice X (so the lower bits
+ STA SOFLG,X            ; are non-zero) and set bit 7 to ???
+
+ CLI                    ; Enable interrupts again
+
+ SEC                    ; Set the C flag
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
@@ -43432,7 +43574,7 @@ ENDIF
 
 .SOINT
 
- LDY #2
+ LDY #2                 ; ???
 
 .SOUL8
 
@@ -43573,9 +43715,10 @@ ENDIF
 
 .SOPR
 
- EQUB 0                 ; Sound buffer for SFXPR values
- EQUB 0
- EQUB 0
+ EQUB 0                 ; Sound buffer for SOPR values
+ EQUB 0                 ;
+ EQUB 0                 ; SOPR,X contains the priority of the sound currently
+                        ; being made on voice X
 
 .PULSEW
 
@@ -44079,6 +44222,7 @@ ENDIF
  CLI                    ; Re-enable interrupts
 
  RTS                    ; Return from the subroutine
+
 ; ******************************************************************************
 ;
 ;       Name: NMIpissoff
@@ -44143,7 +44287,8 @@ ENDIF
  STA COL                ; for a dashboard indicator (though this code is never
                         ; run)
 
-                        ; Fall through into PUTBACK to 
+                        ; Fall through into PUTBACK to return from the
+                        ; subroutine
 
 ; ******************************************************************************
 ;
@@ -45844,7 +45989,7 @@ ENDIF
 
 .WSCAN
 
- PHA
+ PHA                    ; ???
 
 .WSC1
 
@@ -45869,7 +46014,7 @@ ENDIF
 
 .CHPR2
 
- CMP #123
+ CMP #123               ; ???
  BCS whosentthisshit
  CMP #13
  BCC whosentthisshit
@@ -45968,7 +46113,8 @@ ENDIF
 .CHPR
 
  \PRINT   Rewrite for Mode 4 Map
- STA K3
+
+ STA K3                 ; ???
  STY YSAV2
  STX XSAV2
  LDY QQ17
@@ -46089,7 +46235,7 @@ ENDIF
 ;       Name: TTX66K
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: Clear the top part of the screen and draw a yellow border ???
+;    Summary: Clear the top part of the screen and draw a white border
 ;
 ; ------------------------------------------------------------------------------
 ;
@@ -46106,7 +46252,7 @@ ENDIF
 
 .TTX66K
 
- LDA #4
+ LDA #4                 ; ???
  STA SC
  LDA #$60
  STA SC+1
