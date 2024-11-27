@@ -13652,10 +13652,6 @@ ENDIF
 ;   Category: Drawing circles
 ;    Summary: Make the hyperspace sound and draw the hyperspace tunnel
 ;
-; ------------------------------------------------------------------------------
-;
-; See the IRQ1 routine for details on the multi-coloured effect that's used.
-;
 ; ******************************************************************************
 
 .LL164
@@ -43479,11 +43475,11 @@ ENDIF
 
 .lotus
 
- EQUB 2         ; Colour 2 (red) for %10 bit pairs in the upper part of the
-                ; screen
+ EQUB 2                 ; Colour 2 (red) for %10 bit pairs in the upper part of
+                        ; the screen
 
- EQUB 0         ; Colour 0 (transparent) for set bits in the lower part of the
-                ; screen
+ EQUB 0                 ; Colour 0 (transparent) for set bits in the lower part
+                        ; of the screen
 
 ; ******************************************************************************
 ;
@@ -44025,8 +44021,12 @@ ENDIF
                         ; of the SOSUS value contains the sustain volumne, so
                         ; this subtracts 1 from the sustain volumne
 
- LDX SEVENS,Y           ; Update SID register $6 (release length and sustain
- STA SID+6,X            ; volume) with the new value to reduce the volume of
+ LDX SEVENS,Y           ; Use the lookup table at SEVENS to set X = 7 * Y, so it
+                        ; can be used as an index into the SID registers for
+                        ; voice Y
+
+ STA SID+6,X            ; Update SID register $6 (release length and sustain
+                        ; volume) with the new value to reduce the volume of
                         ; the sound by 1
 
  JMP SOUL3              ; Jump to SOUL3 to move on to the next voice
@@ -44037,14 +44037,31 @@ ENDIF
                         ; reached the end of its counter, so we need to
                         ; terminate it
 
- LDX SEVENS,Y           ; ???
- LDA SOCR,Y
- AND #$FE
- STA SID+4,X
- LDA #0
- STA SOFLG,Y
- STA SOPR,Y
- BEQ SOUL3
+ LDX SEVENS,Y           ; Use the lookup table at SEVENS to set X = 7 * Y, so it
+                        ; can be used as an index into the SID registers for
+                        ; voice Y
+
+ LDA SOCR,Y             ; Set SID register $4 (the voice control register) for
+ AND #%11111110         ; voice Y to the value from SOPR for voice Y, but with
+ STA SID+4,X            ; bit 0 clear
+                        ;
+                        ; Bit 0 controls the sound as follows:
+                        ;
+                        ;   * Bit 0: 0 = voice off, release cycle
+                        ;            1 = voice on, attack-decay-sustain cycle
+                        ;
+                        ; So this turns the voice off, while leaving everything
+                        ; else as it was
+
+ LDA #0                 ; Zero the sound flag in SOFLG for voice Y to indicate
+ STA SOFLG,Y            ; that no sound effect is playing on this voice any more
+
+ STA SOPR,Y             ; Set the priority in SOPR for voice Y to zero, so any
+                        ; new sound effects will always override the priority
+                        ; of voice Y
+
+ BEQ SOUL3              ; Jump to SOUL3 to move on to the next voice (this BEQ
+                        ; is effectively a JMP as A is always zero)
 
 .SOUL6
 
@@ -44244,9 +44261,11 @@ ENDIF
 
 .SEVENS
 
- EQUB 0
- EQUB 7
- EQUB 14
+ EQUB 0                 ; Lookup value to change 0 to 0
+
+ EQUB 7                 ; Lookup value to change 1 to 7
+
+ EQUB 14                ; Lookup value to change 2 to 14
 
 ; ******************************************************************************
 ;
@@ -44259,22 +44278,22 @@ ENDIF
 
 .SFXPR
 
- EQUB $72               ; ??? Convert to decimal
- EQUB $70
- EQUB $74
- EQUB $77
- EQUB $73
- EQUB $68
- EQUB $60
- EQUB $F0
- EQUB $30
- EQUB $FE
- EQUB $72
- EQUB $72
- EQUB $92
- EQUB $E1
- EQUB $51
- EQUB $02
+ EQUB 114               ; Sound  0 = sfxplas  = Pulse lasers fired by us
+ EQUB 112               ; Sound  1 = sfxelas  = Being hit by lasers 1
+ EQUB 116               ; Sound  2 = sfxhit   = Other ship exploding
+ EQUB 119               ; Sound  3 = sfxexpl  = We died / Collision
+ EQUB 115               ; Sound  4 = sfxwhosh = Missile launched / Ship launch
+ EQUB 104               ; Sound  5 = sfxbeep  = Short, high beep
+ EQUB 96                ; Sound  6 = sfxboop  = Long, low beep
+ EQUB 240               ; Sound  7 = sfxhyp1  = Hyperspace drive engaged 1
+ EQUB 48                ; Sound  8 = sfxeng   = This sound is not used
+ EQUB 254               ; Sound  9 = sfxecm   = E.C.M. on
+ EQUB 114               ; Sound 10 = sfxblas  = Beam lasers fired by us
+ EQUB 114               ; Sound 11 = sfxalas  = Military lasers fired by us
+ EQUB 146               ; Sound 12 = sfxmlas  = Mining lasers fired by us
+ EQUB 225               ; Sound 13 = sfxbomb  = Energy bomb
+ EQUB 81                ; Sound 14 = sfxtrib  = Trumbles dying
+ EQUB 2                 ; Sound 15 = sfxelas2 = Being hit by lasers 2
 
 ; ******************************************************************************
 ;
@@ -44288,22 +44307,22 @@ ENDIF
 
 .SFXCNT
 
- EQUB $14               ; ??? Convert to decimal
- EQUB $0E
- EQUB $0C
- EQUB $50
- EQUB $3F
- EQUB $05
- EQUB $18
- EQUB $80
- EQUB $30
- EQUB $FF
- EQUB $10
- EQUB $10
- EQUB $70
- EQUB $40
- EQUB $0F
- EQUB $0E
+ EQUB 20                ; Sound  0 = sfxplas  = Pulse lasers fired by us
+ EQUB 14                ; Sound  1 = sfxelas  = Being hit by lasers 1
+ EQUB 12                ; Sound  2 = sfxhit   = Other ship exploding
+ EQUB 80                ; Sound  3 = sfxexpl  = We died / Collision
+ EQUB 63                ; Sound  4 = sfxwhosh = Missile launched / Ship launch
+ EQUB 5                 ; Sound  5 = sfxbeep  = Short, high beep
+ EQUB 24                ; Sound  6 = sfxboop  = Long, low beep
+ EQUB 128               ; Sound  7 = sfxhyp1  = Hyperspace drive engaged 1
+ EQUB 48                ; Sound  8 = sfxeng   = This sound is not used
+ EQUB 255               ; Sound  9 = sfxecm   = E.C.M. on
+ EQUB 16                ; Sound 10 = sfxblas  = Beam lasers fired by us
+ EQUB 16                ; Sound 11 = sfxalas  = Military lasers fired by us
+ EQUB 112               ; Sound 12 = sfxmlas  = Mining lasers fired by us
+ EQUB 64                ; Sound 13 = sfxbomb  = Energy bomb
+ EQUB 15                ; Sound 14 = sfxtrib  = Trumbles dying
+ EQUB 14                ; Sound 15 = sfxelas2 = Being hit by lasers 2
 
 ; ******************************************************************************
 ;
@@ -44316,22 +44335,22 @@ ENDIF
 
 .SFXFQ
 
- EQUB $45               ; ??? Convert to decimal
- EQUB $48
- EQUB $D0
- EQUB $51
- EQUB $40
- EQUB $F0
- EQUB $40
- EQUB $80
- EQUB $10
- EQUB $50
- EQUB $34
- EQUB $33
- EQUB $60
- EQUB $55
- EQUB $80
- EQUB $40
+ EQUB 69                ; Sound  0 = sfxplas  = Pulse lasers fired by us
+ EQUB 72                ; Sound  1 = sfxelas  = Being hit by lasers 1
+ EQUB 208               ; Sound  2 = sfxhit   = Other ship exploding
+ EQUB 81                ; Sound  3 = sfxexpl  = We died / Collision
+ EQUB 64                ; Sound  4 = sfxwhosh = Missile launched / Ship launch
+ EQUB 240               ; Sound  5 = sfxbeep  = Short, high beep
+ EQUB 64                ; Sound  6 = sfxboop  = Long, low beep
+ EQUB 128               ; Sound  7 = sfxhyp1  = Hyperspace drive engaged 1
+ EQUB 16                ; Sound  8 = sfxeng   = This sound is not used
+ EQUB 80                ; Sound  9 = sfxecm   = E.C.M. on
+ EQUB 52                ; Sound 10 = sfxblas  = Beam lasers fired by us
+ EQUB 51                ; Sound 11 = sfxalas  = Military lasers fired by us
+ EQUB 96                ; Sound 12 = sfxmlas  = Mining lasers fired by us
+ EQUB 85                ; Sound 13 = sfxbomb  = Energy bomb
+ EQUB 128               ; Sound 14 = sfxtrib  = Trumbles dying
+ EQUB 64                ; Sound 15 = sfxelas2 = Being hit by lasers 2
 
 ; ******************************************************************************
 ;
@@ -44365,22 +44384,22 @@ ENDIF
 
 .SFXCR
 
- EQUB $41               ; ??? Convert to binary
- EQUB $11
- EQUB $81
- EQUB $81
- EQUB $81
- EQUB $11
- EQUB $11
- EQUB $41
- EQUB $21
- EQUB $41
- EQUB $21
- EQUB $21
- EQUB $11
- EQUB $81
- EQUB $11
- EQUB $21
+ EQUB %01000001         ; Sound  0 = sfxplas  = Pulse lasers fired by us
+ EQUB %00010001         ; Sound  1 = sfxelas  = Being hit by lasers 1
+ EQUB %10000001         ; Sound  2 = sfxhit   = Other ship exploding
+ EQUB %10000001         ; Sound  3 = sfxexpl  = We died / Collision
+ EQUB %10000001         ; Sound  4 = sfxwhosh = Missile launched / Ship launch
+ EQUB %00010001         ; Sound  5 = sfxbeep  = Short, high beep
+ EQUB %00010001         ; Sound  6 = sfxboop  = Long, low beep
+ EQUB %01000001         ; Sound  7 = sfxhyp1  = Hyperspace drive engaged 1
+ EQUB %00100001         ; Sound  8 = sfxeng   = This sound is not used
+ EQUB %01000001         ; Sound  9 = sfxecm   = E.C.M. on
+ EQUB %00100001         ; Sound 10 = sfxblas  = Beam lasers fired by us
+ EQUB %00100001         ; Sound 11 = sfxalas  = Military lasers fired by us
+ EQUB %00010001         ; Sound 12 = sfxmlas  = Mining lasers fired by us
+ EQUB %10000001         ; Sound 13 = sfxbomb  = Energy bomb
+ EQUB %00010001         ; Sound 14 = sfxtrib  = Trumbles dying
+ EQUB %00100001         ; Sound 15 = sfxelas2 = Being hit by lasers 2
 
 ; ******************************************************************************
 ;
@@ -44401,22 +44420,22 @@ ENDIF
 
 .SFXATK
 
- EQUB $01               ; ??? Leave in hex
- EQUB $09
- EQUB $20
- EQUB $08
- EQUB $0C
- EQUB $00
- EQUB $63
- EQUB $18
- EQUB $44
- EQUB $11
- EQUB $00
- EQUB $00
- EQUB $44
- EQUB $11
- EQUB $18
- EQUB $09
+ EQUB $01               ; Sound  0 = sfxplas  = Pulse lasers fired by us
+ EQUB $09               ; Sound  1 = sfxelas  = Being hit by lasers 1
+ EQUB $20               ; Sound  2 = sfxhit   = Other ship exploding
+ EQUB $08               ; Sound  3 = sfxexpl  = We died / Collision
+ EQUB $0C               ; Sound  4 = sfxwhosh = Missile launched / Ship launch
+ EQUB $00               ; Sound  5 = sfxbeep  = Short, high beep
+ EQUB $63               ; Sound  6 = sfxboop  = Long, low beep
+ EQUB $18               ; Sound  7 = sfxhyp1  = Hyperspace drive engaged 1
+ EQUB $44               ; Sound  8 = sfxeng   = This sound is not used
+ EQUB $11               ; Sound  9 = sfxecm   = E.C.M. on
+ EQUB $00               ; Sound 10 = sfxblas  = Beam lasers fired by us
+ EQUB $00               ; Sound 11 = sfxalas  = Military lasers fired by us
+ EQUB $44               ; Sound 12 = sfxmlas  = Mining lasers fired by us
+ EQUB $11               ; Sound 13 = sfxbomb  = Energy bomb
+ EQUB $18               ; Sound 14 = sfxtrib  = Trumbles dying
+ EQUB $09               ; Sound 15 = sfxelas2 = Being hit by lasers 2
 
 ; ******************************************************************************
 ;
@@ -44438,22 +44457,22 @@ ENDIF
 
 .SFXSUS
 
- EQUB $D1               ; ??? Leave in hex
- EQUB $F1
- EQUB $E5
- EQUB $FB
- EQUB $DC
- EQUB $F0
- EQUB $F3
- EQUB $D8
- EQUB $00
- EQUB $E1
- EQUB $E1
- EQUB $F1
- EQUB $F4
- EQUB $E3
- EQUB $B0
- EQUB $A1
+ EQUB $D1               ; Sound  0 = sfxplas  = Pulse lasers fired by us
+ EQUB $F1               ; Sound  1 = sfxelas  = Being hit by lasers 1
+ EQUB $E5               ; Sound  2 = sfxhit   = Other ship exploding
+ EQUB $FB               ; Sound  3 = sfxexpl  = We died / Collision
+ EQUB $DC               ; Sound  4 = sfxwhosh = Missile launched / Ship launch
+ EQUB $F0               ; Sound  5 = sfxbeep  = Short, high beep
+ EQUB $F3               ; Sound  6 = sfxboop  = Long, low beep
+ EQUB $D8               ; Sound  7 = sfxhyp1  = Hyperspace drive engaged 1
+ EQUB $00               ; Sound  8 = sfxeng   = This sound is not used
+ EQUB $E1               ; Sound  9 = sfxecm   = E.C.M. on
+ EQUB $E1               ; Sound 10 = sfxblas  = Beam lasers fired by us
+ EQUB $F1               ; Sound 11 = sfxalas  = Military lasers fired by us
+ EQUB $F4               ; Sound 12 = sfxmlas  = Mining lasers fired by us
+ EQUB $E3               ; Sound 13 = sfxbomb  = Energy bomb
+ EQUB $B0               ; Sound 14 = sfxtrib  = Trumbles dying
+ EQUB $A1               ; Sound 15 = sfxelas2 = Being hit by lasers 2
 
 ; ******************************************************************************
 ;
@@ -44467,22 +44486,22 @@ ENDIF
 
 .SFXFRCH
 
- EQUB $FE               ; ??? Convert to decimal
- EQUB $FE
- EQUB $F3
- EQUB $FF
- EQUB $00
- EQUB $00
- EQUB $00
- EQUB $44
- EQUB $00
- EQUB $55
- EQUB $FE
- EQUB $FF
- EQUB $EF
- EQUB $77
- EQUB $7B
- EQUB $FE
+ EQUB 254               ; Sound  0 = sfxplas  = Pulse lasers fired by us
+ EQUB 254               ; Sound  1 = sfxelas  = Being hit by lasers 1
+ EQUB 243               ; Sound  2 = sfxhit   = Other ship exploding
+ EQUB 255               ; Sound  3 = sfxexpl  = We died / Collision
+ EQUB 0                 ; Sound  4 = sfxwhosh = Missile launched / Ship launch
+ EQUB 0                 ; Sound  5 = sfxbeep  = Short, high beep
+ EQUB 0                 ; Sound  6 = sfxboop  = Long, low beep
+ EQUB 68                ; Sound  7 = sfxhyp1  = Hyperspace drive engaged 1
+ EQUB 0                 ; Sound  8 = sfxeng   = This sound is not used
+ EQUB 85                ; Sound  9 = sfxecm   = E.C.M. on
+ EQUB 254               ; Sound 10 = sfxblas  = Beam lasers fired by us
+ EQUB 255               ; Sound 11 = sfxalas  = Military lasers fired by us
+ EQUB 239               ; Sound 12 = sfxmlas  = Mining lasers fired by us
+ EQUB 119               ; Sound 13 = sfxbomb  = Energy bomb
+ EQUB 123               ; Sound 14 = sfxtrib  = Trumbles dying
+ EQUB 254               ; Sound 15 = sfxelas2 = Being hit by lasers 2
 
 ; ******************************************************************************
 ;
@@ -44496,22 +44515,22 @@ ENDIF
 
 .SFXVCH
 
- EQUB $03               ; ??? Convert to decimal
- EQUB $03
- EQUB $03
- EQUB $0F
- EQUB $0F
- EQUB $FF
- EQUB $FF
- EQUB $1F
- EQUB $FF
- EQUB $FF
- EQUB $03
- EQUB $03
- EQUB $0F
- EQUB $FF
- EQUB $FF
- EQUB $03
+ EQUB 3                 ; Sound  0 = sfxplas  = Pulse lasers fired by us
+ EQUB 3                 ; Sound  1 = sfxelas  = Being hit by lasers 1
+ EQUB 3                 ; Sound  2 = sfxhit   = Other ship exploding
+ EQUB 15                ; Sound  3 = sfxexpl  = We died / Collision
+ EQUB 15                ; Sound  4 = sfxwhosh = Missile launched / Ship launch
+ EQUB 255               ; Sound  5 = sfxbeep  = Short, high beep
+ EQUB 255               ; Sound  6 = sfxboop  = Long, low beep
+ EQUB 31                ; Sound  7 = sfxhyp1  = Hyperspace drive engaged 1
+ EQUB 255               ; Sound  8 = sfxeng   = This sound is not used
+ EQUB 255               ; Sound  9 = sfxecm   = E.C.M. on
+ EQUB 3                 ; Sound 10 = sfxblas  = Beam lasers fired by us
+ EQUB 3                 ; Sound 11 = sfxalas  = Military lasers fired by us
+ EQUB 15                ; Sound 12 = sfxmlas  = Mining lasers fired by us
+ EQUB 255               ; Sound 13 = sfxbomb  = Energy bomb
+ EQUB 255               ; Sound 14 = sfxtrib  = Trumbles dying
+ EQUB 3                 ; Sound 15 = sfxelas2 = Being hit by lasers 2
 
 ; ******************************************************************************
 ;
@@ -44922,7 +44941,7 @@ ENDIF
 
 .DTWOS
 
- EQUD $030C30C0
+ EQUD $030C30C0         ; ???
 
  EQUD $3060C0C0         ; These bytes appear to be unused; they contain a copy
  EQUD $03060C18         ; of the TWOS2 variable, and the original source has a
@@ -44939,7 +44958,7 @@ ENDIF
 
 .CTWOS2
 
- EQUD $3030C0C0
+ EQUD $3030C0C0         ; ???
  EQUD $03030C0C
  EQUW $C0C0
 
@@ -45339,7 +45358,7 @@ ENDIF
 ;
 ; ******************************************************************************
 
- LDA X1
+ LDA X1                 ; ???
  AND #$F8
  CLC
  ADC ylookupl,Y
@@ -45590,7 +45609,7 @@ ENDIF
 
 .DOWN
 
- LDA ylookuph,Y
+ LDA ylookuph,Y         ; ???
  STA SC+1
  LDA X1
  AND #$F8
@@ -45847,7 +45866,7 @@ ENDIF
 
 .STPY
 
- LDY Y1
+ LDY Y1                 ; ???
  TYA
  LDX X1
  CPY Y2
@@ -45934,7 +45953,7 @@ ENDIF
 ;
 ; ******************************************************************************
 
- CLC
+ CLC                    ; ???
  LDA SWAP
  BEQ LI17
  DEX
@@ -45998,7 +46017,7 @@ ENDIF
 
 .LFT
 
- LDA SWAP
+ LDA SWAP               ; ???
  BEQ LI18
  DEX
 
@@ -46057,7 +46076,7 @@ ENDIF
 
 .HLOIN
 
- STY YSAV
+ STY YSAV               ; ???
  LDX X1
  CPX X2
  BEQ HL6
@@ -46259,7 +46278,7 @@ ENDIF
 
 .CPIX2
 
- LDY Y1
+ LDY Y1                 ; ???
  LDA X1
  AND #$F8
  CLC
@@ -46567,7 +46586,7 @@ ENDIF
 
 .clss
 
- JSR TT66simp
+ JSR TT66simp           ; ???
  LDA K3
  JMP RRafter
 
@@ -46582,7 +46601,7 @@ ENDIF
 
 .RR4S
 
- JMP RR4
+ JMP RR4            ; ???
 
 ; ******************************************************************************
 ;
@@ -46934,7 +46953,7 @@ ENDIF
 
 .wantdials
 
- JSR BOX2
+ JSR BOX2               ; ???
  LDA #$91
  STA abraxas
  LDA #$D0
@@ -46979,7 +46998,7 @@ ENDIF
 
 .zonkscanners
 
- LDX #0
+ LDX #0                 ; ???
 
 .zonkL
 
@@ -47012,7 +47031,7 @@ ENDIF
 
 .BLUEBAND
 
- LDX #LO(SCBASE)
+ LDX #LO(SCBASE)        ; ???
  LDY #HI(SCBASE)
  JSR BLUEBANDS
  LDX #LO(SCBASE+$128)
@@ -47056,7 +47075,7 @@ ENDIF
 
 .TT66simp
 
- LDX #8
+ LDX #8                 ; ???
  LDY #0
  CLC
 
@@ -47226,7 +47245,7 @@ ENDIF
 
 .CLYNS
 
- LDA #0
+ LDA #0                 ; ???
  STA DLY
  STA de
 
