@@ -30277,8 +30277,8 @@ ENDIF
 .plus13
 
  LDA TRIBBLE+1          ; If the high byte of TRIBBLE(1 0), the number of
- BEQ nobabies           ; Trumbles in the hold, is zero, jump to nobabies to skip
-                        ; the following
+ BEQ nobabies           ; Trumbles in the hold, is zero, jump to nobabies to
+                        ; skip the following
 
                         ; We have a lot of Trumbles in the hold, so let's see if
                         ; any of them are breeding (note that Trumbles always
@@ -43220,7 +43220,8 @@ ENDIF
                         ;           as v1 > v3 and v1 < v2
                         ;
                         ; If we fell through from above because voice 1 has a
-                        ; higher priority than voice 2, then we set X as follows:
+                        ; higher priority than voice 2, then we set X as
+                        ; follows:
                         ;
                         ;   * X = 1 to choose voice 2 as the lowest priority
                         ;           if voice 2 is lower priority than voice 3
