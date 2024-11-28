@@ -41,7 +41,7 @@
  _GMA85_NTSC            = (_VARIANT = 1)
  _GMA86_PAL             = (_VARIANT = 2)
  _SOURCE_DISK_BUILD     = (_VARIANT = 3)
- _SOURCE_DISC_FILES     = (_VARIANT = 4)
+ _SOURCE_DISK_FILES     = (_VARIANT = 4)
 
 ; ******************************************************************************
 ;
@@ -58,7 +58,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
  C% = $6A00             ; The address where the second block of game code will
                         ; be run (ELITE C onwards)
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  C% = $7300             ; The address where the second block of game code will
                         ; be run (ELITE C onwards)
@@ -406,7 +406,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
                                 ; text view, and we put the sprite definitions
                                 ; after this)
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  DSTORE% = SCBASE + $2800       ; The address of a copy of the dashboard bitmap,
                                 ; which gets copied into screen memory when
@@ -1194,7 +1194,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
  ORG $F900
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  ORG $F000
 
@@ -4475,7 +4475,7 @@ ENDIF
 
 .MA77
 
- LDA MCNT               ; Fetch the main loop counter and calculate MCNT mod 7,
+ LDA MCNT               ; Fetch the main loop counter and calculate MCNT mod 8,
  AND #7                 ; jumping to MA22 if it is non-zero (so the following
  BNE MA22               ; code only runs every 8 iterations of the main loop)
 
@@ -6548,7 +6548,7 @@ IF _MATCH_ORIGINAL_BINARIES
   EQUB $85, $6F, $C8, $B1, $5B, $85, $BB, $29
   EQUB $1F, $C5, $AD, $90, $FB, $C8, $B1, $5B
 
- ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
   EQUB $60, $6D, $A5, $8A, $85, $6E, $A5, $8B   ; These bytes appear to be
   EQUB $85, $6F, $A5, $8D, $85, $70, $4C, $40   ; unused and just contain random
@@ -6641,7 +6641,7 @@ IF _MATCH_ORIGINAL_BINARIES
   EQUB $38, $E5, $9B, $9D, $00, $01, $E8, $A9
   EQUB $00, $E5, $99, $9D, $00, $01, $4C, $61
 
- ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
   EQUB $85, $AE, $A5, $57, $18, $69, $14, $85   ; These bytes appear to be
   EQUB $5B, $A5, $58, $69, $00, $85, $5C, $A0   ; unused and just contain random
@@ -7212,15 +7212,14 @@ ENDIF
                         ; So SC(1 0) now contains the address of the first pixel
                         ; in the character block containing the (x, y)
 
- TYA                    ; Set Y = Y AND %111
- AND #%00000111         ;
- TAY                    ; So Y is the pixel row within the character block where
-                        ; we want to draw
+ TYA                    ; Set Y = Y mod 8, which is the pixel row within the
+ AND #7                 ; character block at which we want to draw the start of
+ TAY                    ; our line (as each character block has 8 rows)
 
- TXA                    ; Set X = X1 AND %111
- AND #%00000111         ;
- TAX                    ; So X is the pixel column within the character block
-                        ; where we want to draw
+ TXA                    ; Set X = X mod 8, which is the horizontal pixel number
+ AND #7                 ; within the character block where the line starts (as
+ TAX                    ; each pixel line in the character block is 8 pixels
+                        ; wide)
 
  LDA ZZ                 ; If distance in ZZ >= 144, then this point is a very
  CMP #144               ; long way away, so jump to PX3 to fetch a 1-pixel point
@@ -28426,7 +28425,7 @@ ENDIF
 ;
 ; ******************************************************************************
 
-IF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+IF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
 .SWAPPZERO
 
@@ -31232,7 +31231,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
  JSR startat            ; Start playing the title music
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
 ;JSR FX200              ; This instruction is commented out in the original
                         ; source
@@ -33865,7 +33864,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
  BNE dojoystick         ; activity, and jump to dojoystick with X = $FF if any
                         ; of the bits are set
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  CMP #%00011111         ; If nothing is being pressed then A will be %00011111,
  BNE dojoystick         ; in which case keep going, otherwise something is being
@@ -34092,7 +34091,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
                         ; If we get here then the C flag is set if the joystick
                         ; fire button is being pressed, or clear otherwise
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
                         ; A clear bit in A indicates that the direction/button
                         ; is being pressed, while a set bit indicates that it
@@ -36391,7 +36390,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
  EQUB $53, $04, $8D, $5F, $04, $20, $0E, $B1
  EQUB $A9
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  EQUB $A2, $36, $B5, $00, $BC, $00, $CE, $9D    ; These bytes appear to be
  EQUB $00, $CE, $94, $00, $E8, $D0, $F3, $60    ; unused and just contain random
@@ -36443,7 +36442,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
                         ; random workspace noise left over from the BBC Micro
                         ; assembly process
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  EQUB $28               ; This byte appears to be unused and just contains
                         ; random workspace noise left over from the BBC Micro
@@ -36521,7 +36520,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
                         ; random workspace noise left over from the BBC Micro
                         ; assembly process
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  EQUB $10               ; This byte appears to be unused and just contains
                         ; random workspace noise left over from the BBC Micro
@@ -42292,7 +42291,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
                         ;
                         ; So we need to set Y to $2800 / 64 = $A0
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  LDY #$C4               ; For the GMA variants, we have:
                         ;
@@ -42356,7 +42355,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
                         ; $A0 from Y so we have Y = 0 for pulse lasers through
                         ; to Y = 3 for mining lasers
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  LDA sightcol-$C4,Y     ; Fetch the colour from the sightcol table, subtracting
                         ; $C4 from Y so we have Y = 0 for pulse lasers through
@@ -45411,15 +45410,14 @@ ENDIF
  ADC #0                 ; and adds it to the row offset we just calculated in A
  STA SC+1
 
- TYA                    ; Set Y = Y AND %111
- AND #%00000111         ;
- TAY                    ; So Y is the pixel row within the character block where
-                        ; we want to start drawing
+ TYA                    ; Set Y = Y mod 8, which is the pixel row within the
+ AND #7                 ; character block at which we want to draw the start of
+ TAY                    ; our line (as each character block has 8 rows)
 
- LDA X1                 ; Set X = X1 AND %111
- AND #%00000111         ;
- TAX                    ; So X is the pixel column within the character block
-                        ; where we want to start drawing
+ LDA X1                 ; Set X = X1 mod 8, which is the horizontal pixel number
+ AND #7                 ; within the character block where the line starts (as
+ TAX                    ; each pixel line in the character block is 8 pixels
+                        ; wide)
 
  BIT SWAP               ; If SWAP is $FF then we swapped the coordinates above,
  BMI LI70               ; so jump to LI70 to use the correct addresses
@@ -45889,10 +45887,10 @@ ENDIF
                         ; move along the line - we just need to alter the value
                         ; of SC so that SC(1 0) + Y points to the right address
 
- LDA X1                 ; Set X = X1 AND %111
- AND #%00000111         ;
- TAX                    ; So X is the pixel column within the character block
-                        ; where we want to start drawing
+ LDA X1                 ; Set X = X1 mod 8, which is the horizontal pixel number
+ AND #7                 ; within the character block where the line starts (as
+ TAX                    ; each pixel line in the character block is 8 pixels
+                        ; wide)
 
  BIT SWAP               ; If SWAP is $FF then we swapped the coordinates above,
  BMI LI90               ; so jump to LI90 to use the correct addresses
@@ -46361,8 +46359,8 @@ ENDIF
  ADC #0                 ; and adds it to the row offset we just calculated in A
  STA SC+1
 
- TYA                    ; Set Y = Y AND %111
- AND #%00000111         ;
+ TYA                    ; Set Y = Y mod 8
+ AND #7                 ;
  TAY                    ; So Y is the pixel row within the character block where
                         ; we want to start drawing
 
@@ -47789,8 +47787,7 @@ ENDIF
 ;       Name: SETXC
 ;       Type: Subroutine
 ;   Category: Text
-;    Summary: Move the text cursor to a specific column
-;
+;    Summary: An unused routine to move the text cursor to a specific column
 ;
 ; ------------------------------------------------------------------------------
 ;
@@ -47814,7 +47811,7 @@ ENDIF
 ;       Name: SETYC
 ;       Type: Subroutine
 ;   Category: Text
-;    Summary: Move the text cursor to a specific row
+;    Summary: An unused routine to move the text cursor to a specific row
 ;
 ; ------------------------------------------------------------------------------
 ;
@@ -48649,7 +48646,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
  LDA #$25
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  LDA #$20
 
@@ -48694,7 +48691,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
                         ; address before the start of the tune that is
                         ; configured to play for docking
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  LDA #LO(musicstart)    ; Set A to the low byte of musicstart, which is the
                         ; address before the start of the docking music
@@ -48710,7 +48707,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
                         ; address before the start of the tune that is
                         ; configured to play for docking
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  LDA #HI(musicstart)    ; Set A to the high byte of musicstart, which is the
                         ; address before the start of the docking music
@@ -48809,7 +48806,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
  LDA #5
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  LDA #6
 
@@ -48826,7 +48823,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
  LDA #4
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  LDA #5
 
@@ -48855,7 +48852,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
  CPX #0
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  CPX #2
 
@@ -48947,7 +48944,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
  INCBIN "1-source-files/music/gma/C.COMUDAT.bin"
 
-ELIF _SOURCE_DISC_FILES OR _SOURCE_DISK_BUILD
+ELIF _SOURCE_DISK_FILES OR _SOURCE_DISK_BUILD
 
  INCBIN "1-source-files/music/source-disk/C.COMUDAT.bin"
 
@@ -48955,7 +48952,7 @@ ENDIF
 
 .THEME
 
-IF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+IF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  EQUB $28               ; C.THEME is not included in the encrypted HICODE binary
                         ; in the source disk variant, unlike the GMA85 variant

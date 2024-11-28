@@ -39,7 +39,7 @@
  _GMA85_NTSC            = (_VARIANT = 1)
  _GMA86_PAL             = (_VARIANT = 2)
  _SOURCE_DISK_BUILD     = (_VARIANT = 3)
- _SOURCE_DISC_FILES     = (_VARIANT = 4)
+ _SOURCE_DISK_FILES     = (_VARIANT = 4)
 
 ; ******************************************************************************
 ;
@@ -72,7 +72,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
  SPRITELOC% = SCBASE + $2800    ; The address where the sprite bitmaps get
                                 ; copied to during the loading process
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  DSTORE% = SCBASE + $2800       ; The address of a copy of the dashboard bitmap,
                                 ; which gets copied into screen memory when
@@ -186,7 +186,7 @@ ELIF _SOURCE_DISK_BUILD
  EQUB $52, $22, $A8, $CB, $07, $2E, $DB, $BB
  EQUB $E5, $05, $DC, $BC
 
-ELIF _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_FILES
 
  EQUB $38, $E0, $60, $3F, $0F, $7C, $24, $B2   ; These bytes appear to be
  EQUB $60, $56, $9C, $67, $23, $FA, $81, $91   ; unused and just contain random
@@ -345,7 +345,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
  LDX #$29               ; ???
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  LDX #$20
 
@@ -653,7 +653,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
  LDA #$A0
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  LDA #$C4
 
@@ -666,7 +666,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
  LDA #$A4
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  LDA #$C8
 
@@ -679,7 +679,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
  LDA #$A5
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  LDA #$C9
 
@@ -696,7 +696,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
 
  LDA #$A6
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  LDA #$CA
 
@@ -973,7 +973,7 @@ ELIF _SOURCE_DISK_BUILD
  EQUB $EA, $11          ; assembly process
  EQUB $F1, $19
 
-ELIF _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_FILES
 
  EQUB $99, $02          ; These bytes appear to be unused and just contain
  EQUB $E5, $6B          ; random workspace noise left over from the BBC Micro
@@ -1047,7 +1047,7 @@ ELIF _SOURCE_DISK_BUILD
  EQUB $74, $D4          ; assembly process
  EQUB $D8, $FF
 
-ELIF _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_FILES
 
  EQUB $00, $FB          ; These bytes appear to be unused and just contain
  EQUB $0E, $F3          ; random workspace noise left over from the BBC Micro
@@ -1091,7 +1091,7 @@ ELIF _SOURCE_DISK_BUILD
  EQUB $F8, $D3, $4F, $30, $5F, $44, $05, $0C
  EQUB $D3, $4F, $68, $99, $A1, $CB, $B7, $34
 
-ELIF _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_FILES
 
  EQUB $DC, $80, $1F, $87, $29, $80, $80, $E3   ; These bytes appear to be
  EQUB $8A, $42, $CE, $41, $9D, $20, $CB, $DC   ; unused and just contain random
@@ -1150,7 +1150,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
   EQUB $D3, $4F, $29, $50, $D3, $05, $45, $C9
   EQUB $E9, $B0, $E9, $19, $B5, $0B, $FB, $B9
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
 
  INCBIN "1-source-files/images/C.DATE4.bin"
 
@@ -1183,7 +1183,7 @@ ELIF _SOURCE_DISK_BUILD
                         ; random workspace noise left over from the BBC Micro
                         ; assembly process
 
-ELIF _SOURCE_DISC_FILES
+ELIF _SOURCE_DISK_FILES
 
  EQUB $DB               ; This byte appears to be unused and just contains
                         ; random workspace noise left over from the BBC Micro
