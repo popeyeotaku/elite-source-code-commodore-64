@@ -7215,11 +7215,11 @@ ENDIF
                         ; in the character block containing the (x, y)
 
  TYA                    ; Set Y = Y mod 8, which is the pixel row within the
- AND #7                 ; character block at which we want to draw the start of
- TAY                    ; our line (as each character block has 8 rows)
+ AND #7                 ; character block at which we want to draw our pixel
+ TAY                    ; (as each character block has 8 rows)
 
  TXA                    ; Set X = X mod 8, which is the horizontal pixel number
- AND #7                 ; within the character block where the line starts (as
+ AND #7                 ; within the character block where the pixel lies (as
  TAX                    ; each pixel line in the character block is 8 pixels
                         ; wide)
 
@@ -44748,12 +44748,17 @@ ENDIF
  LDA #LO(NMIpissoff)    ; Set the NMI interrupt service hardware vector at $FFFA
  STA $FFFA              ; to point to the NMIpissoff routine, which acknowledges
  LDA #HI(NMIpissoff)    ; NMI interrupts and ignores them
- STA $FFFB
+ STA $FFFB              ;
+                        ; This ensures that even if the Kernal is not paged into
+                        ; memory, NMIs will be processed
 
  LDA #HI(COMIRQ1)       ; Set the IRQ interrupt service hardware vector at $FFFE
  STA $FFFF              ; to point to COMIRQ1, so it gets called to handle all
  LDA #LO(COMIRQ1)       ; IRQ interrupts and BRK instructions (COMIRQ1 plays the
  STA $FFFE              ; background music and manages the split screen)
+                        ;
+                        ; This ensures that even if the Kernal is not paged into
+                        ; memory, IRQs will be processed
 
  CLI                    ; Re-enable interrupts
 
@@ -44961,7 +44966,8 @@ ENDIF
 ;       Name: CTWOS2
 ;       Type: Variable
 ;   Category: Drawing pixels
-;    Summary: ???
+;    Summary: Ready-made single-pixel character row bytes for multicolour bitmap
+;             mode
 ;
 ; ******************************************************************************
 
@@ -46700,109 +46706,198 @@ ENDIF
 
 .HLOIN
 
- STY YSAV               ; ???
- LDX X1
- CPX X2
- BEQ HL6
- BCC HL5
- LDA X2
- STA X1
+ STY YSAV               ; Store Y into YSAV, so we can preserve it across the
+                        ; call to this subroutine
+
+ LDX X1                 ; Set X = X1
+
+ CPX X2                 ; If X1 = X2 then the start and end points are the same,
+ BEQ HL6                ; so return from the subroutine (as HL6 contains an RTS)
+
+ BCC HL5                ; If X1 < X2, jump to HL5 to skip the following code, as
+                        ; (X1, Y1) is already the left point
+
+ LDA X2                 ; Swap the values of X1 and X2, so we know that (X1, Y1)
+ STA X1                 ; is on the left and (X2, Y1) is on the right
  STX X2
- TAX
+
+ TAX                    ; Set X = X1
 
 .HL5
 
- DEC X2
- LDA Y1
- TAY
- AND #7
+ DEC X2                 ; Decrement X2 so we do not draw a pixel at the end
+                        ; point
+
+ LDA Y1                 ; Set the low byte of SC(1 0) to Y1 mod 8, which is the
+ TAY                    ; pixel row within the character block at which we want
+ AND #7                 ; to draw our line (as each character block has 8 rows)
  STA SC
- LDA ylookuph,Y
- STA SC+1
- TXA
- AND #$F8
- CLC
- ADC ylookupl,Y
- TAY
- BCC P%+4
- INC SC+1
+
+ LDA ylookuph,Y         ; Set the top byte of SC(1 0) to the address of the
+ STA SC+1               ; start of the character row to draw in, from the
+                        ; ylookup table
+
+ TXA                    ; Set A = bits 3-7 of X1
+ AND #%11111000
+
+ CLC                    ; The ylookup table lets us look up the 16-bit address
+ ADC ylookupl,Y         ; of the start of a character row containing a specific
+ TAY                    ; pixel, so this fetches the address for the start of
+                        ; the character row containing the y-coordinate in Y,
+                        ; and adds it to the row offset we just calculated in A,
+                        ; storing the result in Y
+
+ BCC P%+4               ; If the addition overflowed, increment the high byte
+ INC SC+1               ; of SC(1 0), so SC(1 0) + Y gives us the correct
+                        ; address of the start of the line
 
 .HL1
 
- TXA
- AND #$F8
+ TXA                    ; Set T2 = bits 3-7 of X1, which will contain the
+ AND #%11111000         ; character number of the start of the line * 8
  STA T2
- LDA X2
- AND #$F8
- SEC
- SBC T2
 
- BEQ HL2
- LSR A
- LSR A
- LSR A
+ LDA X2                 ; Set A = bits 3-7 of X2, which will contain the
+ AND #%11111000         ; character number of the end of the line * 8
 
+ SEC                    ; Set A = A - T2, which will contain the number of
+ SBC T2                 ; character blocks we need to fill - 1 * 8
+
+ BEQ HL2                ; If A = 0 then the start and end character blocks are
+                        ; the same, so the whole line fits within one block, so
+                        ; jump down to HL2 to draw the line
+
+                        ; Otherwise the line spans multiple characters, so we
+                        ; start with the left character, then do any characters
+                        ; in the middle, and finish with the right character
+
+ LSR A                  ; Set R2 = A / 8, so R2 now contains the number of
+ LSR A                  ; character blocks we need to fill - 1
+ LSR A
  STA R2
- LDA X1
- AND #7
- TAX
- LDA TWFR,X
- EOR (SC),Y
- STA (SC),Y
- TYA
- ADC #8
- TAY
- BCC P%+4
- INC SC+1
- LDX R2
 
- DEX
- BEQ HL3
- CLC
+ LDA X1                 ; Set X = X1 mod 8, which is the horizontal pixel number
+ AND #7                 ; within the character block where the line starts (as
+ TAX                    ; each pixel line in the character block is 8 pixels
+                        ; wide)
+
+ LDA TWFR,X             ; Fetch a ready-made byte with X pixels filled in at the
+                        ; right end of the byte (so the filled pixels start at
+                        ; point X and go all the way to the end of the byte),
+                        ; which is the shape we want for the left end of the
+                        ; line
+
+ EOR (SC),Y             ; Store this into screen memory at SC(1 0), using EOR
+ STA (SC),Y             ; logic so it merges with whatever is already on-screen,
+                        ; so we have now drawn the line's left cap
+
+ TYA                    ; Set Y = Y + 8 so (SC),Y points to the next character
+ ADC #8                 ; block along, on the same pixel row as before
+ TAY
+
+ BCC P%+4               ; If the addition overflowed, increment the high byte
+ INC SC+1               ; of SC(1 0), so SC(1 0) + Y gives us the correct
+                        ; address of the pixel
+
+ LDX R2                 ; Fetch the number of character blocks we need to fill
+                        ; from R2
+
+ DEX                    ; Decrement the number of character blocks in X
+
+ BEQ HL3                ; If X = 0 then we only have the last block to do (i.e.
+                        ; the right cap), so jump down to HL3 to draw it
+
+ CLC                    ; Otherwise clear the C flag so we can do some additions
+                        ; while we draw the character blocks with full-width
+                        ; lines in them
 
 .HLL1
 
- LDA #$FF
- EOR (SC),Y
- STA (SC),Y
- TYA
- ADC #8
+ LDA #%11111111         ; Store a full-width 8-pixel horizontal line in SC(1 0)
+ EOR (SC),Y             ; so that it draws the line on-screen, using EOR logic
+ STA (SC),Y             ; so it merges with whatever is already on-screen
+
+ TYA                    ; Set Y = Y + 8 so (SC),Y points to the next character
+ ADC #8                 ; block along, on the same pixel row as before
  TAY
- BCC P%+5
- INC SC+1
- CLC
- DEX
- BNE HLL1
+
+ BCC P%+5               ; If the addition overflowed, increment the high byte
+ INC SC+1               ; of SC(1 0), so SC(1 0) + Y gives us the correct
+ CLC                    ; address of the start of the line
+                        ;
+                        ; We also clear the C flag so additions will work
+                        ; properly if we loop back for more
+
+ DEX                    ; Decrement the number of character blocks in X
+
+ BNE HLL1               ; Loop back to draw more full-width lines, if we have
+                        ; any more to draw
 
 .HL3
 
- LDA X2
- AND #7
- TAX
- LDA TWFL,X
- EOR (SC),Y
- STA (SC),Y
- LDY YSAV
- RTS
+ LDA X2                 ; Now to draw the last character block at the right end
+ AND #7                 ; of the line, so set X = X2 mod 8, which is the
+ TAX                    ; horizontal pixel number where the line ends
+
+ LDA TWFL,X             ; Fetch a ready-made byte with X pixels filled in at the
+                        ; left end of the byte (so the filled pixels start at
+                        ; the left edge and go up to point X), which is the
+                        ; shape we want for the right end of the line
+
+ EOR (SC),Y             ; Store this into screen memory at SC(1 0), using EOR
+ STA (SC),Y             ; logic so it merges with whatever is already on-screen,
+                        ; so we have now drawn the line's right cap
+
+ LDY YSAV               ; Restore Y from YSAV, so that it's preserved across the
+                        ; call to this subroutine
+
+ RTS                    ; Return from the subroutine
 
 .HL2
 
- LDA X1
- AND #7
+                        ; If we get here then the entire horizontal line fits
+                        ; into one character block
+
+ LDA X1                 ; Set X = X1 mod 8, which is the horizontal pixel number
+ AND #7                 ; within the character block where the line starts (as
+ TAX                    ; each pixel line in the character block is 8 pixels
+                        ; wide)
+
+ LDA TWFR,X             ; Fetch a ready-made byte with X pixels filled in at the
+ STA T2                 ; right end of the byte (so the filled pixels start at
+                        ; point X and go all the way to the end of the byte)
+
+ LDA X2                 ; Set X = X2 mod 8, which is the horizontal pixel number
+ AND #7                 ; where the line ends
  TAX
 
- LDA TWFR,X
- STA T2
- LDA X2
- AND #7
- TAX
- LDA TWFL,X
- AND T2
- EOR (SC),Y
- STA (SC),Y
+ LDA TWFL,X             ; Fetch a ready-made byte with X pixels filled in at the
+                        ; left end of the byte (so the filled pixels start at
+                        ; the left edge and go up to point X)
 
- LDY YSAV
- RTS
+ AND T2                 ; We now have two bytes, one (T2) containing pixels from
+                        ; the starting point X1 onwards, and the other (A)
+                        ; containing pixels up to the end point at X2, so we can
+                        ; get the actual line we want to draw by AND'ing them
+                        ; together. For example, if we want to draw a line from
+                        ; point 2 to point 5 (within the row of 8 pixels
+                        ; numbered from 0 to 7), we would have this:
+                        ;
+                        ;   T2       = %00111111
+                        ;   A        = %11111100
+                        ;   T2 AND A = %00111100
+                        ;
+                        ; So we can stick T2 AND A in screen memory to get the
+                        ; line we want, which is what we do here by setting
+                        ; A = A AND T2
+
+ EOR (SC),Y             ; Store our horizontal line byte into screen memory at
+ STA (SC),Y             ; SC(1 0), using EOR logic so it merges with whatever is
+                        ; already on-screen
+
+ LDY YSAV               ; Restore Y from YSAV, so that it's preserved
+
+ RTS                    ; Return from the subroutine
 
  EQUD $F0E0C080         ; These bytes appear to be unused; they contain a copy
  EQUW $FCF8             ; of the TWFL variable, and the original source has a
@@ -46898,47 +46993,100 @@ ENDIF
 ;   Category: Drawing pixels
 ;    Summary: Draw a single-height dash on the dashboard
 ;
+; ------------------------------------------------------------------------------
+;
+; Draw a single-height multicolour bitmap mode dash (1 pixel high, 2 pixels
+; wide).
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   X1                  The screen pixel x-coordinate of the dash
+;
+;   Y1                  The screen pixel y-coordinate of the dash
+;
+;   COL                 The colour of the dash as a multicolour bitmap mode
+;                       character row byte
+;
 ; ******************************************************************************
 
 .CPIX2
 
- LDY Y1                 ; ???
- LDA X1
- AND #$F8
- CLC
- ADC ylookupl,Y
- STA SC
- LDA ylookuph,Y
- ADC #0
+ LDY Y1                 ; Fetch the y-coordinate into Y
+
+ LDA X1                 ; Each character block contains 8 pixel rows, so to get
+ AND #%11111000         ; the address of the first byte in the character block
+                        ; that we need to draw into, as an offset from the start
+                        ; of the row, we clear bits 0-2
+
+ CLC                    ; The ylookup table lets us look up the 16-bit address
+ ADC ylookupl,Y         ; of the start of a character row containing a specific
+ STA SC                 ; pixel, so this fetches the address for the start of
+ LDA ylookuph,Y         ; the character row containing the y-coordinate in Y,
+ ADC #0                 ; and adds it to the row offset we just calculated in A
  STA SC+1
- TYA
- AND #7
- TAY
- LDA X1
- AND #7
- TAX
- LDA CTWOS2,X
- AND COL
- EOR (SC),Y
- STA (SC),Y
-;JSR P%+3
-;INX
- LDA CTWOS2+2,X
- BPL CP1
- LDA SC
- CLC
- ADC #8
- STA SC
- BCC P%+4
- INC SC+1
- LDA CTWOS2+2,X
+
+ TYA                    ; Set Y to the y-coordinate mod 8, which will be the
+ AND #7                 ; number of the pixel row we need to draw within the
+ TAY                    ; character block
+
+ LDA X1                 ; Set X = X1 mod 8, which is the horizontal pixel number
+ AND #7                 ; within the character block where the pixel lies (as
+ TAX                    ; each pixel line in the character block is 8 pixels
+                        ; wide)
+
+ LDA CTWOS2,X           ; Fetch a multicolour bitmap mode 1-pixel byte with the
+ AND COL                ; pixel position at X, and AND with the colour byte so
+                        ; that pixel takes on the colour we want to draw (i.e. A
+                        ; is acting as a mask on the colour byte)
+                        ;
+                        ; Note that the CTWOS2 table contains two identical
+                        ; bitmap bytes for consecutive values of X, as each
+                        ; pixel is double-width and straddles two x-coordinates
+
+ EOR (SC),Y             ; Draw the pixel on-screen using EOR logic, so we can
+ STA (SC),Y             ; remove it later without ruining the background that's
+                        ; already on-screen
+
+;JSR P%+3               ; These instructions are commented out in the original
+;INX                    ; source
+
+ LDA CTWOS2+2,X         ; Fetch a multicolour bitmap mode 1-pixel byte with the
+                        ; pixel position at X+1, so we can draw the right pixel
+                        ; of the dash (we add 2 to CTWOS2 as there are two
+                        ; repeated entries for X and X+1 in the table)
+
+ BPL CP1                ; The CTWOS table has an extra two rows at the end of it
+                        ; that repeat the first two value, %11000000, so if we
+                        ; have notfetched that value, then the right pixel of
+                        ; the dash is in the same character block as the left
+                        ; pixel, so jump to CP1 to draw it
+
+ LDA SC                 ; Otherwise the left pixel we drew was at the last
+ CLC                    ; position of four in this character block, so we add
+ ADC #8                 ; 8 to the screen address to move onto the next block
+ STA SC                 ; along (as there are 8 bytes in a character block)
+
+ BCC P%+4               ; If the addition we just did overflowed, then increment
+ INC SC+1               ; the high byte of SC(1 0), as this means we just moved
+                        ; into the right half of the screen row
+
+ LDA CTWOS2+2,X         ; Re-fetch the multicolour bitmap mode 1-pixel byte, as
+                        ; we just overwrote A (the byte will still be the last
+                        ; byte from the table, which is correct as we want to
+                        ; draw the leftmost pixel in the next character along as
+                        ; the dash's right pixel)
 
 .CP1
 
- AND COL
- EOR (SC),Y
- STA (SC),Y
- RTS
+ AND COL                ; Apply the colour mask to the pixel byte, as above
+
+ EOR (SC),Y             ; Draw the dash's right pixel according to the mask in
+ STA (SC),Y             ; A, with the colour in COL, using EOR logic, just as
+                        ; above
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
@@ -47140,23 +47288,37 @@ ENDIF
 ;   Category: Drawing the screen
 ;    Summary: Wait for the vertical sync
 ;
+; ------------------------------------------------------------------------------
+;
+; Wait for vertical sync to occur on the video system - in other words, wait
+; for the screen to start its refresh cycle, which it does 50 times a second
+; (50Hz) on PAL systems, or 60 times a second (60Hz) on NTSC systems.
+;
+; We do this by monitoring the value of RASTCT, which is updated by the
+; interrupt routine at COMIRQ1 as it draws the two different parts of the screen
+; (the upper part containing the space view, and the lower part containing the
+; dashboard).
+;
 ; ******************************************************************************
 
 .WSCAN
 
- PHA                    ; ???
+ PHA                    ; Store A on the stack so we can preserve it
 
 .WSC1
 
- LDA RASTCT
- BEQ WSC1
+ LDA RASTCT             ; Wait until RASTCT is non-zero, which indicates that
+ BEQ WSC1               ; the VIC-II is now drawing the dashboard
 
 .WSC2
 
- LDA RASTCT
- BNE WSC2
- PLA
- RTS
+ LDA RASTCT             ; Wait until RASTCT is zero, which indicates that the
+ BNE WSC2               ; VIC-II is now drawing the top line of the visible
+                        ; screen
+
+ PLA                    ; Restore A from the stack so it is unchanged
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
@@ -47165,30 +47327,54 @@ ENDIF
 ;   Category: Text
 ;    Summary: Character print vector handler
 ;
+; ------------------------------------------------------------------------------
+;
+; This routine is set as the handler in CHRV, so it replaces the Kernal's
+; character-printing routine.
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   A                   The character to print
+;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   C flag              The C flag is cleared
+;
 ; ******************************************************************************
 
 .CHPR2
 
- CMP #123               ; ???
- BCS whosentthisshit
+ CMP #123               ; If the character to print in A is outside of the range
+ BCS whosentthisshit    ; 13 to 122, jump to whosentthisshit to print nothing
  CMP #13
  BCC whosentthisshit
- BNE CHPR
- LDA #12
- JSR CHPR
- LDA #13
+
+ BNE CHPR               ; If A is not 13, jump to CHPR to print the character,
+                        ; returning from the subroutine using a tail call
+
+ LDA #12                ; If we get here then A is 13, so call CHPR with A = 12,
+ JSR CHPR               ; which will print a carriage return
+
+ LDA #13                ; Set A = 13 so it is unchanged
 
 .whosentthisshit
 
- CLC
- RTS  ; tape CHPR
+ CLC                    ; Clear the C flag, as the CHPR routine does this and
+                        ; we need CHPR2 to act in the same way
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
 ;       Name: R5
 ;       Type: Subroutine
 ;   Category: Text
-;    Summary: ???
+;    Summary: Make a beep and jump back into the character-printing routine at
+;             CHPR
 ;
 ; ******************************************************************************
 
@@ -47219,13 +47405,17 @@ ENDIF
 ;       Name: RR4S
 ;       Type: Subroutine
 ;   Category: Text
-;    Summary: ???
+;    Summary: A jump point that restores the registers and returns from the CHPR
+;             subroutine (so we can use a branch instruction to jump to RR4)
 ;
 ; ******************************************************************************
 
 .RR4S
 
- JMP RR4            ; ???
+ JMP RR4                ; Jump to RR4 to restore the registers and return from
+                        ; the subroutine using a tail call (this JMP enables us
+                        ; to jump to RR4 using a branch to RR4S though this
+                        ; isn't actually done anywhere)
 
 ; ******************************************************************************
 ;
@@ -47383,7 +47573,7 @@ ENDIF
  LDX XSAV2
  LDA K3
  CLC
- RTS ;must exit CHPR with C = 0
+ RTS
 
 ; ******************************************************************************
 ;
