@@ -2239,13 +2239,12 @@ ENDIF
 
 .DFLAG
 
- SKIP 1                 ; A flag to indicate whether we need to show the
-                        ; dashboard on-screen in the current view (as it is
-                        ; hidden for the trading screens) ???
+ SKIP 1                 ; A flag that indicates whether the dashboard is
+                        ; currently being shown on-screen
                         ;
-                        ;   * 0 = do show the dashboard
+                        ;   * 0 = there is no dashboard on-screen
                         ;
-                        ;   * $FF = do not show the dashboard
+                        ;   * $FF = the dashboard is on-screen
 
 .DNOIZ
 
@@ -47925,8 +47924,8 @@ ENDIF
  LDX #0
  STX COMC
 
- STX DFLAG              ; Set DFLAG to 0 to indicate that we do need to show the
-                        ; dashboard in this view
+ STX DFLAG              ; Set DFLAG to 0 to indicate that there is no dashboard
+                        ; bwing shown on-screen
 
  INX
  STX XC
@@ -48051,8 +48050,8 @@ ENDIF
  STA caravanserai       ; the screen (the dashboard) is shown in multicolour
                         ; bitmap mode
 
- LDA DFLAG              ; If DFLAG is non-zero then the dashboard is not needed
- BNE nearlyxmas         ; for the current view, so jump to nearlyxmas to skip
+ LDA DFLAG              ; If DFLAG is non-zero then the dashboard is already
+ BNE nearlyxmas         ; being shown on-screen, so jump to nearlyxmas to skip
                         ; displaying the dashboard on-screen
 
  LDX #8                 ; Set X = 8 so we copy eight pages of the dashboard
@@ -48100,8 +48099,8 @@ ENDIF
  JSR NOSPRITES          ; Call NOSPRITES to disable all sprites and remove them
                         ; from the screen
 
- LDA #$FF               ; Set DFLAG to $FF to indicate that we do not need to
- STA DFLAG              ; show the dashboard in this view
+ LDA #$FF               ; Set DFLAG to $FF to indicate that the dashboard is now
+ STA DFLAG              ; being shown on-screen
 
  RTS                    ; Return from the subroutine
 
@@ -48220,7 +48219,7 @@ ENDIF
 
 .BLUEL1
 
- LDA #%11111111         ; Set A to a pixel byte with every pixel on
+ LDA #%11111111         ; Set A to a pixel byte with every pixel on ???
 
  STA (SC),Y             ; Store the pixel byte in the Y-th byte of SC(1 0)
 
