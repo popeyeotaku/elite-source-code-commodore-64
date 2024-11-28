@@ -36,8 +36,10 @@
 
  _GMA85_NTSC            = (_VARIANT = 1)
  _GMA86_PAL             = (_VARIANT = 2)
+ _GMA_RELEASE           = (_VARIANT = 1) OR (_VARIANT = 2)
  _SOURCE_DISK_BUILD     = (_VARIANT = 3)
  _SOURCE_DISK_FILES     = (_VARIANT = 4)
+ _SOURCE_DISK           = (_VARIANT = 3) OR (_VARIANT = 4)
 
 ; ******************************************************************************
 ;
@@ -1195,7 +1197,7 @@ ENDMACRO
  CHAR 'B'
  EQUB 0
 
-IF _GMA85_NTSC OR _GMA86_PAL OR _SOURCE_DISK_FILES
+IF _GMA_RELEASE OR _SOURCE_DISK_FILES
 
  RTOK 102               ; Token 114:    "EXTRA ENERGY UNIT"
  RTOK 121               ;
@@ -1470,7 +1472,7 @@ ENDIF
  CHAR 'R'
  EQUB 0
 
-IF _GMA85_NTSC OR _GMA86_PAL OR _SOURCE_DISK_FILES
+IF _GMA_RELEASE OR _SOURCE_DISK_FILES
 
  SKIP 4                 ; These bytes appear to be unused
 
@@ -6227,7 +6229,7 @@ ENDMACRO
 
 .endian
 
-IF _GMA85_NTSC OR _GMA86_PAL OR _SOURCE_DISK_FILES
+IF _GMA_RELEASE OR _SOURCE_DISK_FILES
 
  EQUB $3A, $4C, $44, $41, $58, $58, $31, $2B    ; These bytes appear to be
  EQUB $31, $3A, $41, $44, $43, $23, $30, $3A    ; unused and just contain random

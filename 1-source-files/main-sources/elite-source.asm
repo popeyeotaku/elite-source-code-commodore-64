@@ -40,8 +40,10 @@
 
  _GMA85_NTSC            = (_VARIANT = 1)
  _GMA86_PAL             = (_VARIANT = 2)
+ _GMA_RELEASE           = (_VARIANT = 1) OR (_VARIANT = 2)
  _SOURCE_DISK_BUILD     = (_VARIANT = 3)
  _SOURCE_DISK_FILES     = (_VARIANT = 4)
+ _SOURCE_DISK           = (_VARIANT = 3) OR (_VARIANT = 4)
 
 ; ******************************************************************************
 ;
@@ -53,12 +55,12 @@
 
  LOAD% = $1D00          ; The address where the code will be loaded
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  C% = $6A00             ; The address where the second block of game code will
                         ; be run (ELITE C onwards)
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
  C% = $7300             ; The address where the second block of game code will
                         ; be run (ELITE C onwards)
@@ -392,7 +394,7 @@ ENDIF
                         ; are memory-mapped to the 16 bytes from $DD00 to $DD0F
                         ; (see page 428 of the Programmer's Reference Guide)
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  DSTORE% = SCBASE + $AF90       ; The address of a copy of the dashboard bitmap,
                                 ; which gets copied into screen memory when
@@ -406,7 +408,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
                                 ; text view, and we put the sprite definitions
                                 ; after this)
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
  DSTORE% = SCBASE + $2800       ; The address of a copy of the dashboard bitmap,
                                 ; which gets copied into screen memory when
@@ -1190,11 +1192,11 @@ ENDIF
 ;
 ; ******************************************************************************
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  ORG $F900
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
  ORG $F000
 
@@ -2381,7 +2383,7 @@ ENDIF
                         ; "X" has also been configured, see the DK4 and DKS3
                         ; routines for details
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
 .MUSWAP
 
@@ -2410,7 +2412,7 @@ ENDIF
                         ; "X" has also been configured, see the DK4 and DKS3
                         ; routines for details
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
 .MULIE
 
@@ -2452,7 +2454,7 @@ ENDIF
  EQUB $17               ; P
  EQUB $2C               ; C
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  EQUB $32               ; E
 
@@ -6513,7 +6515,7 @@ ENDIF
 
 IF _MATCH_ORIGINAL_BINARIES
 
- IF _GMA85_NTSC OR _GMA86_PAL
+ IF _GMA_RELEASE
 
   EQUB $76, $85, $9C, $A5, $8B, $85, $9A, $A5   ; These bytes appear to be
   EQUB $8D, $20, $0C, $9A, $B0, $D2, $85, $6F   ; unused and just contain random
@@ -6548,7 +6550,7 @@ IF _MATCH_ORIGINAL_BINARIES
   EQUB $85, $6F, $C8, $B1, $5B, $85, $BB, $29
   EQUB $1F, $C5, $AD, $90, $FB, $C8, $B1, $5B
 
- ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ ELIF _SOURCE_DISK
 
   EQUB $60, $6D, $A5, $8A, $85, $6E, $A5, $8B   ; These bytes appear to be
   EQUB $85, $6F, $A5, $8D, $85, $70, $4C, $40   ; unused and just contain random
@@ -6606,7 +6608,7 @@ ENDIF
 
 IF _MATCH_ORIGINAL_BINARIES
 
- IF _GMA85_NTSC OR _GMA86_PAL
+ IF _GMA_RELEASE
 
   EQUB $85, $2E, $29, $0F, $AA, $B5, $35, $D0   ; These bytes appear to be
   EQUB $FE, $A5, $2E, $4A, $4A, $4A, $4A, $AA   ; unused and just contain random
@@ -6641,7 +6643,7 @@ IF _MATCH_ORIGINAL_BINARIES
   EQUB $38, $E5, $9B, $9D, $00, $01, $E8, $A9
   EQUB $00, $E5, $99, $9D, $00, $01, $4C, $61
 
- ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ ELIF _SOURCE_DISK
 
   EQUB $85, $AE, $A5, $57, $18, $69, $14, $85   ; These bytes appear to be
   EQUB $5B, $A5, $58, $69, $00, $85, $5C, $A0   ; unused and just contain random
@@ -23652,7 +23654,7 @@ ENDIF
 ;
 ; ******************************************************************************
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
 .SWAPPZERO
 
@@ -28425,7 +28427,7 @@ ENDIF
 ;
 ; ******************************************************************************
 
-IF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+IF _SOURCE_DISK
 
 .SWAPPZERO
 
@@ -31227,11 +31229,11 @@ ENDIF
  LDA #3                 ; Move the text cursor to column 3
  JSR DOXC
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  JSR startat            ; Start playing the title music
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
 ;JSR FX200              ; This instruction is commented out in the original
                         ; source
@@ -31247,7 +31249,7 @@ ENDIF
  CMP #YINT              ; Did we press "Y"? If not, jump to QU5, otherwise
  BNE QU5                ; continue on to load a new commander
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  JSR stopat             ; Stop playing the title music
 
@@ -31259,7 +31261,7 @@ ENDIF
  JSR SVE                ; Call SVE to load a new commander into the last saved
                         ; commander data block
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  JSR startat            ; Start playing the title music
 
@@ -31292,7 +31294,7 @@ ENDIF
  LDY #48                ; {cr}"), with the ship at a distance of 48, returning
  JSR TITLE              ; with the internal number of the key pressed in A
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  JSR stopat             ; Stop playing the title music
 
@@ -31506,7 +31508,7 @@ ENDIF
 
  STX TYPE               ; Store the ship type in location TYPE
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  LDA #$FF               ; Set MULIE to $FF to indicate that the RESET routine is
  STA MULIE              ; in-progress, so we don't try to stop any music that
@@ -31519,7 +31521,7 @@ ENDIF
  JSR RESET              ; Reset our ship so we can use it for the rotating
                         ; title ship
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  LDA #0                 ; Set MULIE to 0 to indicate that the RESET routine is
  STA MULIE              ; no longer being run, so the stopbd routine can work
@@ -33858,13 +33860,13 @@ ENDIF
                         ; A clear bit indicates that the direction/button is
                         ; being pressed, while a set bit indicates that it isn't
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  EOR #%00011111         ; Flip the polarity of bits 0-4, so a set bit indicates
  BNE dojoystick         ; activity, and jump to dojoystick with X = $FF if any
                         ; of the bits are set
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
  CMP #%00011111         ; If nothing is being pressed then A will be %00011111,
  BNE dojoystick         ; in which case keep going, otherwise something is being
@@ -34050,7 +34052,7 @@ ENDIF
                         ;
                         ;   * Bit 4 = port 2 joystick fire pressed
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
                         ; A set bit in A indicates that the direction/button
                         ; is being pressed, while a clear bit indicates that it
@@ -34091,7 +34093,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
                         ; If we get here then the C flag is set if the joystick
                         ; fire button is being pressed, or clear otherwise
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
                         ; A clear bit in A indicates that the direction/button
                         ; is being pressed, while a set bit indicates that it
@@ -36031,7 +36033,7 @@ ENDMACRO
 ;
 ; ******************************************************************************
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
 .startat
 
@@ -36063,7 +36065,7 @@ ENDIF
 
 .startbd
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  BIT MUSWAP             ; If bit 7 of MUSWAP is set then the docking computer
  BMI startat            ; has been configured to play the title music rather
@@ -36173,7 +36175,7 @@ ENDIF
 
 .stopbd
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  BIT MULIE              ; If bit 7 of MULIE is set then the RESET routine is
  BMI itsoff             ; currently being run
@@ -36378,7 +36380,7 @@ ENDIF
 
  LOAD_G% = LOAD% + P% - CODE%
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  EQUB $A9, $05, $20, $7F, $82, $A9, $00, $8D    ; These bytes appear to be
  EQUB $15, $D0, $A9, $04, $78, $8D, $8E, $82    ; unused and just contain random
@@ -36390,7 +36392,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
  EQUB $53, $04, $8D, $5F, $04, $20, $0E, $B1
  EQUB $A9
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
  EQUB $A2, $36, $B5, $00, $BC, $00, $CE, $9D    ; These bytes appear to be
  EQUB $00, $CE, $94, $00, $E8, $D0, $F3, $60    ; unused and just contain random
@@ -36436,13 +36438,13 @@ ENDIF
 
 IF _MATCH_ORIGINAL_BINARIES
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  EQUB $06               ; This byte appears to be unused and just contains
                         ; random workspace noise left over from the BBC Micro
                         ; assembly process
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
  EQUB $28               ; This byte appears to be unused and just contains
                         ; random workspace noise left over from the BBC Micro
@@ -36514,13 +36516,13 @@ ENDIF
 
 IF _MATCH_ORIGINAL_BINARIES
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  EQUB $AE               ; This byte appears to be unused and just contains
                         ; random workspace noise left over from the BBC Micro
                         ; assembly process
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
  EQUB $10               ; This byte appears to be unused and just contains
                         ; random workspace noise left over from the BBC Micro
@@ -42283,7 +42285,7 @@ ENDIF
                         ;
                         ;   Y = (SPRITELOC% - SCBASE) / 64
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  LDY #$A0               ; For the GMA variants, we have:
                         ;
@@ -42291,7 +42293,7 @@ IF _GMA85_NTSC OR _GMA86_PAL
                         ;
                         ; So we need to set Y to $2800 / 64 = $A0
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
  LDY #$C4               ; For the GMA variants, we have:
                         ;
@@ -42349,13 +42351,13 @@ ENDIF
                         ; live in the last eight bytes of screen RAM, so that's
                         ; from $67F8 to $67FF for sprites 0 to 7
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  LDA sightcol-$A0,Y     ; Fetch the colour from the sightcol table, subtracting
                         ; $A0 from Y so we have Y = 0 for pulse lasers through
                         ; to Y = 3 for mining lasers
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
  LDA sightcol-$C4,Y     ; Fetch the colour from the sightcol table, subtracting
                         ; $C4 from Y so we have Y = 0 for pulse lasers through
@@ -48165,7 +48167,7 @@ ENDIF
 ;
 ; ******************************************************************************
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
 .value5
 
@@ -48642,11 +48644,11 @@ ENDIF
  CLC
  CLD
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  LDA #$25
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
  LDA #$20
 
@@ -48685,13 +48687,13 @@ ENDIF
  DEX
  BNE BDloop2
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  LDA value5             ; Set A to the low byte of value5, which is set to the
                         ; address before the start of the tune that is
                         ; configured to play for docking
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
  LDA #LO(musicstart)    ; Set A to the low byte of musicstart, which is the
                         ; address before the start of the docking music
@@ -48701,13 +48703,13 @@ ENDIF
  STA BDdataptr1
  STA BDdataptr3
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  LDA value5+1           ; Set A to the high byte of value5, which is set to the
                         ; address before the start of the tune that is
                         ; configured to play for docking
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
  LDA #HI(musicstart)    ; Set A to the high byte of musicstart, which is the
                         ; address before the start of the docking music
@@ -48802,11 +48804,11 @@ ENDIF
 
  INC vibrato3
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  LDA #5
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
  LDA #6
 
@@ -48819,11 +48821,11 @@ ENDIF
  BEQ BDlab23
  INC vibrato2
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  LDA #4
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
  LDA #5
 
@@ -48848,11 +48850,11 @@ ENDIF
 
  LDX counter
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  CPX #0
 
-ELIF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+ELIF _SOURCE_DISK
 
  CPX #2
 
@@ -48940,7 +48942,7 @@ ENDIF
 ;
 ; ******************************************************************************
 
-IF _GMA85_NTSC OR _GMA86_PAL
+IF _GMA_RELEASE
 
  INCBIN "1-source-files/music/gma/C.COMUDAT.bin"
 
@@ -48952,12 +48954,12 @@ ENDIF
 
 .THEME
 
-IF _SOURCE_DISK_BUILD OR _SOURCE_DISK_FILES
+IF _SOURCE_DISK
 
  EQUB $28               ; C.THEME is not included in the encrypted HICODE binary
                         ; in the source disk variant, unlike the GMA85 variant
 
-ELIF _GMA85_NTSC OR _GMA86_PAL
+ELIF _GMA_RELEASE
 
  INCBIN "1-source-files/music/gma/C.THEME.bin"
 
