@@ -44939,7 +44939,8 @@ ENDIF
 ;       Name: DTWOS
 ;       Type: Variable
 ;   Category: Drawing pixels
-;    Summary: ???
+;    Summary: An unused table of ready-made double-pixel character row bytes
+;             for the dashboard
 ;
 ; ******************************************************************************
 
@@ -45823,7 +45824,7 @@ ENDIF
 ;   Category: Drawing lines
 ;    Summary: Draw a shallow line going right and down or left and up
 ;  Deep dive: Bresenham's line algorithm
-
+;
 ; ------------------------------------------------------------------------------
 ;
 ; This routine draws a line from (X1, Y1) to (X2, Y2). It has multiple stages.
@@ -46346,6 +46347,10 @@ ENDIF
 
 .LI15
 
+                        ; By this point we know the line is vertical-ish and
+                        ; Y1 >= Y2, so we're going from top to bottom as we go
+                        ; from Y1 to Y2
+
  TXA                    ; Set A = bits 3-7 of X1
  AND #%11111000
 
@@ -46361,10 +46366,10 @@ ENDIF
  TAY                    ; So Y is the pixel row within the character block where
                         ; we want to start drawing
 
- TXA                    ; Set X = X AND %111
- AND #%00000111         ;
- TAX                    ; So X is the pixel column within the character block
-                        ; where we want to start drawing
+ TXA                    ; Set X = X1 mod 8, which is the horizontal pixel number
+ AND #7                 ; within the character block where the line starts (as
+ TAX                    ; each pixel line in the character block is 8 pixels
+                        ; wide)
 
  LDA TWOS,X             ; Fetch a 1-pixel byte from TWOS where pixel X is set,
  STA R2                 ; and store it in R2
@@ -46507,16 +46512,27 @@ ENDIF
  BPL LI16               ; If Y is positive we are still within the same
                         ; character block, so skip to LI16
 
- LDA SC                 ; Otherwise we need to move up into the character block
- SBC #$3F               ; above, so subtract 320 ($140) from SC(1 0) to move up
- STA SC                 ; one pixel line, as there are 320 bytes in each pixel
- LDA SC+1               ; line in the screen bitmap
- SBC #$01               ;
- STA SC+1               ; We cleared the C flag above, so we can actually
-                        ; subtract $13F to get the correct result
+                        ; We now need to move up into the character block above,
+                        ; and each character row in screen memory takes up $140
+                        ; bytes ($100 for the visible part and $20 for each of
+                        ; the blank borders on the side of the screen), so
+                        ; that's what we need to subtract from SC(1 0)
+                        ;
+                        ; We also know the C flag is clear, as we cleared it
+                        ; above, so we can subtract $13F in order to get the
+                        ; correct result
 
- LDY #7                 ; Set the pixel line to the last line in the new
-                        ; character block
+ LDA SC                 ; Set SC(1 0) = SC(1 0) - $140
+ SBC #$3F               ;
+ STA SC                 ; Starting with the low bytes
+
+ LDA SCH                ; And then subtracting the high bytes
+ SBC #$01
+ STA SCH
+
+ LDY #7                 ; Set the pixel line to the last line in that character
+                        ; block
+
 .LI16
 
  LDA S2                 ; Set S2 = S2 + P2 to update the slope error
@@ -46540,11 +46556,10 @@ ENDIF
  ADC #8                 ; character along to the right
  STA SC
 
- BCC P%+5               ; If the addition of the low bytes overflowed, increment
- INC SCH                ; the high byte of SC(1 0)
+ BCC LIC5               ; If the addition of the low bytes of SC overflowed,
+ INC SC+1               ; increment the high byte
 
- CLC                    ; Clear the C flag so the above subtraction will work if
-                        ; we loop back
+ CLC                    ; Clear the C flag
 
 .LIC5
 
@@ -46591,53 +46606,88 @@ ENDIF
 
 .LFT
 
- LDA SWAP               ; ???
- BEQ LI18
- DEX
+ LDA SWAP               ; If SWAP = 0 then we didn't swap the coordinates above,
+ BEQ LI18               ; so jump down to LI18 to skip plotting the first pixel
+
+ DEX                    ; Decrement the counter in X because we're about to plot
+                        ; the first pixel
 
 .LIL6
 
- LDA R2
- EOR (SC),Y
- STA (SC),Y
+ LDA R2                 ; Fetch the pixel byte from R2
+
+ EOR (SC),Y             ; Store R into screen memory at SC(1 0), using EOR
+ STA (SC),Y             ; logic so it merges with whatever is already on-screen
 
 .LI18
 
- DEY
- BPL LI19
- LDA SC
- SBC #$3F
- STA SC
- LDA SCH
- SBC #1
+ DEY                    ; Decrement Y to step up along the y-axis
+
+ BPL LI19               ; If Y is positive we are still within the same
+                        ; character block, so skip to LI19
+
+                        ; We now need to move up into the character block above,
+                        ; and each character row in screen memory takes up $140
+                        ; bytes ($100 for the visible part and $20 for each of
+                        ; the blank borders on the side of the screen), so
+                        ; that's what we need to subtract from SC(1 0)
+                        ;
+                        ; We also know the C flag is clear, as we call LFT with
+                        ; a BCC, so we can subtract $13F in order to get the
+                        ; correct result
+
+ LDA SC                 ; Set SC(1 0) = SC(1 0) - $140
+ SBC #$3F               ;
+ STA SC                 ; Starting with the low bytes
+
+ LDA SCH                ; And then subtracting the high bytes
+ SBC #$01
  STA SCH
- LDY #7
+
+ LDY #7                 ; Set the pixel line to the last line in that character
+                        ; block
 
 .LI19
 
- LDA S2
+ LDA S2                 ; Set S2 = S2 + P2 to update the slope error
  ADC P2
  STA S2
- BCC LIC6
- ASL R2
- BCC LIC6
- ROL R2
- LDA SC
- SBC #7
+
+ BCC LIC6               ; If the addition didn't overflow, jump to LIC6
+
+ ASL R2                 ; Otherwise we just overflowed, so shift the single
+                        ; pixel in R2 to the left, so the next pixel we plot
+                        ; will be at the previous x-coordinate
+
+ BCC LIC6               ; If the pixel didn't fall out of the left end of R2
+                        ; into the C flag, then jump to LIC6
+
+ ROL R2                 ; Otherwise we need to move over to the next character
+                        ; block, so first rotate R2 left so the set C flag goes
+                        ; back into the right end, giving %0000001
+
+ LDA SC                 ; Subtract 7 from SC, so SC(1 0) now points to the
+ SBC #7                 ; previous character along to the left
  STA SC
- BCS P%+4
- DEC SCH
- CLC
+
+ BCS P%+4               ; If the subtraction of the low bytes of SC underflowed,
+ DEC SCH                ; decrement the high byte
+
+ CLC                    ; Clear the C flag so it doesn't affect the additions
+                        ; below
 
 .LIC6
 
- DEX
- BNE LIL6
- LDY YSAV
+ DEX                    ; Decrement the counter in X
+
+ BNE LIL6               ; If we haven't yet reached the left end of the line,
+                        ; loop back to LIL6 to plot the next pixel along
+
+ LDY YSAV               ; Restore Y from YSAV, so that it's preserved
 
 .HL6
 
- RTS
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
