@@ -2239,7 +2239,13 @@ ENDIF
 
 .DFLAG
 
- SKIP 1                 ; This byte appears to be unused
+ SKIP 1                 ; A flag to indicate whether we need to show the
+                        ; dashboard on-screen in the current view (as it is
+                        ; hidden for the trading screens) ???
+                        ;
+                        ;   * 0 = do show the dashboard
+                        ;
+                        ;   * $FF = do not show the dashboard
 
 .DNOIZ
 
@@ -25443,11 +25449,7 @@ ENDIF
                         ; for our ship. In memory, this is the layout of the
                         ; ship data blocks and ship line heaps:
                         ;
-                        ;   +-----------------------------------+   $1034
-                        ;   |                                   |
-                        ;   | WP workspace                      |
-                        ;   |                                   |
-                        ;   +-----------------------------------+   $0800 = WP
+                        ;   +-----------------------------------+   $FFC0 = LS%
                         ;   |                                   |
                         ;   | Current ship line heap            |
                         ;   |                                   |
@@ -25471,7 +25473,7 @@ ENDIF
                         ;   |                                   |
                         ;   | Existing ship data blocks         |
                         ;   |                                   |
-                        ;   +-----------------------------------+   $0400 = K%
+                        ;   +-----------------------------------+   $F900 = K%
                         ;
                         ; So, to work out if we have enough space, we have to
                         ; make sure there is room between the end of our new
@@ -47887,7 +47889,9 @@ ENDIF
 
 .BOL1
 
- JSR ZES1k
+ JSR ZES1k              ; Call ZES1k to zero-fill the page in X, which will
+                        ; clear part of a character row
+
  INX
  CPX #HI(DLOC%)
  BNE BOL1
@@ -47912,18 +47916,26 @@ ENDIF
 
 .BOL2
 
- JSR ZES1k
+ JSR ZES1k              ; Call ZES1k to zero-fill the page in X, which will
+                        ; clear part of a character row
+
  INX
  CPX #HI(SCBASE)+$20
  BNE BOL2
  LDX #0
  STX COMC
- STX DFLAG
+
+ STX DFLAG              ; Set DFLAG to 0 to indicate that we do need to show the
+                        ; dashboard in this view
+
  INX
  STX XC
  STX YC
- JSR BLUEBAND
- JSR zonkscanners
+
+ JSR BLUEBAND           ; Clear the borders along the edges of the space view,
+                        ; to hide any sprites that might be lurking there
+
+ JSR zonkscanners       ; Hide all ships on the scanner
 
  JSR NOSPRITES          ; Call NOSPRITES to disable all sprites and remove them
                         ; from the screen
@@ -48023,122 +48035,219 @@ ENDIF
 ;       Name: wantdials
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: Show the dashboard on-screen
 ;
 ; ******************************************************************************
 
 .wantdials
 
  JSR BOX2               ; ???
- LDA #$91
- STA abraxas
- LDA #$D0
- STA caravanserai
- LDA DFLAG
- BNE nearlyxmas
- LDX #8
- LDA #LO(DSTORE%)
- STA V
- LDA #HI(DSTORE%)
- STA V+1
- LDA #LO(DLOC%)
- STA SC
- LDA #HI(DLOC%)
- STA SC+1
- JSR mvblockK
- LDY #$C0
- LDX #1
- JSR mvbllop
- JSR zonkscanners
- JSR DIALS
+
+ LDA #$91               ; Set abraxas = $91, so the colour of the lower part of
+ STA abraxas            ; the screen is determined by screen RAM at $6400 (i.w.
+                        ; (i.e. for when the dashboard is being shown)
+
+ LDA #%11010000         ; Set bit 4 of caravanserai so that the lower part of
+ STA caravanserai       ; the screen (the dashboard) is shown in multicolour
+                        ; bitmap mode
+
+ LDA DFLAG              ; If DFLAG is non-zero then the dashboard is not needed
+ BNE nearlyxmas         ; for the current view, so jump to nearlyxmas to skip
+                        ; displaying the dashboard on-screen
+
+ LDX #8                 ; Set X = 8 so we copy eight pages of the dashboard
+                        ; image from DSTORE% to screen memory
+
+ LDA #LO(DSTORE%)       ; Set V(1 0) = DSTORE%
+ STA V                  ;
+ LDA #HI(DSTORE%)       ; So V(1 0) points to the copy of the dashboard image
+ STA V+1                ; at DSTORE%
+
+ LDA #LO(DLOC%)         ; Set SC(1 0) = DLOC%
+ STA SC                 ;
+ LDA #HI(DLOC%)         ; So SC(1 0) points to the address in the screen bitmap
+ STA SC+1               ; of the start of the dashboard at DLOC%
+
+ JSR mvblockK           ; Copy X pages from V(1 0) to SC(1 0), which copies all
+                        ; eight pages of the dashboard from the copy at DSTORE%
+                        ; into the screen bitmap
+
+                        ; This leaves the addresses as follows:
+                        ;
+                        ;   * V(1 0) = DSTORE% + $800
+                        ;
+                        ;   * SC(1 0) = DLOC% + $800
+
+ LDY #$C0               ; Set Y = $C0 so we copy the colour data from an offset
+                        ; of $8C0 ???
+
+ LDX #1                 ; Set X = 1 so we copy one page of the dashboard colour
+                        ; data to screen RAM ???
+
+ JSR mvbllop            ; Copy X pages from V(1 0)+Y to SC(1 0)+Y, which copies
+                        ; one pages of dashboard colour data from DSTORE% + $8C0
+                        ; into screen RAM at DLOC% + $8C0 ???
+
+ JSR zonkscanners       ; Hide all ships on the scanner
+
+ JSR DIALS              ; Call DIALS to update the dashboard
 
 .nearlyxmas
 
- JSR BLUEBAND
+ JSR BLUEBAND           ; Clear the borders along the edges of the space view,
+                        ; to hide any sprites that might be lurking there
 
  JSR NOSPRITES          ; Call NOSPRITES to disable all sprites and remove them
                         ; from the screen
 
- LDA #$FF
- STA DFLAG
- RTS
+ LDA #$FF               ; Set DFLAG to $FF to indicate that we do not need to
+ STA DFLAG              ; show the dashboard in this view
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
 ;       Name: zonkscanners
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: Hide all ships on the scanner
 ;
 ; ******************************************************************************
 
 .zonkscanners
 
- LDX #0                 ; ???
+ LDX #0                 ; Set up a counter in X to work our way through all the
+                        ; ship slots in FRIN
 
 .zonkL
 
- LDA FRIN,X
- BEQ zonk1
- BMI zonk2
- JSR GINF
- LDY #31
- LDA (INF),Y
- AND #$EF
+ LDA FRIN,X             ; Fetch the ship type in slot X
+
+ BEQ zonk1              ; If the slot contains 0 then it is empty and we have
+                        ; checked all the slots (as they are always shuffled
+                        ; down in the main loop to close up and gaps), so jump
+                        ; to zonk1 as we are done
+
+ BMI zonk2              ; If the slot contains a ship type with bit 7 set, then
+                        ; it contains the planet or the sun, so jump down to
+                        ; zonk2 to skip this slot, as the planet and sun don't
+                        ; appear on the scanner
+
+ JSR GINF               ; Call GINF to get the address of the data block for
+                        ; ship slot X and store it in INF
+
+ LDY #31                ; Clear bit 4 in the ship's byte #31, which hides it
+ LDA (INF),Y            ; from the scanner
+ AND #%11101111
  STA (INF),Y
 
 .zonk2
 
- INX
- BNE zonkL
+ INX                    ; Increment X to point to the next ship slot
+
+ BNE zonkL              ; Loop back up to process the next slot (this BNE is
+                        ; effectively a JMP as X will never be zero)
 
 .zonk1
 
- RTS
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
 ;       Name: BLUEBAND
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: Clear two four-character borders along each side of the space view
+;
+; ------------------------------------------------------------------------------
+;
+; The Elite game screen is 256 pixels wide but the Commodore 64 screen is 320
+; pixels wide, which leaves 64 pixels (eight character blocks). We therefore
+; show the game in the middle of the screen, and clear a four-character border
+; along the left and right edges of the space view.
+;
+; This prevents graphics from spilling out of the sides of the space view (in
+; particular the Trumble and explosion sprites).
 ;
 ; ******************************************************************************
 
 .BLUEBAND
 
- LDX #LO(SCBASE)        ; ???
- LDY #HI(SCBASE)
- JSR BLUEBANDS
- LDX #LO(SCBASE+$128)
- LDY #HI(SCBASE+$128)
+ LDX #LO(SCBASE)        ; Set (Y X) = SCBASE so it contains the address of the
+ LDY #HI(SCBASE)        ; top-left corner of the four-character border along
+                        ; the left edge of the screen
+
+ JSR BLUEBANDS          ; Call BLUEBANDS to clear the left border
+
+ LDX #LO(SCBASE+37*8)   ; Set (Y X) = SCBASE so it contains the address of
+ LDY #HI(SCBASE+37*8)   ; character block 37 on the top row of the screen, which
+                        ; is the top-left corner of the border along the right
+                        ; edge of the screen (as there are four blocks for the
+                        ; left border and 32 blocks for the space view)
+
+                        ; Fall through into BLUEBANDS to clear the right border
+
+; ******************************************************************************
+;
+;       Name: BLUEBANDS
+;       Type: Subroutine
+;   Category: Drawing the screen
+;    Summary: Clear a four-character border along one side of the space view
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   (Y X)               The address of the top-left corner of the border strip
+;                       to fill
+;
+; ******************************************************************************
 
 .BLUEBANDS
 
- STX SC
+ STX SC                 ; Set SC(1 0) = (Y X)
  STY SC+1
- LDX #18
+
+ LDX #18                ; The space view is 144 pixels high, which is 18
+                        ; character rows of eight pixels each, so set a row
+                        ; counter in X
 
 .BLUEL2
 
- LDY #23
+ LDY #23                ; The border is 24 pixels wide (four characters of
+                        ; eight pixels each), so set a pixel byte counter in Y
+                        ; to cover a whole character row of 24 pixels
 
 .BLUEL1
 
- LDA #$FF
- STA (SC),Y
- DEY
- BPL BLUEL1
- LDA SC
- CLC
- ADC #$40
+ LDA #%11111111         ; Set A to a pixel byte with every pixel on
+
+ STA (SC),Y             ; Store the pixel byte in the Y-th byte of SC(1 0)
+
+ DEY                    ; Decrement the pixel byte counter
+
+ BPL BLUEL1             ; Loop back until we have done a whole character row
+
+                        ; We now need to move down into the character row below,
+                        ; and each 40-character row in screen memory takes up
+                        ; 40 * 8 = 320 bytes ($140), so that's what we need to
+                        ; add to SC(1 0)
+
+ LDA SC                 ; Set SC(1 0) = SC(1 0) + $140
+ CLC                    ;
+ ADC #$40               ; Starting with the low bytes
  STA SC
- LDA SC+1
- ADC #1
+
+ LDA SC+1               ; And then adding the high bytes
+ ADC #$01
  STA SC+1
- DEX
- BNE BLUEL2
- RTS
+
+ DEX                    ; Decrement the row counter in X
+
+ BNE BLUEL2             ; Loop back until we have filled all 18 rows along the
+                        ; edges of the space view
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
@@ -48183,18 +48292,22 @@ ENDIF
 ;       Name: ZES1k
 ;       Type: Subroutine
 ;   Category: Utility routines
-;    Summary: ???
+;    Summary: Zero-fill the page whose number is in X
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   X                   The page we want to zero-fill
 ;
 ; ******************************************************************************
 
 .ZES1k
 
- LDY #0                 ; Set Y = 0
-
- STY SC                 ; Set the low byte of SC(1 0) to zero
-
-                        ; Fall through into ZES2k to ???
-
+ LDY #0                 ; If we set Y = SC = 0 and fall through into ZESNEW
+ STY SC                 ; below, then we will zero-fill 255 bytes starting from
+                        ; SC - in other words, we will zero-fill the whole of
+                        ; page X
 ; ******************************************************************************
 ;
 ;       Name: ZES2k
@@ -48337,25 +48450,47 @@ ENDIF
 ;       Name: mvblockK
 ;       Type: Subroutine
 ;   Category: Utility routines
-;    Summary: ???
+;    Summary: Copy a specific number of pages in memory
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   V(1 0)              Source address
+;
+;   SC(1 0)             Destination address
+;
+;   X                   Number of pages of memory to copy
+;
+; ------------------------------------------------------------------------------
+;
+; Other entry points:
+;
+;   mvbllop             Start the copy from index Y within each block
 ;
 ; ******************************************************************************
 
 .mvblockK
 
- LDY #0
+ LDY #0                 ; Set an index counter in Y
 
 .mvbllop
 
- LDA (V),Y
+ LDA (V),Y              ; Copy the Y-th byte from V(1 0) to SC(1 0)
  STA (SC),Y
- DEY
- BNE mvbllop
- INC V+1
- INC SC+1
- DEX
- BNE mvbllop
- RTS
+
+ DEY                    ; Decrement the index counter
+
+ BNE mvbllop            ; Loop back until we have copied a whole page of bytes
+
+ INC V+1                ; Increment the high bytes of V(1 0) and SC(1 0) to
+ INC SC+1               ; point to the next page in memory
+
+ DEX                    ; Decrement the page counter
+
+ BNE mvbllop            ; Loop back until we have copied X pages of memory
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
