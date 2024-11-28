@@ -47390,15 +47390,22 @@ ENDIF
 ;       Name: clss
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: Clear the top part of the screen and ???
+;    Summary: Clear the screen and jump back into the CHPR routine to print the
+;             next character
 ;
 ; ******************************************************************************
 
 .clss
 
- JSR TT66simp           ; ???
- LDA K3
- JMP RRafter
+ JSR TT66simp           ; Call TT66simp to clear the screen 
+
+ LDA K3                 ; We called this routine from CHPR, which put the
+                        ; character we are printing into K3, so set A to the
+                        ; character number so we can jump back to CHPR to print
+                        ; it on the newly cleared screen
+
+ JMP RRafter            ; Jump back into the CHPR routine to print the character
+                        ; in A
 
 ; ******************************************************************************
 ;
@@ -47446,6 +47453,52 @@ ENDIF
 ;       Type: Subroutine
 ;   Category: Text
 ;    Summary: Print a character at the text cursor by poking into screen memory
+;  Deep dive: Drawing text
+;
+; ------------------------------------------------------------------------------
+;
+; Print a character at the text cursor (XC, YC), do a beep, print a newline,
+; or delete left (backspace).
+;
+; The CHPR2 sends characters here for printing if they are in the range 13-122.
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   A                   The character to be printed. Can be one of the
+;                       following:
+;
+;                         * 7 (beep)
+;
+;                         * 10 (line feed)
+;
+;                         * 11 (clear the top part of the screen and draw a
+;                           border)
+;
+;                         * 12-13 (carriage return)
+;
+;                         * 32-95 (ASCII capital letters, numbers and
+;                           punctuation)
+;
+;                         * 127 (delete the character to the left of the text
+;                           cursor and move the cursor to the left)
+;
+;   XC                  Contains the text column to print at (the x-coordinate)
+;
+;   YC                  Contains the line number to print on (the y-coordinate)
+;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   A                   A is preserved
+;
+;   X                   X is preserved
+;
+;   Y                   Y is preserved
+;
+;   C flag              The C flag is cleared
 ;
 ; ------------------------------------------------------------------------------
 ;
@@ -47457,98 +47510,306 @@ ENDIF
 
 .CHPR
 
- \PRINT   Rewrite for Mode 4 Map
+ STA K3                 ; Store the A, X and Y registers, so we can restore
+ STY YSAV2              ; them at the end (so they don't get changed by this
+ STX XSAV2              ; routine)
 
- STA K3                 ; ???
- STY YSAV2
- STX XSAV2
- LDY QQ17
- CPY #$FF
- BEQ RR4S
+ LDY QQ17               ; Load the QQ17 flag, which contains the text printing
+                        ; flags
+
+ CPY #255               ; If QQ17 = 255 then printing is disabled, so jump to
+ BEQ RR4S               ; RR4 (via the JMP in RR4S) to restore the registers
+                        ; and return from the subroutine using a tail call
 
 .RRafter
 
- CMP #7
- BEQ R5
- CMP #32
- BCS RR1
- CMP #10
- BEQ RRX1
+ CMP #7                 ; If this is a beep character (A = 7), jump to R5,
+ BEQ R5                 ; which will emit the beep, restore the registers and
+                        ; return from the subroutine
+
+ CMP #32                ; If this is an ASCII character (A >= 32), jump to RR1
+ BCS RR1                ; below, which will print the character, restore the
+                        ; registers and return from the subroutine
+
+ CMP #10                ; If this is control code 10 (line feed) then jump to
+ BEQ RRX1               ; RRX1, which will move down a line, restore the
+                        ; registers and return from the subroutine
 
 .RRX2
 
- LDX #1
- STX XC
+ LDX #1                 ; If we get here, then this is control code 12 or 13,
+ STX XC                 ; both of which are used. This code prints a newline,
+                        ; which we can achieve by moving the text cursor
+                        ; to the start of the line (carriage return) and down
+                        ; one line (line feed). These two lines do the first
+                        ; bit by setting XC = 1, and we then fall through into
+                        ; the line feed routine that's used by control code 10
 
 .RRX1
 
- CMP #13
- BEQ RR4S
- INC YC
- BNE RR4S
+ CMP #13                ; If this is control code 13 (carriage return) then jump
+ BEQ RR4S               ; to RR4 (via the JMP in RR4S) to restore the registers
+                        ; and return from the subroutine using a tail call
+
+ INC YC                 ; Increment the text cursor y-coordinate to move it
+                        ; down one row
+
+ BNE RR4S               ; Jump to RR4 via RR4S to restore the registers and
+                        ; return from the subroutine using a tail call
 
 .RR1
 
- TAY
- LDX #HI(FONT)-1
- ASL A
- ASL A
+                        ; If we get here, then the character to print is an
+                        ; ASCII character in the range 32-95. The quickest way
+                        ; to display text on-screen is to poke the character
+                        ; pixel by pixel, directly into screen memory, so
+                        ; that's what the rest of this routine does
+                        ;
+                        ; The first step, then, is to get hold of the bitmap
+                        ; definition for the character we want to draw on the
+                        ; screen (i.e. we need the pixel shape of this
+                        ; character)
+                        ;
+                        ; The Commodore 64 version of Elite uses the same
+                        ; character bitmaps as the BBC Micro version of Elite,
+                        ; which in turn uses the characters from the BBC Micro's
+                        ; MOS operating system
+                        ;
+                        ; A copy of these bitmap definitions is embedded into
+                        ; this source code at page FONT, so page 0 of the font
+                        ; is at FONT, page 1 is at FONT+1, and page 2 at
+                        ; FONT+3
+                        ;
+                        ; There are definitions for 32 characters in each of the
+                        ; three pages of MOS memory, as each definition takes up
+                        ; 8 bytes (8 rows of 8 pixels) and 32 * 8 = 256 bytes =
+                        ; 1 page. So:
+                        ;
+                        ;   ASCII 32-63  are defined in $C000-$C0FF (page 0)
+                        ;   ASCII 64-95  are defined in $C100-$C1FF (page 1)
+                        ;   ASCII 96-126 are defined in $C200-$C2F0 (page 2)
+                        ;
+                        ; The following code reads the relevant character
+                        ; bitmap from the copied MOS bitmaps at FONT and pokes
+                        ; those values into the correct position in screen
+                        ; memory, thus printing the character on-screen
+                        ;
+                        ; It's a long way from 10 PRINT "Hello world!":GOTO 10
+
+ TAY                    ; Copy the character number from A to Y, as we are
+                        ; about to pull A apart to work out where this
+                        ; character definition lives in memory
+
+                        ; Now we want to set X to point to the relevant page
+                        ; number for this character - i.e. FONT to FONT+2
+
+                        ; The following logic is easier to follow if we look
+                        ; at the three character number ranges in binary:
+                        ;
+                        ;   Bit #  76543210
+                        ;
+                        ;   32  = %00100000     Page 0 of bitmap definitions
+                        ;   63  = %00111111
+                        ;
+                        ;   64  = %01000000     Page 1 of bitmap definitions
+                        ;   95  = %01011111
+                        ;
+                        ;   96  = %01100000     Page 2 of bitmap definitions
+                        ;   125 = %01111101
+                        ;
+                        ; We'll refer to this below
+
+ LDX #HI(FONT)-1        ; Set X to point to the page before the first font page,
+                        ; which is HI(FONT) - 1
+
+ ASL A                  ; If bit 6 of the character is clear (A is 32-63)
+ ASL A                  ; then skip the following instruction
  BCC P%+4
- LDX #HI(FONT)+1
- ASL A
- BCC P%+3
- INX
- STA P+1
- STX P+2
- LDA XC
- CMP #31
- BCS RRX2
- LDA #128
- STA SC
- LDA YC
- CMP #24
- BCC RR3
- JMP clss
+
+ LDX #HI(FONT)+1        ; A is 64-126, so set X to point to the after the first
+                        ; font page, which is HI(FONT) + 1
+
+ ASL A                  ; If bit 5 of the character is clear (A is 64-95)
+ BCC P%+3               ; then skip the following instruction
+
+ INX                    ; Increment X
+                        ;
+                        ; By this point, we started with X = FONT%-1, and then
+                        ; we did the following:
+                        ;
+                        ;   If A = 32-63:   skip       then INX  so X = FONT
+                        ;   If A = 64-95:   X = FONT+1 then skip so X = FONT+1
+                        ;   If A = 96-126:  X = FONT+1 then INX  so X = FONT+2
+                        ;
+                        ; In other words, X points to the relevant page. But
+                        ; what about the value of A? That gets shifted to the
+                        ; left three times during the above code, which
+                        ; multiplies the number by 8 but also drops bits 7, 6
+                        ; and 5 in the process. Look at the above binary
+                        ; figures and you can see that if we cleared bits 5-7,
+                        ; then that would change 32-53 to 0-31... but it would
+                        ; do exactly the same to 64-95 and 96-125. And because
+                        ; we also multiply this figure by 8, A now points to
+                        ; the start of the character's definition within its
+                        ; page (because there are 8 bytes per character
+                        ; definition)
+                        ;
+                        ; Or, to put it another way, X contains the high byte
+                        ; (the page) of the address of the definition that we
+                        ; want, while A contains the low byte (the offset into
+                        ; the page) of the address
+
+ STA P+1                ; Store the address of this character's definition in
+ STX P+2                ; P(2 1)
+
+ LDA XC                 ; Fetch XC, the x-coordinate (column) of the text cursor
+                        ; into A
+
+ CMP #31                ; If A >= 31, i.e. the text cursor past the right edge
+ BCS RRX2               ; the screen, jump to RRX2 to move to column 1
+
+ LDA #$80               ; Set SC to $80 so we can use it in the calculation of
+ STA SC                 ; the character's screen address below
+
+ LDA YC                 ; Fetch YC, the y-coordinate (row) of the text cursor
+
+ CMP #24                ; If the text cursor is on the screen (i.e. YC < 24, so
+ BCC RR3                ; we are on rows 0-23), then jump to RR3 to print the
+                        ; character
+
+ JMP clss               ; Otherwise we are off the bottom of the screen, so call
+                        ; clss to clear the screen and draw a white border,
+                        ; before jumping back to RRafter with A set to the
+                        ; character to be printed at the top of the newly
+                        ; cleared screen
 
 .RR3
 
- LSR A
- ROR SC
- LSR A
- ROR SC
- ADC YC
- ADC #HI(SCBASE)
- STA SC+1
- LDA XC
- ASL A
- ASL A
- ASL A
- ADC SC
+                        ; A contains the value of YC - the screen row where we
+                        ; want to print this character - so now we need to
+                        ; convert this into a screen address, so we can poke
+                        ; the character data to the right place in screen
+                        ; memory
+
+ LSR A                  ; Set (A SC) = (A SC) >> 2
+ ROR SC                 ;            = (YC $80) / 4
+ LSR A                  ;            = (YC * 256 / 4) + ($80 / 4)
+ ROR SC                 ;            = YC * 64 + $20
+                        ;
+                        ; This also clears the C flag, as the low bits of SC are
+                        ; all zeroes
+
+ ADC YC                 ; Set A = A + YC
+                        ;
+                        ; So (A SC) = (A SC) + (YC 0)
+                        ;           = YC * 64 + $20 + YC * 256
+                        ;           = YC * 320 + 32
+
+ ADC #HI(SCBASE)        ; The low byte of the screen bitmap addreas in SCBASE is
+ STA SC+1               ; always zero, so this does the following:
+                        ;
+                        ;   SC(1 0) = SCBASE + (A SC)
+                        ;           = SCBASE + YC * 320 + 32
+                        ;
+                        ; So SC(1 0) contains the screen address we want to poke
+                        ; the character into, because:
+                        ;
+                        ;   * The screen bitmap starts at SCBASE
+                        ;
+                        ;   * Each character row of 40 character blocks takes up
+                        ;     40 * 8 = 320 bytes, and we want to print on row
+                        ;     YC, so we add YC * 320 bytes to get to the correct
+                        ;     character row
+                        ;
+                        ;   * Because the game screen is 256 pixels wide and the
+                        ;     Commodore 64 screen is 320 pixels wide, we have a
+                        ;     32-pixel margin on each side that we need to skip
+                        ;     past, and 32 pixels is the width of four character
+                        ;     blocks, each of which takes up eight bytes of
+                        ;     bitmap memory, so we add another 4 * 8 = 32 bytes
+                        ;     to cater for the indent
+
+ LDA XC                 ; Set SC(1 0) = SC(1 0) + XC * 8
+ ASL A                  ;
+ ASL A                  ; So SC(1 0) now points to the screen address of the
+ ASL A                  ; character block in column XC, which is where we want
+ ADC SC                 ; to draw our character
  STA SC
  BCC P%+4
  INC SC+1
- CPY #$7F
- BNE RR2
- DEC XC
- DEC SC+1
- LDY #$F8
- JSR ZESNEW
- BEQ RR4
+
+ CPY #127               ; If the character number (which is in Y) <> 127, then
+ BNE RR2                ; skip to RR2 to print that character, otherwise this is
+                        ; the delete character, so continue on
+
+ DEC XC                 ; We want to delete the character to the left of the
+                        ; text cursor and move the cursor back one, so let's
+                        ; do that by decrementing YC. Note that this doesn't
+                        ; have anything to do with the actual deletion below,
+                        ; we're just updating the cursor so it's in the right
+                        ; position following the deletion
+
+ DEC SC+1               ; Decrement the high byte of the screen address to point
+                        ; to the address of the current character, minus one
+                        ; page
+
+ LDY #$F8               ; Set Y = $F8, so the following call to ZESNEW will
+                        ; count Y upwards from $F8 to $FF
+
+ JSR ZESNEW             ; Call ZESNEW, which zero-fills from address SC(1 0) + Y
+                        ; to SC(1 0) + $FF. SC(1 0) points to the character
+                        ; above the text cursor, and adding $FF to this would
+                        ; point to the cursor, so adding $F8 points to the
+                        ; character before the cursor, which is the one we want
+                        ; to delete. So this call zero-fills the character to
+                        ; the left of the cursor, which erases it from the
+                        ; screen
+
+ BEQ RR4                ; We are done deleting, so restore the registers and
+                        ; return from the subroutine (this BNE is effectively
+                        ; a JMP as ZESNEW always returns with the Z flag set)
 
 .RR2
 
- INC XC
- EQUB $2C
- STA SC+1
- LDY #7
+ INC XC                 ; Once we print the character, we want to move the text
+                        ; cursor to the right, so we do this by incrementing
+                        ; XC. Note that this doesn't have anything to do
+                        ; with the actual printing below, we're just updating
+                        ; the cursor so it's in the right position following
+                        ; the print
+
+ EQUB $2C               ; Skip the next instruction by turning it into
+                        ; $2C $85 $08, or BIT $0885, which does nothing apart
+                        ; from affect the flags
+
+ STA SC+1               ; This instruction has no effect, as it is always
+                        ; skipped, so perhaps this was accidentally left behind
+                        ; from development
+
+ LDY #7                 ; We want to print the 8 bytes of character data to the
+                        ; screen (one byte per row), so set up a counter in Y
+                        ; to count these bytes
 
 .RRL1
 
- LDA (P+1),Y
- EOR (SC),Y
- STA (SC),Y
- DEY
- BPL RRL1
+ LDA (P+1),Y            ; The character definition is at P(2 1) - we set this up
+                        ; above - so load the Y-th byte from P(2 1), which will
+                        ; contain the bitmap for the Y-th row of the character
+
+ EOR (SC),Y             ; If we EOR this value with the existing screen
+                        ; contents, then it's reversible (so reprinting the
+                        ; same character in the same place will revert the
+                        ; screen to what it looked like before we printed
+                        ; anything); this means that printing a white pixel
+                        ; onto a white background results in a black pixel, but
+                        ; that's a small price to pay for easily erasable text
+
+ STA (SC),Y             ; Store the Y-th byte at the screen address for this
+                        ; character location
+
+ DEY                    ; Decrement the loop counter
+
+ BPL RRL1               ; Loop back for the next byte to print to the screen
 
  LDY YC                 ; Set SC(1 0) to the address of the start of the current
  LDA celllookl,Y        ; text row in screen RAM, by looking up the address from
@@ -47569,11 +47830,12 @@ ENDIF
 
 .RR4
 
- LDY YSAV2
- LDX XSAV2
- LDA K3
+ LDY YSAV2              ; We're done printing, so restore the values of the
+ LDX XSAV2              ; A, X and Y registers that we saved above and clear
+ LDA K3                 ; the C flag, so everything is back to how it was
  CLC
- RTS
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
@@ -47938,41 +48200,89 @@ ENDIF
 ;       Name: ZES2k
 ;       Type: Subroutine
 ;   Category: Utility routines
-;    Summary: ???
+;    Summary: Zero-fill a specific page
+;
+; ------------------------------------------------------------------------------
+;
+; Zero-fill from address (X SC) to (X SC) + Y.
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   Y                   The offset from (X SC) where we start zeroing, counting
+;                       down to 0
+;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   Z flag              Z flag is set
 ;
 ; ******************************************************************************
 
 .ZES2k
 
- LDA #0                 ; ???
- STX SC+1
+ LDA #0                 ; Load A with the byte we want to fill the memory block
+                        ; with - i.e. zero
+
+ STX SC+1               ; We want to zero-fill page X, so store this in the
+                        ; high byte of SC, so the 16-bit address in SC and
+                        ; SC+1 is now pointing to the SC-th byte of page X
 
 .ZEL1k
 
- STA (SC),Y
- DEY
- BNE ZEL1k
- RTS
+ STA (SC),Y             ; Zero the Y-th byte of the block pointed to by SC,
+                        ; so that's effectively the Y-th byte before SC
+
+ DEY                    ; Decrement the loop counter
+
+ BNE ZEL1k              ; Loop back to zero the next byte
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
 ;       Name: ZESNEW
 ;       Type: Subroutine
 ;   Category: Utility routines
-;    Summary: ???
+;    Summary: Zero-fill memory from SC(1 0) to the end of the page
+;
+; ------------------------------------------------------------------------------
+;
+; Zero-fill from address SC(1 0) + Y to SC(1 0) + $FF.
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   Y                   The offset from SC(1 0) where we start zeroing, counting
+;                       up to $FF
+;
+;   SC(1 0)             The starting address of the zero-fill
+;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   Z flag              Z flag is set
 ;
 ; ******************************************************************************
 
 .ZESNEW
 
- LDA #0
+ LDA #0                 ; Load A with the byte we want to fill the memory block
+                        ; with - i.e. zero
 
 .ZESNEWL
 
- STA (SC),Y
- INY
- BNE ZESNEWL
- RTS
+ STA (SC),Y             ; Zero the Y-th byte of the block pointed to by SC
+
+ INY                    ; Increment the loop counter
+
+ BNE ZESNEWL            ; Loop back to zero the next byte
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
