@@ -1163,13 +1163,13 @@ ENDIF
 ;       Name: DIALS
 ;       Type: Variable
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: The dashboard bitmap and colour data for screen RAM
 ;
 ; ******************************************************************************
 
 .DIALS
 
- SKIP 24
+ SKIP 24                ; This indents the image by three character blocks ???
 
  INCBIN "1-source-files/images/C.CODIALS.bin"
 

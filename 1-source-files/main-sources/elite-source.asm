@@ -527,7 +527,7 @@ ENDIF
                         ;
                         ; A value of 0 denotes the leftmost column and 32 the
                         ; rightmost column, but because the top part of the
-                        ; screen (the space view) has a white border that
+                        ; screen (the space view) has a border box that
                         ; clashes with columns 0 and 32, text is only shown
                         ; in columns 1-31
 
@@ -548,7 +548,7 @@ ENDIF
                         ; just before the screen splits
                         ;
                         ; A value of 0 denotes the top row, but because the
-                        ; top part of the screen has a white border that clashes
+                        ; top part of the screen has a border box that clashes
                         ; with row 0, text is always shown at row 1 or greater
 
 .QQ17
@@ -2390,7 +2390,7 @@ ENDIF
 
 IF _GMA_RELEASE
 
-.MUSWAP
+.MUDOCK
 
  SKIP 1                 ; Docking music tune configuration setting
                         ;
@@ -8558,7 +8558,7 @@ ENDIF
 
 .STATUS
 
- LDA #8                 ; Clear the top part of the screen, draw a white border,
+ LDA #8                 ; Clear the top part of the screen, draw a border box,
  JSR TRADEMODE          ; and set up a printable trading screen with a view type
                         ; in QQ11 of 8 (Status Mode screen)
 
@@ -13744,7 +13744,7 @@ ENDIF
  LDA QQ11               ; Store the current view type in QQ11 on the stack
  PHA
 
- LDA #0                 ; Clear the top part of the screen, draw a white border,
+ LDA #0                 ; Clear the top part of the screen, draw a border box,
  JSR TT66               ; and set the current view type in QQ11 to 0 (the space
                         ; view)
 
@@ -16821,7 +16821,7 @@ ENDIF
  STA INWK+7             ; Set z_hi = 1, the distance at which we show the
                         ; rotating ship
 
- JSR TT66               ; Clear the top part of the screen, draw a white border,
+ JSR TT66               ; Clear the top part of the screen, draw a border box,
                         ; and set the current view type in QQ11 to 1
 
  LDA #64                ; Set the main loop counter to 64, so the ship rotates
@@ -16950,7 +16950,7 @@ ENDIF
  LDA #0                 ; Set the ship's AI flag to 0 (no AI) so it doesn't get
  STA INWK+31            ; any ideas of its own
 
- LDA #1                 ; Clear the top part of the screen, draw a white border,
+ LDA #1                 ; Clear the top part of the screen, draw a border box,
  JSR TT66               ; and set the current view type in QQ11 to 1
 
  JSR LL9                ; Draw the ship on screen to redisplay it
@@ -17576,7 +17576,7 @@ ENDIF
 
 .TRADEMODE
 
- JSR TT66               ; Clear the top part of the screen, draw a white border,
+ JSR TT66               ; Clear the top part of the screen, draw a border box,
                         ; and set the current view type in QQ11 to A
 
  JSR FLKB               ; Call FLKB to flush the keyboard buffer
@@ -17888,7 +17888,7 @@ ENDIF
 
 .TT25
 
- LDA #1                 ; Clear the top part of the screen, draw a white border,
+ LDA #1                 ; Clear the top part of the screen, draw a border box,
  JSR TRADEMODE          ; and set up a printable trading screen with a view type
                         ; in QQ11 of 1
 
@@ -18307,7 +18307,7 @@ ENDIF
 
 .TT22
 
- LDA #64                ; Clear the top part of the screen, draw a white border,
+ LDA #64                ; Clear the top part of the screen, draw a border box,
  JSR TT66               ; and set the current view type in QQ11 to 32 (Long-
                         ; range Chart)
 
@@ -18703,7 +18703,7 @@ ENDIF
 
 .TT219
 
- LDA #2                 ; Clear the top part of the screen, draw a white border,
+ LDA #2                 ; Clear the top part of the screen, draw a border box,
  JSR TRADEMODE          ; and set up a printable trading screen with a view type
                         ; in QQ11 of 2 (Buy Cargo screen)
 
@@ -18749,8 +18749,7 @@ ENDIF
 .TT224
 
  JSR CLYNS              ; Clear the bottom three text rows of the upper screen,
-                        ; and move the text cursor to column 1 on row 21, i.e.
-                        ; the start of the top row of the three bottom rows
+                        ; and move the text cursor to the first cleared row
 
  LDA #204               ; Print recursive token 44 ("QUANTITY OF ")
  JSR TT27
@@ -19067,7 +19066,7 @@ ENDIF
 
 .TT208
 
- LDA #4                 ; Clear the top part of the screen, draw a white border,
+ LDA #4                 ; Clear the top part of the screen, draw a border box,
  JSR TRADEMODE          ; and set up a printable trading screen with a view type
                         ; in QQ11 of 4 (Sell Cargo screen)
 
@@ -19312,7 +19311,7 @@ ENDIF
 
 .TT213
 
- LDA #8                 ; Clear the top part of the screen, draw a white border,
+ LDA #8                 ; Clear the top part of the screen, draw a border box,
  JSR TRADEMODE          ; and set up a printable trading screen with a view type
                         ; in QQ11 of 4 (Inventory screen)
 
@@ -19658,7 +19657,7 @@ ENDIF
                         ; dimensions of the space view (which we don't want to
                         ; do as there is no dashboard in the chart view)
 
- LDA #128               ; Clear the top part of the screen, draw a white border,
+ LDA #128               ; Clear the top part of the screen, draw a border box,
  JSR TT66               ; and set the current view type in QQ11 to 128 (Short-
                         ; range Chart)
 
@@ -20254,8 +20253,7 @@ ENDIF
 .dockEd
 
  JSR CLYNS              ; Clear the bottom three text rows of the upper screen,
-                        ; and move the text cursor to column 1 on row 21, i.e.
-                        ; the start of the top row of the three bottom rows
+                        ; and move the text cursor to the first cleared row
 
  LDA #15                ; Move the text cursor to column 15
  JSR DOXC
@@ -21084,7 +21082,7 @@ ENDIF
 
 .TT167
 
- LDA #16                ; Clear the top part of the screen, draw a white border,
+ LDA #16                ; Clear the top part of the screen, draw a border box,
  JSR TRADEMODE          ; and set up a printable trading screen with a view type
                         ; in QQ11 of 32 (Market Price screen)
 
@@ -21442,7 +21440,7 @@ ENDIF
 ;JSR CATLOD             ; This instruction is commented out in the original
                         ; source
 
- LDA #3                 ; Clear the top part of the screen, draw a white border,
+ LDA #3                 ; Clear the top part of the screen, draw a border box,
  JSR TT66               ; and set the current view type in QQ11 to 3
 
  JSR LL164              ; Call LL164 to show the hyperspace tunnel and make the
@@ -21513,7 +21511,7 @@ ENDIF
  LDA QQ11               ; If the current view is not a space view, jump to ee5
  BNE ee5                ; to skip the following
 
- JSR TT66               ; Clear the top part of the screen, draw a white border,
+ JSR TT66               ; Clear the top part of the screen, draw a border box,
                         ; and set the current view type in QQ11 to 0 (space
                         ; view)
 
@@ -21563,7 +21561,7 @@ ENDIF
  AND #%00111111         ; one of the charts (64 or 128), return from the
  BNE RTS111             ; subroutine (as RTS111 contains an RTS)
 
- JSR TTX66              ; Otherwise clear the screen and draw a white border
+ JSR TTX66              ; Otherwise clear the screen and draw a border box
 
  LDA QQ11               ; If the current view is one of the charts, jump to
  BNE TT114              ; TT114 (from which we jump to the correct routine to
@@ -21883,7 +21881,7 @@ ENDIF
 
 .EQSHP
 
- LDA #32                ; Clear the top part of the screen, draw a white border,
+ LDA #32                ; Clear the top part of the screen, draw a border box,
  JSR TRADEMODE          ; and set up a printable trading screen with a view type
                         ; in QQ11 of 32 (Equip Ship screen)
 
@@ -21974,8 +21972,7 @@ ENDIF
  BCC EQL1               ; list of equipment available at this station
 
  JSR CLYNS              ; Clear the bottom three text rows of the upper screen,
-                        ; and move the text cursor to column 1 on row 21, i.e.
-                        ; the start of the top row of the three bottom rows
+                        ; and move the text cursor to the first cleared row
 
  LDA #127               ; Print recursive token 127 ("ITEM") followed by a
  JSR prq                ; question mark
@@ -22440,7 +22437,7 @@ ENDIF
  BCC P%+7               ; screen to prevent the view menu from clashing with the
                         ; longer equipment menu available in higher tech systems
 
- LDA #32                ; Clear the top part of the screen, draw a white border,
+ LDA #32                ; Clear the top part of the screen, draw a border box,
  JSR TT66               ; and set the current view type in QQ11 to 32 (Equip
                         ; Ship screen)
 
@@ -22473,8 +22470,7 @@ ENDIF
  BCC qv1                ; view in the menu
 
  JSR CLYNS              ; Clear the bottom three text rows of the upper screen,
-                        ; and move the text cursor to column 1 on row 21, i.e.
-                        ; the start of the top row of the three bottom rows
+                        ; and move the text cursor to the first cleared row
 
 .qv2
 
@@ -22531,8 +22527,7 @@ ENDIF
                         ; system
 
  JMP CLYNS              ; Clear the bottom three text rows of the upper screen,
-                        ; and move the text cursor to column 1 on row 21, i.e.
-                        ; the start of the top row of the three bottom rows
+                        ; and move the text cursor to the first cleared row
 
                         ; Return from the subroutine using a tail call
 
@@ -29467,8 +29462,7 @@ ENDIF
 .clynsneed
 
  JSR CLYNS              ; Clear the bottom three text rows of the upper screen,
-                        ; and move the text cursor to column 1 on row 21, i.e.
-                        ; the start of the top row of the three bottom rows
+                        ; and move the text cursor to the first cleared row
 
  JMP me3                ; Jump back into the main spawning loop at me3
 
@@ -30955,11 +30949,11 @@ ENDIF
  LDX #24                ; Set the screen to only show 24 text rows, which hides
  JSR DET1               ; the dashboard, setting A to 6 in the process
 
- JSR TT66               ; Clear the top part of the screen, draw a white border,
+ JSR TT66               ; Clear the top part of the screen, draw a border box,
                         ; and set the current view type in QQ11 to 6 (death
                         ; screen)
 
- JSR BOX                ; Call BOX to redraw the same white border (BOX is part
+ JSR BOX                ; Call BOX to redraw the same border box (BOX is part
                         ; of TT66), which removes the border as it is drawn
                         ; using EOR logic
 
@@ -31535,7 +31529,7 @@ ENDIF
  LDA #32                ; Switch to the palette for the title view, though this
  JSR DOVDU19            ; doesn't actually do anything in this version of Elite
 
- LDA #13                ; Clear the top part of the screen, draw a white border,
+ LDA #13                ; Clear the top part of the screen, draw a border box,
  JSR TT66               ; and set the current view type in QQ11 to 13 (rotating
                         ; ship view)
 
@@ -35110,7 +35104,7 @@ ENDIF
                         ; If we get here then the "X" configuration option has
                         ; been enabled, so the title screen shows the authors'
                         ; names, we can force a mis-jump, and we can alter the
-                        ; MUFOR, MUSWAP and MUSILLY configuration options, which
+                        ; MUFOR, MUDOCK and MUSILLY configuration options, which
                         ; are unavailable by default
 
  JSR DKS3               ; Call DKS3 to scan for the key given in Y, and toggle
@@ -35290,8 +35284,7 @@ ENDIF
  BEQ infrontvw          ; instruction
 
  JSR CLYNS              ; Clear the bottom three text rows of the upper screen,
-                        ; and move the text cursor to column 1 on row 21, i.e.
-                        ; the start of the top row of the three bottom rows
+                        ; and move the text cursor to the first cleared row
 
  LDA #25                ; Set A = 25 to use as the text row for the message if
                         ; this is not a space view
@@ -36068,7 +36061,7 @@ ENDIF
 
 IF _GMA_RELEASE
 
- BIT MUSWAP             ; If bit 7 of MUSWAP is set then the docking computer
+ BIT MUDOCK             ; If bit 7 of MUDOCK is set then the docking computer
  BMI startat            ; has been configured to play the title music rather
                         ; than the docking music, so jump to startat to set
                         ; (A X) to the address of the title music to play when
@@ -36637,7 +36630,16 @@ ENDIF
 ;       Type: Variable
 ;   Category: Drawing pixels
 ;    Summary: Lookup table for converting a pixel y-coordinate to the low byte
-;             of a screen address
+;             of a screen address (within the 256-pixel-wide game screen)
+;
+; ------------------------------------------------------------------------------
+;
+; The address returned is indented by four character blocks from the edge of the
+; screen (that's the $20 part, as each character is 8 bytes, and 4 * 8 = $20).
+;
+; This is because the first four characters of every character line are blank,
+; so the 256-pixel-wide game screen is centred in the Commodore 64's screen
+; width of 320 pixels.
 ;
 ; ******************************************************************************
 
@@ -36655,7 +36657,16 @@ ENDIF
 ;       Type: Variable
 ;   Category: Drawing pixels
 ;    Summary: Lookup table for converting a pixel y-coordinate to the high byte
-;             of a screen address
+;             of a screen address (within the 256-pixel-wide game screen)
+;
+; ------------------------------------------------------------------------------
+;
+; The address returned is indented by four character blocks from the edge of the
+; screen (that's the $20 part, as each character is 8 bytes, and 4 * 8 = $20).
+;
+; This is because the first four characters of every character line are blank,
+; so the 256-pixel-wide game screen is centred in the Commodore 64's screen
+; width of 320 pixels.
 ;
 ; ******************************************************************************
 
@@ -42198,7 +42209,7 @@ ENDIF
 
  STX VIEW               ; Set the current space view to X
 
- JSR TT66               ; Clear the top part of the screen, draw a white border,
+ JSR TT66               ; Clear the top part of the screen, draw a border box,
                         ; and set the current view type in QQ11 to 0 (space
                         ; view)
 
@@ -42222,7 +42233,7 @@ ENDIF
 
  STX VIEW               ; Change the current space view to X
 
- JSR TT66               ; Clear the top part of the screen, draw a white border,
+ JSR TT66               ; Clear the top part of the screen, draw a border box,
                         ; and set the current view type in QQ11 to 0 (space
                         ; view)
 
@@ -42502,7 +42513,7 @@ ENDIF
 ;
 ; ------------------------------------------------------------------------------
 ;
-; Clear the top part of the screen, draw a white border, and set the current
+; Clear the top part of the screen, draw a border box, and set the current
 ; view type in QQ11 to A.
 ;
 ; ------------------------------------------------------------------------------
@@ -42519,18 +42530,18 @@ ENDIF
  STA QQ11               ; Set the current view type in QQ11 to A
 
                         ; Fall through into TTX66 to clear the screen and draw a
-                        ; white border
+                        ; border box
 
 ; ******************************************************************************
 ;
 ;       Name: TTX66
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: Clear the top part of the screen and draw a white border
+;    Summary: Clear the top part of the screen and draw a border box
 ;
 ; ------------------------------------------------------------------------------
 ;
-; Clear the top part of the screen (the space view) and draw a white border
+; Clear the top part of the screen (the space view) and draw a border box
 ; along the top and sides.
 ;
 ; ******************************************************************************
@@ -47391,14 +47402,16 @@ ENDIF
 ;       Name: clss
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: Clear the screen and jump back into the CHPR routine to print the
-;             next character
+;    Summary: Clear the screen, move the text cursor to the top-left corner and
+;             jump back into the CHPR routine to print the next character
 ;
 ; ******************************************************************************
 
 .clss
 
- JSR TT66simp           ; Call TT66simp to clear the screen 
+ JSR TT66simp           ; Call TT66simp to clear the whole screen inside the box
+                        ; border, and move the text cursor to the top-left
+                        ; corner
 
  LDA K3                 ; We called this routine from CHPR, which put the
                         ; character we are printing into K3, so set A to the
@@ -47679,7 +47692,7 @@ ENDIF
                         ; character
 
  JMP clss               ; Otherwise we are off the bottom of the screen, so call
-                        ; clss to clear the screen and draw a white border,
+                        ; clss to clear the screen and draw a border box,
                         ; before jumping back to RRafter with A set to the
                         ; character to be printed at the top of the newly
                         ; cleared screen
@@ -47843,27 +47856,28 @@ ENDIF
 ;       Name: TTX66K
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: Clear the top part of the screen and draw a white border
+;    Summary: Clear the top part of the screen and draw a border box
 ;
 ; ------------------------------------------------------------------------------
 ;
-; Clear the top part of the screen (the space view) and draw a white border
-; along the top and sides.
+; Clear the top part of the screen (the space view) and draw a border box along
+; the top and sides.
 ;
 ; ------------------------------------------------------------------------------
 ;
 ; Other entry points:
 ;
-;   BOX                 Just draw the white border along the top and sides
+;   BOX                 Just draw the border box along the top and sides
 ;
 ; ******************************************************************************
 
 .TTX66K
 
- LDA #4                 ; ???
+ LDA #$04               ; Set SC(1 0) = $6004
  STA SC
  LDA #$60
  STA SC+1
+
  LDX #24
 
 .BOL3
@@ -48017,13 +48031,15 @@ ENDIF
  STA (SC),Y
  DEY
  BPL BOXL3
- LDA SC
+
+ LDA SC                 ; Set SC(1 0) = SC(1 0) + $40 to skip the screen margins
  CLC
  ADC #$40
  STA SC
  LDA SC+1
  ADC #1
  STA SC+1
+
  DEX
  BNE BOXL2
 
@@ -48043,7 +48059,7 @@ ENDIF
  JSR BOX2               ; ???
 
  LDA #$91               ; Set abraxas = $91, so the colour of the lower part of
- STA abraxas            ; the screen is determined by screen RAM at $6400 (i.w.
+ STA abraxas            ; the screen is determined by screen RAM at $6400
                         ; (i.e. for when the dashboard is being shown)
 
  LDA #%11010000         ; Set bit 4 of caravanserai so that the lower part of
@@ -48054,13 +48070,22 @@ ENDIF
  BNE nearlyxmas         ; being shown on-screen, so jump to nearlyxmas to skip
                         ; displaying the dashboard on-screen
 
- LDX #8                 ; Set X = 8 so we copy eight pages of the dashboard
-                        ; image from DSTORE% to screen memory
+                        ; We now copy the dashboard bitmap the copy at DSTORE%
+                        ; into the screen bitmap, so the dashboard appears
+                        ; on-screen
+                        ;
+                        ; The bitmap is seven character rows in size, which is
+                        ; 7 * 40 * 7 = $8C0 bytes, so we need to copy this many
+                        ; bytes from DSTORE% to the screen bitmap address of the
+                        ; dashboard at DLOC%
+
+ LDX #8                 ; Set X = 8 so we copy the first eight pages of the
+                        ; dashboard bitmap from DSTORE% to screen memory
 
  LDA #LO(DSTORE%)       ; Set V(1 0) = DSTORE%
  STA V                  ;
  LDA #HI(DSTORE%)       ; So V(1 0) points to the copy of the dashboard image
- STA V+1                ; at DSTORE%
+ STA V+1                ; and colour data at DSTORE%
 
  LDA #LO(DLOC%)         ; Set SC(1 0) = DLOC%
  STA SC                 ;
@@ -48068,24 +48093,19 @@ ENDIF
  STA SC+1               ; of the start of the dashboard at DLOC%
 
  JSR mvblockK           ; Copy X pages from V(1 0) to SC(1 0), which copies all
-                        ; eight pages of the dashboard from the copy at DSTORE%
-                        ; into the screen bitmap
+                        ; eight pages of the dashboard bitmap from the copy at
+                        ; DSTORE% into the screen bitmap
 
-                        ; This leaves the addresses as follows:
-                        ;
-                        ;   * V(1 0) = DSTORE% + $800
-                        ;
-                        ;   * SC(1 0) = DLOC% + $800
+                        ; We have copied $800 bytes, so now for the other $C0
+                        ; bytes
 
- LDY #$C0               ; Set Y = $C0 so we copy the colour data from an offset
-                        ; of $8C0 ???
+ LDY #$C0               ; Set Y = $C0 so we copy this many bytes
 
- LDX #1                 ; Set X = 1 so we copy one page of the dashboard colour
-                        ; data to screen RAM ???
+ LDX #1                 ; Set X = 1 so we copy this many bytes within just one
+                        ; page
 
- JSR mvbllop            ; Copy X pages from V(1 0)+Y to SC(1 0)+Y, which copies
-                        ; one pages of dashboard colour data from DSTORE% + $8C0
-                        ; into screen RAM at DLOC% + $8C0 ???
+ JSR mvbllop            ; Copy Y bytes from V(1 0) to SC(1 0), so this copies
+                        ; the rest of the dashboard bitmap to the screen
 
  JSR zonkscanners       ; Hide all ships on the scanner
 
@@ -48219,7 +48239,17 @@ ENDIF
 
 .BLUEL1
 
- LDA #%11111111         ; Set A to a pixel byte with every pixel on ???
+ LDA #%11111111         ; Set A to a pixel byte with every pixel in colour 1
+                        ;
+                        ; Colour 1 is mapped to black, so this blanks the sides
+                        ; of the screen, and because it is a non-zero colour, it
+                        ; will cover over any sprites in the border (such as the
+                        ; Trumbles or explosion sprites)
+                        ;
+                        ; As this process is only done when we change views,
+                        ; it means sprites that spill over into the borders
+                        ; don't get cut in half when the main part of the
+                        ; screen changes
 
  STA (SC),Y             ; Store the pixel byte in the Y-th byte of SC(1 0)
 
@@ -48253,38 +48283,58 @@ ENDIF
 ;       Name: TT66simp
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: Clear the whole screen inside the box border, and move the text
+;             cursor to the top-left corner
 ;
 ; ******************************************************************************
 
 .TT66simp
 
- LDX #8                 ; ???
- LDY #0
- CLC
+ LDX #8                 ; We are going to clear character rows 1 through 23,
+                        ; so that's from pixel y-coordinate 8 onwards, so set a
+                        ; set a pixel y-coordinate counter in X
+
+ LDY #0                 ; Set Y = 0, so we can use it as a byte counter below
+
+ CLC                    ; Clear the C flag so the addition below works
 
 .T6SL1
 
- LDA ylookupl,X
- STA SC
- LDA ylookuph,X
+ LDA ylookupl,X         ; Set SC(1 0) to the address in screen memory of the
+ STA SC                 ; start of the character row within the game screen that
+ LDA ylookuph,X         ; contains pixel y-coordinate Y
  STA SC+1
- TYA
+
+ TYA                    ; Set A = 0, which we can use to zero screen memory
+
+                        ; We now zero a whole page of memory (256 bytes) at
+                        ; SC(1 0), using Y as a byte counter, starting from
+                        ; Y = 0
 
 .T6SL2
 
- STA (SC),Y
- DEY
- BNE T6SL2
- TXA
- ADC #8
- TAX
- CMP #24*8
- BCC T6SL1
- INY
+ STA (SC),Y             ; Zero the Y-th byte of SC(1 0)
+
+ DEY                    ; Decrement the byte counter
+
+ BNE T6SL2              ; Loop back until we have zeroed a whole page of bytes
+                        ; (which corresponds to an entire character row of width
+                        ; 256 pixels, which is the width of the game screen)
+
+ TXA                    ; Set X = X + 8
+ ADC #8                 ;
+ TAX                    ; So X now points to the pixel coordinate at the start
+                        ; of the next character row
+
+ CMP #24*8              ; Loop back until we have cleared character rows 1
+ BCC T6SL1              ; through 23 (i.e. values of X from 8 to 23*8)
+
+ INY                    ; Move the text cursor to column 1
  STY XC
- STY YC
- RTS
+
+ STY YC                 ; Move the text cursor to row 1
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
@@ -48465,7 +48515,7 @@ ENDIF
 ;
 ; Other entry points:
 ;
-;   mvbllop             Start the copy from index Y within each block
+;   mvbllop             Only copy Y bytes, rather than a whole page
 ;
 ; ******************************************************************************
 
@@ -48496,51 +48546,93 @@ ENDIF
 ;       Name: CLYNS
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: Clear the bottom two text rows of the visible screen ???
+;    Summary: Clear the bottom three text rows of the space view
+;
+; ------------------------------------------------------------------------------
+;
+; This routine clears some space at the bottom of the screen and moves the text
+; cursor to column 1, row 21.
 ;
 ; ******************************************************************************
 
 .CLYNS
 
- LDA #0                 ; ???
- STA DLY
- STA de
+ LDA #0                 ; Set the delay in DLY to 0, to indicate that we are
+ STA DLY                ; no longer showing an in-flight message, so any new
+                        ; in-flight messages will be shown instantly
+
+ STA de                 ; Clear de, the flag that appends " DESTROYED" to the
+                        ; end of the next text token, so that it doesn't
 
 .CLYNS2
 
- LDA #$FF
- STA DTW2
- LDA #128
- STA QQ17
- LDA #21
- STA YC
- LDA #1
+ LDA #%11111111         ; Set DTW2 = %11111111 to denote that we are not
+ STA DTW2               ; currently printing a word
+
+ LDA #%10000000         ; Set bit 7 of QQ17 to switch standard tokens to
+ STA QQ17               ; Sentence Case
+
+ LDA #21                ; Move the text cursor to row 21, near the bottom of
+ STA YC                 ; the screen
+
+ LDA #1                 ; Move the text cursor to column 1
  STA XC
- LDA #HI(SCBASE)+$1A
- STA SC+1
- LDA #$60
- STA SC
- LDX #3
+
+ LDA #HI(SCBASE)+$1A    ; Set the high byte of SC(1 0) to SCBASE + $1A and the
+ STA SC+1               ; low byte to $60
+ LDA #$60               ;
+ STA SC                 ; We know that the low byte of SCBASE is zero, so this
+                        ; sets SC(1 0) as follows:
+                        ;
+                        ;   SC(1 0) = SCBASE + $1A00 + $60
+                        ;
+                        ; Each character row in the screen bitmap is 40
+                        ; characters wide, and each character takes up 8 bytes,
+                        ; so 21 rows takes up 21 * 40 * 8 = 6720 = $1A40 bytes,
+                        ; and the first four characters of each character row
+                        ; are the blank screen margin either side of the game
+                        ; screen (and 4 * 8 = 32 = $20), so $1A60 is the screen
+                        ; bitmap address of the start of character row 22 within
+                        ; the game area, which is where we want our three blank
+                        ; rows to appear
+                        ;
+                        ; In other words, we need to blank screen memory from
+                        ; SC(1 0) onwards, for three character rows
+
+ LDX #3                 ; We want to clear three text rows, so set a counter in
+                        ; X for 3 rows
 
 .CLYLOOP2
 
- LDA #0
- TAY
+ LDA #0                 ; Set A = 0, which we can use to zero screen memory
+
+ TAY                    ; Set Y = 0, so we can use it as a byte counter
 
 .CLYLOOP
 
- STA (SC),Y
- DEY
- BNE CLYLOOP
- CLC
+ STA (SC),Y             ; Zero the Y-th byte of SC(1 0)
+
+ DEY                    ; Decrement the byte counter
+
+ BNE CLYLOOP            ; Loop back until we have zeroed a whole page of bytes
+                        ; (which corresponds to an entire character row of width
+                        ; 256 pixels, which is the width of the game screen)
+
+ CLC                    ; Set SC(1 0) = SC(1 0) + $40 to skip the screen margins
  LDA SC
  ADC #$40
  STA SC
  LDA SC+1
  ADC #1
  STA SC+1
- DEX
- BNE CLYLOOP2
+
+ DEX                    ; Decrement the row counter in X
+
+ BNE CLYLOOP2           ; Loop back to blank another row, until we have done the
+                        ; number of rows in X
+
+                        ; Fall through into SCAN to return from the subroutine
+                        ; (as the first instruction of SCAN is an RTS)
 
 ; ******************************************************************************
 ;
