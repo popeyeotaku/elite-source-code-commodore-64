@@ -568,12 +568,14 @@ ENDIF
  STA (ZP),Y
  INY
  STA (ZP),Y
- LDA ZP
+
+ LDA ZP                 ; Set ZP(1 0) = ZP(1 0) + 40
  CLC
  ADC #40
  STA ZP
  BCC P%+4
  INC ZP+1
+
  DEX
  BNE LOOP10
  LDA #0
@@ -603,12 +605,14 @@ ENDIF
  STA (ZP),Y
  INY
  STA (ZP),Y
- LDA ZP
+
+ LDA ZP                 ; Set ZP(1 0) = ZP(1 0) + 40
  CLC
  ADC #40
  STA ZP
  BCC P%+4
  INC ZP+1
+
  DEX
  BNE LOOP11
  LDA #$70
