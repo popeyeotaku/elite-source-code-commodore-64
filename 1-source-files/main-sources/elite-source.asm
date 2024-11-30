@@ -45530,8 +45530,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  SBC #$40               ; above, so subtract 320 ($140) from SC(1 0) to move up
- STA SC                 ; one pixel line, as there are 320 bytes in each pixel
- LDA SC+1               ; line in the screen bitmap
+ STA SC                 ; one pixel line, as there are 320 bytes in each
+ LDA SC+1               ; character row in the screen bitmap
  SBC #$01
  STA SC+1
 
@@ -45569,8 +45569,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  SBC #$40               ; above, so subtract 320 ($140) from SC(1 0) to move up
- STA SC                 ; one pixel line, as there are 320 bytes in each pixel
- LDA SC+1               ; line in the screen bitmap
+ STA SC                 ; one pixel line, as there are 320 bytes in each
+ LDA SC+1               ; character row in the screen bitmap
  SBC #$01
  STA SC+1
 
@@ -45608,8 +45608,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  SBC #$40               ; above, so subtract 320 ($140) from SC(1 0) to move up
- STA SC                 ; one pixel line, as there are 320 bytes in each pixel
- LDA SC+1               ; line in the screen bitmap
+ STA SC                 ; one pixel line, as there are 320 bytes in each
+ LDA SC+1               ; character row in the screen bitmap
  SBC #$01
  STA SC+1
 
@@ -45648,8 +45648,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  SBC #$40               ; above, so subtract 320 ($140) from SC(1 0) to move up
- STA SC                 ; one pixel line, as there are 320 bytes in each pixel
- LDA SC+1               ; line in the screen bitmap
+ STA SC                 ; one pixel line, as there are 320 bytes in each
+ LDA SC+1               ; character row in the screen bitmap
  SBC #$01
  STA SC+1
 
@@ -45687,8 +45687,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  SBC #$40               ; above, so subtract 320 ($140) from SC(1 0) to move up
- STA SC                 ; one pixel line, as there are 320 bytes in each pixel
- LDA SC+1               ; line in the screen bitmap
+ STA SC                 ; one pixel line, as there are 320 bytes in each
+ LDA SC+1               ; character row in the screen bitmap
  SBC #$01
  STA SC+1
 
@@ -45726,8 +45726,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  SBC #$40               ; above, so subtract 320 ($140) from SC(1 0) to move up
- STA SC                 ; one pixel line, as there are 320 bytes in each pixel
- LDA SC+1               ; line in the screen bitmap
+ STA SC                 ; one pixel line, as there are 320 bytes in each
+ LDA SC+1               ; character row in the screen bitmap
  SBC #$01
  STA SC+1
 
@@ -45768,8 +45768,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  SBC #$40               ; above, so subtract 320 ($140) from SC(1 0) to move up
- STA SC                 ; one pixel line, as there are 320 bytes in each pixel
- LDA SC+1               ; line in the screen bitmap
+ STA SC                 ; one pixel line, as there are 320 bytes in each
+ LDA SC+1               ; character row in the screen bitmap
  SBC #$01
  STA SC+1
 
@@ -45808,8 +45808,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  SBC #$40               ; above, so subtract 320 ($140) from SC(1 0) to move up
- STA SC                 ; one pixel line, as there are 320 bytes in each pixel
- LDA SC+1               ; line in the screen bitmap
+ STA SC                 ; one pixel line, as there are 320 bytes in each
+ LDA SC+1               ; character row in the screen bitmap
  SBC #$01
  STA SC+1
 
@@ -46006,8 +46006,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  ADC #$3F               ; below, so add 320 ($140) to SC(1 0) to move down one
- STA SC                 ; pixel line, as there are 320 bytes in each pixel line
- LDA SC+1               ; in the screen bitmap
+ STA SC                 ; pixel line, as there are 320 bytes in each character
+ LDA SC+1               ; row in the screen bitmap
  ADC #1                 ;
  STA SC+1               ; We know the C flag is set as we just passed through a
                         ; BCC, so we only need to add $13F to get the result
@@ -46046,8 +46046,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  ADC #$3F               ; below, so add 320 ($140) to SC(1 0) to move down one
- STA SC                 ; pixel line, as there are 320 bytes in each pixel line
- LDA SC+1               ; in the screen bitmap
+ STA SC                 ; pixel line, as there are 320 bytes in each character
+ LDA SC+1               ; row in the screen bitmap
  ADC #1                 ;
  STA SC+1               ; We know the C flag is set as we just passed through a
                         ; BCC, so we only need to add $13F to get the result
@@ -46086,8 +46086,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  ADC #$3F               ; below, so add 320 ($140) to SC(1 0) to move down one
- STA SC                 ; pixel line, as there are 320 bytes in each pixel line
- LDA SC+1               ; in the screen bitmap
+ STA SC                 ; pixel line, as there are 320 bytes in each 
+ LDA SC+1               ; row in the screen bitmap
  ADC #1                 ;
  STA SC+1               ; We know the C flag is set as we just passed through a
                         ; BCC, so we only need to add $13F to get the result
@@ -46127,8 +46127,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  ADC #$3F               ; below, so add 320 ($140) to SC(1 0) to move down one
- STA SC                 ; pixel line, as there are 320 bytes in each pixel line
- LDA SC+1               ; in the screen bitmap
+ STA SC                 ; pixel line, as there are 320 bytes in each 
+ LDA SC+1               ; row in the screen bitmap
  ADC #1                 ;
  STA SC+1               ; We know the C flag is set as we just passed through a
                         ; BCC, so we only need to add $13F to get the result
@@ -46167,8 +46167,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  ADC #$3F               ; below, so add 320 ($140) to SC(1 0) to move down one
- STA SC                 ; pixel line, as there are 320 bytes in each pixel line
- LDA SC+1               ; in the screen bitmap
+ STA SC                 ; pixel line, as there are 320 bytes in each character
+ LDA SC+1               ; row in the screen bitmap
  ADC #1                 ;
  STA SC+1               ; We know the C flag is set as we just passed through a
                         ; BCC, so we only need to add $13F to get the result
@@ -46207,8 +46207,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  ADC #$3F               ; below, so add 320 ($140) to SC(1 0) to move down one
- STA SC                 ; pixel line, as there are 320 bytes in each pixel line
- LDA SC+1               ; in the screen bitmap
+ STA SC                 ; pixel line, as there are 320 bytes in each character
+ LDA SC+1               ; row in the screen bitmap
  ADC #1                 ;
  STA SC+1               ; We know the C flag is set as we just passed through a
                         ; BCC, so we only need to add $13F to get the result
@@ -46249,8 +46249,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  ADC #$3F               ; below, so add 320 ($140) to SC(1 0) to move down one
- STA SC                 ; pixel line, as there are 320 bytes in each pixel line
- LDA SC+1               ; in the screen bitmap
+ STA SC                 ; pixel line, as there are 320 bytes in each character
+ LDA SC+1               ; row in the screen bitmap
  ADC #1                 ;
  STA SC+1               ; We know the C flag is set as we just passed through a
                         ; BCC, so we only need to add $13F to get the result
@@ -46290,8 +46290,8 @@ ENDIF
 
  LDA SC                 ; Otherwise we need to move up into the character block
  ADC #$3F               ; below, so add 320 ($140) to SC(1 0) to move down one
- STA SC                 ; pixel line, as there are 320 bytes in each pixel line
- LDA SC+1               ; in the screen bitmap
+ STA SC                 ; pixel line, as there are 320 bytes in each character
+ LDA SC+1               ; row in the screen bitmap
  ADC #1                 ;
  STA SC+1               ; We know the C flag is set as we just passed through a
                         ; BCC, so we only need to add $13F to get the result
@@ -48102,45 +48102,97 @@ ENDIF
 .BOX
 
  LDX #199               ; Draw a horizontal line across the screen at pixel
- JSR BOXS               ; y-coordinate 199, ???
+ JSR BOXS               ; y-coordinate 199, to draw the bottom edge of the
+                        ; border box
 
- LDA #$FF               ; ???
- STA SCBASE+$1F1F
+ LDA #$FF               ; This draws an 8-pixel line in character column 35 on
+ STA SCBASE+$1F1F       ; character row 24, which is within the four-character
+                        ; border to the right of the game screen and just within
+                        ; the lower portion of the screen (where the dashboard
+                        ; lives)
+                        ;
+                        ; The palette for this part of the screen is black on
+                        ; black, so the result isn't visible, and it's unclear
+                        ; what this is for; perhaps it was a visual check used
+                        ; during development to ensure that the border area was
+                        ; indeed not showing any pixels
+                        ;
+                        ; This write is manually reversed in the DEATH routine
 
- LDX #25
- EQUB $2C
+ LDX #25                ; Set X = 25 so when we fall into BOX2, we draw the
+                        ; left and right edges of the border box at a height of
+                        ; 25 character rows rather than 18, so the box surrounds
+                        ; the entire screen, and not just the space view portion
+
+ EQUB $2C               ; Skip the first instruction of BOX2 by turning it into
+                        ; $2C $A2 $12, or BIT $12A2, which does nothing apart
+                        ; from affect the flags
+
+                        ; Fall into BOX2 to draw the left and right edges of the
+                        ; border box for the text view
 
 ; ******************************************************************************
 ;
 ;       Name: BOX2
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: Draw a box border around the space view
+;    Summary: Draw the left and right edges of the border box for the space view
 ;
 ; ******************************************************************************
 
 .BOX2
 
- LDX #18                ; ???
- STX T2
+ LDX #18                ; The space view is 18 character rows tall, so set a
+                        ; row counter in X so we draw edges along the sides of
+                        ; the space view only
 
- LDY #LO(SCBASE+$18)
- STY SC
- LDY #HI(SCBASE+$18)
- LDA #3
+ STX T2                 ; Store the value of X in T2 so we can retrieve it for
+                        ; the right edge below
 
- JSR BOXS2
+ LDY #LO(SCBASE+3*8)    ; Set (Y SC) to the address of the fourth byte in the
+ STY SC                 ; screen bitmap, so we draw the border box in the
+ LDY #HI(SCBASE+3*8)    ; rightmost two pixels of the four-character screen
+                        ; border on the left
 
- LDY #LO(SCBASE+$120)
- STY SC
- LDY #HI(SCBASE+$120)
- LDA #$C0
- LDX T2
+ LDA #%00000011         ; Set a pixel byte in A with the two rightmost pixels
+                        ; set, to use for drawing the left edge of the border
+                        ; box
 
- JSR BOXS2
- LDA #1
- STA SCBASE+$118
- LDX #0
+ JSR BOXS2              ; Draw the left vertical edge of the border box
+
+ LDY #LO(SCBASE+36*8)   ; Set (Y SC) to the address of the first byte to the
+ STY SC                 ; right of the game screen, skipping the four character 
+ LDY #HI(SCBASE+36*8)   ; border on the left and the 32 characters of the game
+                        ; screen, so we draw the border box in the leftmost two
+                        ; pixels of the four-character screen border on the
+                        ; right
+
+ LDA #%11000000         ; Set a pixel byte in A with the two leftmost pixels
+                        ; set, to use for drawing the right edge of the border
+                        ; box
+
+ LDX T2                 ; Set X to the height of the border box that we stored
+                        ; in T2 above
+
+ JSR BOXS2              ; Draw the right vertical edge of the border box
+
+ LDA #1                 ; This draws a pixel in character column 35 on the first
+ STA SCBASE+$118        ; character row, which is within the four-character
+                        ; border to the right of the game screen
+                        ;
+                        ; The palette for this part of the screen is black on
+                        ; black, so the result isn't visible, and it's unclear
+                        ; what this is for; perhaps it was a visual check used
+                        ; during development to ensure that the border area was
+                        ; indeed not showing any pixels
+                        ;
+                        ; This write is manually reversed in the DEATH routine
+
+ LDX #0                 ; Set X = 0 so we draw a horizontal line across the
+                        ; screen at pixel y-coordinate 0
+
+                        ; Fall into BOXS to draw the top horizontal edge of the
+                        ; border box at y-coordinate 0
 
 ; ******************************************************************************
 ;
@@ -48176,37 +48228,60 @@ ENDIF
 ;       Name: BOXS2
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: ???
+;    Summary: Draw a vertical line for the left or right border box edge
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   A                   A screen bitmap pixel byte to use for the edge
+;
+;   (Y SC)              The address in screen bitmap memory of the character
+;                       block at the top of the edge
+;
+;   X                   The height of the line in character blocks (so the line
+;                       will be 8 * X pixels tall)
 ;
 ; ******************************************************************************
 
 .BOXS2
 
- STA R2                 ; ???
- STY SC+1
+ STA R2                 ; Store the pixel byte for the edge in R2, so we can
+                        ; fetch it in the drawing loop
+
+ STY SC+1               ; Set SC(1 0) = (Y SC), so SC(1 0) points to the address
+                        ; in the screen bitmap where we start drawing the line
 
 .BOXL2
 
- LDY #7
+ LDY #7                 ; We start by drawing the vertical line in all eight
+                        ; pixel rows in the character block, so set a pixel row
+                        ; counter in Y
 
 .BOXL3
 
- LDA R2
- EOR (SC),Y
- STA (SC),Y
- DEY
- BPL BOXL3
+ LDA R2                 ; Set A to the pixel byte containing set bits in the
+                        ; correct positions for the vertical line
 
- LDA SC                 ; Set SC(1 0) = SC(1 0) + $40 to skip the screen margins
- CLC
- ADC #$40
- STA SC
+ EOR (SC),Y             ; Store A into screen memory at SC(1 0), using EOR
+ STA (SC),Y             ; logic so it merges with whatever is already on-screen
+
+ DEY                    ; Decrement the pixel row counter
+
+ BPL BOXL3              ; Loop back until we have drawn a vertical line across
+                        ; the whole character block
+
+ LDA SC                 ; We have now drawn a whole character block, so we need
+ CLC                    ; to move to the character row below, so add 320 ($140)
+ ADC #$40               ; to SC(1 0) to move down one pixel line, as there are
+ STA SC                 ; 320 bytes in each character row in the screen bitmap
  LDA SC+1
  ADC #1
  STA SC+1
 
- DEX
- BNE BOXL2
+ DEX                    ; Decrement the character row counter
+
+ BNE BOXL2              ; Loop back until we have drawn X character blocks
 
  RTS                    ; Return from the subroutine
 
@@ -48787,10 +48862,10 @@ ENDIF
                         ; (which corresponds to an entire character row of width
                         ; 256 pixels, which is the width of the game screen)
 
- CLC                    ; Set SC(1 0) = SC(1 0) + $40 to skip the screen margins
- LDA SC
- ADC #$40
- STA SC
+ CLC                    ; We have now blanked a whole text row, so we need to
+ LDA SC                 ; move to the character row below, so add 320 ($140)
+ ADC #$40               ; to SC(1 0) to move down one pixel line, as there are
+ STA SC                 ; 320 bytes in each character row in the screen bitmap
  LDA SC+1
  ADC #1
  STA SC+1
@@ -48811,6 +48886,16 @@ ENDIF
 ;    Summary: Display the current ship on the scanner
 ;  Deep dive: The 3D scanner
 ;
+; ------------------------------------------------------------------------------
+;
+; This is used both to display a ship on the scanner, and to erase it again.
+;
+; ------------------------------------------------------------------------------
+;
+; Arguments:
+;
+;   INWK                The ship's data block
+;
 ; ******************************************************************************
 
 .SCR1
@@ -48819,146 +48904,354 @@ ENDIF
 
 .SCAN
 
- LDA QQ11               ; ???
+ LDA QQ11               ; If QQ11 is non-zero then this is not the space view
+ BNE SCR1               ; and there is no dashboard on-screen, so jump to SCR1
+                        ; to return from the subroutine
+
+ LDA INWK+31            ; Fetch the ship's scanner flag from byte #31
+
+ AND #%00010000         ; If bit 4 is clear then the ship should not be shown
+ BEQ SCR1               ; on the scanner, so return from the subroutine (as SCR1
+                        ; contains an RTS)
+
+ LDX TYPE               ; Fetch the ship's type from TYPE into X
+
+ BMI SCR1               ; If this is the planet or the sun, then the type will
+                        ; have bit 7 set and we don't want to display it on the
+                        ; scanner, so return from the subroutine (as SCR1
+                        ; contains an RTS)
+
+ LDA scacol,X           ; Set A to the scanner colour for this ship type from
+                        ; the X-th entry in the scacol table
+
+ STA COL                ; Store the scanner colour in COL so it can be used to
+                        ; draw this ship in the correct colour
+
+ LDA INWK+1             ; If any of x_hi, y_hi and z_hi have a 1 in bit 6 or 7,
+ ORA INWK+4             ; then the ship is too far away to be shown on the
+ ORA INWK+7             ; scanner, so return from the subroutine (as SCR1
+ AND #%11000000         ; contains an RTS)
  BNE SCR1
- LDA INWK+31
- AND #16
- BEQ SCR1
- LDX TYPE
- BMI SCR1
- LDA scacol,X
- STA COL
- LDA INWK+1
- ORA INWK+4
- ORA INWK+7
- AND #$C0
- BNE SCR1
- LDA INWK+1
- CLC
- LDX INWK+2
- BPL SC2
- EOR #$FF
- ADC #1
+
+                        ; If we get here, we know x_hi, y_hi and z_hi are all
+                        ; 63 (%00111111) or less
+
+                        ; Now, we convert the x_hi coordinate of the ship into
+                        ; the screen x-coordinate of the dot on the scanner,
+                        ; using the following (see the deep dive on "The 3D
+                        ; scanner" for an explanation):
+                        ;
+                        ;   X1 = 123 + (x_sign x_hi)
+
+ LDA INWK+1             ; Set A = x_hi
+
+ CLC                    ; Clear the C flag so we can do addition below
+
+ LDX INWK+2             ; Set X = x_sign
+
+ BPL SC2                ; If x_sign is positive, skip the following
+
+ EOR #%11111111         ; x_sign is negative, so flip the bits in A and add 1
+ ADC #1                 ; to make it a negative number (bit 7 will now be set
+                        ; as we confirmed above that bits 6 and 7 are clear). So
+                        ; this gives A the sign of x_sign and gives it a value
+                        ; range of -63 (%11000001) to 0
 
 .SC2
 
- ADC #123
+ ADC #123               ; Set X1 = 123 + (x_sign x_hi)
  STA X1
- LDA INWK+7
- LSR A
- LSR A
- CLC
- LDX INWK+8
- BPL SC3
- EOR #$FF
- SEC
+
+                        ; Next, we convert the z_hi coordinate of the ship into
+                        ; the y-coordinate of the base of the ship's stick,
+                        ; like this (see the deep dive on "The 3D scanner" for
+                        ; an explanation):
+                        ;
+                        ;   SC = 220 - (z_sign z_hi) / 4
+                        ;
+                        ; though the following code actually does it like this:
+                        ;
+                        ;   SC = 255 - (35 + z_hi / 4)
+
+ LDA INWK+7             ; Set A = z_hi / 4
+ LSR A                  ;
+ LSR A                  ; So A is in the range 0-15
+
+ CLC                    ; Clear the C flag for the addition below
+
+ LDX INWK+8             ; Set X = z_sign
+
+ BPL SC3                ; If z_sign is positive, skip the following
+
+ EOR #%11111111         ; z_sign is negative, so flip the bits in A and set the
+ SEC                    ; C flag. As above, this makes A negative, this time
+                        ; with a range of -16 (%11110000) to -1 (%11111111). And
+                        ; as we are about to do an ADC, the SEC effectively adds
+                        ; another 1 to that value, giving a range of -15 to 0
 
 .SC3
 
- ADC #83 ;35
- EOR #$FF
- STA SC
- LDA INWK+4
+ ADC #83                ; Set A = 83 + A to give a number in the range 48 to 98
+
+ EOR #%11111111         ; Flip all the bits and store in Y2, so Y2 is in the
+ STA SC                 ; range 157 to 207, with a higher z_hi giving a lower Y2
+
+                        ; Now for the stick height, which we calculate using the
+                        ; following (see the deep dive on "The 3D scanner" for
+                        ; an explanation):
+                        ;
+                        ; A = - (y_sign y_hi) / 2
+
+ LDA INWK+4             ; Set A = y_hi / 2
  LSR A
- CLC
- LDX INWK+5
- BMI SCD6
- EOR #$FF
- SEC
+
+ CLC                    ; Clear the C flag
+
+ LDX INWK+5             ; Set X = y_sign
+
+ BMI SCD6               ; If y_sign is negative, skip the following, as we
+                        ; already have a positive value in A
+
+ EOR #%11111111         ; y_sign is positive, so flip the bits in A and set the
+ SEC                    ; C flag. This makes A negative, and as we are about to
+                        ; do an ADC below, the SEC effectively adds another 1 to
+                        ; that value to implement two's complement negation, so
+                        ; we don't need to add another 1 here
 
 .SCD6
 
- ADC SC
-;BPL ld246
- CMP #146 ;194
- BCS P%+4
- LDA #146
- CMP #199 ;247
- BCC P%+4
+                        ; We now have all the information we need to draw this
+                        ; ship on the scanner, namely:
+                        ;
+                        ;   X1 = the screen x-coordinate of the ship's dot
+                        ;
+                        ;   SC = the screen y-coordinate of the base of the
+                        ;        stick
+                        ;
+                        ;   A = the screen height of the ship's stick, with the
+                        ;       correct sign for adding to the base of the stick
+                        ;       to get the dot's y-coordinate
+                        ;
+                        ; First, though, we have to make sure the dot is inside
+                        ; the dashboard, by moving it if necessary
+
+ ADC SC                 ; Set A = SC + A, so A now contains the y-coordinate of
+                        ; the end of the stick, plus the length of the stick, to
+                        ; give us the screen y-coordinate of the dot
+
+;BPL ld246              ; This instruction is commented out in the original
+                        ; source
+
+ CMP #146               ; If A >= 146, skip the following instruction, as 146 is
+ BCS P%+4               ; the minimum allowed value of A
+
+ LDA #146               ; A < 146, so set A to 146, the minimum allowed value
+                        ; for the y-coordinate of our ship's dot
+
+ CMP #199               ; If A < 199, skip the following instruction, as 198 is
+ BCC P%+4               ; the maximum allowed value of A
 
 .ld246
 
- LDA #198 ;246
- STA Y1
- SEC
- SBC SC
- PHP
-;BCS SC48
-;EOR #$FF
-;ADC #1
+ LDA #198               ; A >= 199, so set A to 198, the maximum allowed value
+                        ; for the y-coordinate of our ship's dot
+
+ STA Y1                 ; Store A in Y1, as it now contains the screen
+                        ; y-coordinate for the ship's dot, clipped so that it
+                        ; fits within the dashboard
+
+ SEC                    ; Set A = A - SC to get the stick length, by reversing
+ SBC SC                 ; the ADC SC we did above. This clears the C flag if the
+                        ; result is negative (i.e. the stick length is negative)
+                        ; and sets it if the result is positive (i.e. the stick
+                        ; length is negative)
+
+                        ; So now we have the following:
+                        ;
+                        ;   X1 = the screen x-coordinate of the ship's dot,
+                        ;        clipped to fit into the dashboard
+                        ;
+                        ;   Y1 = the screen y-coordinate of the ship's dot,
+                        ;        clipped to fit into the dashboard
+                        ;
+                        ;   SC = the screen y-coordinate of the base of the
+                        ;        stick
+                        ;
+                        ;   A = the screen height of the ship's stick, with the
+                        ;       correct sign for adding to the base of the stick
+                        ;       to get the dot's y-coordinate
+                        ;
+                        ;   C = 0 if A is negative, 1 if A is positive
+                        ;
+                        ; and we can get on with drawing the dot and stick
+
+ PHP                    ; Store the flags (specifically the C flag) from the
+                        ; above subtraction
+
+;BCS SC48               ; These instructions are commented out in the original
+;EOR #$FF               ; source. They would negate A if the C flag were set,
+;ADC #1                 ; which would reverse the direction of all the sticks,
+                        ; so you could turn your joystick around. Perhaps one of
+                        ; the authors' test sticks were easier to use upside
+                        ; down? Who knows...
 
 .SC48
 
- PHA
- JSR CPIX4
- LDA CTWOS2+2,X
- AND COL
- STA X1
- PLA
- PLP
- TAX
- BEQ RTS
- BCC VL3
+ PHA                    ; Store the stick height in A on the stack
+
+ JSR CPIX4              ; Draw a double-height dot at (X1, Y1). This also leaves
+                        ; the following variables set up for the dot's top-right
+                        ; pixel, the last pixel to be drawn (as the dot gets
+                        ; drawn from the bottom up):
+                        ;
+                        ;   SC(1 0) = screen address of the pixel's character
+                        ;             block
+                        ;
+                        ;   Y = number of the character row containing the pixel
+                        ;
+                        ;   X = the pixel's number (0-3) in that row
+                        ;
+                        ; We can use there as the starting point for drawing the
+                        ; stick, if there is one
+
+ LDA CTWOS2+2,X         ; Load the same bitmap 1-pixel byte that we just used
+ AND COL                ; for the top-right pixel, and mask it with the same
+ STA X1                 ; colour, storing the result in X1, so we can use it as
+                        ; the character row byte for the stick
+
+ PLA                    ; Restore the stick height from the stack into A
+
+ PLP                    ; Restore the flags from above, so the C flag once again
+                        ; reflects the sign of the stick height
+
+ TAX                    ; Copy the stick height into X
+
+ BEQ RTS                ; If the stick height is zero, then there is no stick to
+                        ; draw, so return from the subroutine (as RTS contains
+                        ; an RTS)
+
+ BCC VL3                ; If the C flag is clear then the stick height in A is
+                        ; negative, so jump down to VL3
 
 .VLL1
 
- DEY
- BPL VL1
- LDY #7
- LDA SC
- SEC
- SBC #$40
+                        ; If we get here then the stick length is positive (so
+                        ; the dot is below the ellipse and the stick is above
+                        ; the dot, and we need to draw the stick upwards from
+                        ; the dot)
+
+ DEY                    ; We want to draw the stick upwards, so decrement the
+                        ; pixel row in Y
+
+ BPL VL1                ; If Y is still positive then it correctly points at the
+                        ; line above, so jump to VL1 to skip the following
+
+ LDY #7                 ; We just decremented Y up through the top of the
+                        ; character block, so we need to move it to the last row
+                        ; in the character above, so set Y to 7, the number of
+                        ; the last row
+
+                        ; We now need to move up into the character block above,
+                        ; and each character row in screen memory takes up $140
+                        ; bytes ($100 for the visible part and $20 for each of
+                        ; the blank borders on the side of the screen), so
+                        ; that's what we need to subtract from SC(1 0)
+
+ LDA SC                 ; Set SC(1 0) = SC(1 0) - $140
+ SEC                    ;
+ SBC #$40               ; Starting with the low bytes
  STA SC
- LDA SC+1
- SBC #1
+
+ LDA SC+1               ; And then subtracting the high bytes
+ SBC #$01
  STA SC+1
 
 .VL1
 
- LDA X1
- EOR (SC),Y
- STA (SC),Y
- DEX
- BNE VLL1
+ LDA X1                 ; Set A to the character row byte for the stick, which
+                        ; we stored in X1 above, and which has the same pixel
+                        ; pattern as the bottom-right pixel of the dot (so the
+                        ; stick comes out of the right side of the dot)
+
+ EOR (SC),Y             ; Draw the stick on row Y of the character block using
+ STA (SC),Y             ; EOR logic
+
+ DEX                    ; Decrement the (positive) stick height in X
+
+ BNE VLL1               ; If we still have more stick to draw, jump up to VLL1
+                        ; to draw the next pixel
 
 .RTS
 
- RTS
+ RTS                    ; Return from the subroutine
+
+                        ; If we get here then the stick length is negative (so
+                        ; the dot is above the ellipse and the stick is below
+                        ; the dot, and we need to draw the stick downwards from
+                        ; the dot)
 
 .VL3
 
- INY
- CPY #8
- BNE VLL2
- LDY #0
- LDA SC
- ADC #$3F
- STA SC
- LDA SC+1
- ADC #1
- STA SC+1
+ INY                    ; We want to draw the stick downwards, so we first
+                        ; increment the row counter so that it's pointing to the
+                        ; bottom-right pixel in the dot (as opposed to the top-
+                        ; right pixel that the call to CPIX4 finished on)
+
+ CPY #8                 ; If the row number in Y is less than 8, then it
+ BNE VLL2               ; correctly points at the next line down, so jump to
+                        ; VLL2 to skip the following
+
+ LDY #0                 ; We just incremented Y down through the bottom of the
+                        ; character block, so we need to move it to the first
+                        ; row in the character below, so set Y to 0, the number
+                        ; of the first row
+
+ LDA SC                 ; Otherwise we need to move up into the character block
+ ADC #$3F               ; below, so add 320 ($140) to SC(1 0) to move down one
+ STA SC                 ; pixel line, as there are 320 bytes in each character
+ LDA SC+1               ; row in the screen bitmap
+ ADC #1                 ;
+ STA SC+1               ; We know the C flag is set as we just passed through a
+                        ; BNE, so we only need to add $13F to get the result
 
 .VLL2
 
- INY
- CPY #8
- BNE VL2
- LDY #0
- LDA SC
- ADC #$3F
- STA SC
- LDA SC+1
- ADC #1
- STA SC+1
+ INY                    ; We want to draw the stick itself, heading downwards,
+                        ; so increment the pixel row in Y
+
+ CPY #8                 ; If the row number in Y is less than 8, then it
+ BNE VL2                ; correctly points at the next line down, so jump to
+                        ; VL2 to skip the following
+
+ LDY #0                 ; We just incremented Y down through the bottom of the
+                        ; character block, so we need to move it to the first
+                        ; row in the character below, so set Y to 0, the number
+                        ; of the first row
+
+ LDA SC                 ; Otherwise we need to move up into the character block
+ ADC #$3F               ; below, so add 320 ($140) to SC(1 0) to move down one
+ STA SC                 ; pixel line, as there are 320 bytes in each character
+ LDA SC+1               ; row in the screen bitmap
+ ADC #1                 ;
+ STA SC+1               ; We know the C flag is set as we just passed through a
+                        ; BNE, so we only need to add $13F to get the result
 
 .VL2
 
- LDA X1
- EOR (SC),Y
- STA (SC),Y
- INX
- BNE VLL2
- RTS
+ LDA X1                 ; Set A to the character row byte for the stick, which
+                        ; we stored in X1 above, and which has the same pixel
+                        ; pattern as the bottom-right pixel of the dot (so the
+                        ; stick comes out of the right side of the dot)
+
+ EOR (SC),Y             ; Draw the stick on row Y of the character block using
+ STA (SC),Y             ; EOR logic
+
+ INX                    ; Increment the (negative) stick height in X
+
+ BNE VLL2               ; If we still have more stick to draw, jump up to VLL2
+                        ; to draw the next pixel
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
