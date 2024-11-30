@@ -1185,6 +1185,10 @@ ENDIF
 ; ------------------------------------------------------------------------------
 ;
 ;
+; The blocks are pointed to by the lookup table at location UNIV. The first 370
+; bytes of the K% workspace hold ship data on up to 10 ships, with 37 (NI%)
+; bytes per ship.
+;
 ; See the deep dive on "Ship data blocks" for details on ship data blocks, and
 ; the deep dive on "The local bubble of universe" for details of how Elite
 ; stores the local universe in K%, FRIN and UNIV.
@@ -2446,25 +2450,35 @@ ENDIF
                         ; configuration bytes (starting from DAMP), using their
                         ; internal key numbers as returned by the RDKEY routine
 
- EQUB $01               ; RUN/STOP
- EQUB $36               ; A
- EQUB $29               ; X
- EQUB $2B               ; F
- EQUB $27               ; Y
- EQUB $1E               ; J
- EQUB $1B               ; K
- EQUB $1C               ; M
- EQUB $2E               ; D
- EQUB $17               ; P
- EQUB $2C               ; C
+ EQUB $01               ; Keyboard damping (RUN/STOP)
+
+ EQUB $36               ; Keyboard auto-recentre ("A")
+
+ EQUB $29               ; Author names and manual mis-jump ("X")
+
+ EQUB $2B               ; Flashing console bars ("F")
+
+ EQUB $27               ; Reverse joystick Y-channel ("Y")
+
+ EQUB $1E               ; Reverse both joystick channels ("J")
+
+ EQUB $1B               ; Keyboard or joystick ("K")
+
+ EQUB $1C               ; Docking music toggle ("M")
+
+ EQUB $2E               ; Current media ("D")
+
+ EQUB $17               ; Planetary details ("P")
+
+ EQUB $2C               ; Allow docking music to be toggled ("C")
 
 IF _GMA_RELEASE
 
- EQUB $32               ; E
+ EQUB $32               ; Docking music tune ("E")
 
 ENDIF
 
- EQUB $24               ; B
+ EQUB $24               ; Allow sounds during music ("B")
 
 ; ******************************************************************************
 ;
@@ -6005,6 +6019,10 @@ ENDIF
 ;       Type: Subroutine
 ;   Category: Text
 ;    Summary: Switch to white text
+;
+; ------------------------------------------------------------------------------
+;
+; This subroutine has no effect in this version of Elite.
 ;
 ; ******************************************************************************
 
@@ -16986,18 +17004,9 @@ ENDIF
 ;       Name: MT29
 ;       Type: Subroutine
 ;   Category: Text
-;    Summary: Move to row 6, switch to white text, and switch to lower case when
-;             printing extended tokens
+;    Summary: Move to row 6 and switch to lower case when printing extended
+;             tokens
 ;  Deep dive: Extended text tokens
-;
-; ------------------------------------------------------------------------------
-;
-; This routine sets the following:
-;
-;   * YC = 6 (move to row 6)
-;
-; Then it calls WHITETEXT to switch to white text, before jumping to MT13 to
-; switch to lower case when printing extended tokens.
 ;
 ; ******************************************************************************
 
@@ -17006,7 +17015,7 @@ ENDIF
  LDA #6                 ; Move the text cursor to row 6
  JSR DOYC
 
- JSR WHITETEXT          ; Set white text
+ JSR WHITETEXT          ; This routine has no effect in this version of Elite
 
  JMP MT13               ; Jump to MT13 to set bit 7 of DTW6 and bit 5 of DTW1,
                         ; returning from the subroutine using a tail call
@@ -47855,7 +47864,8 @@ ENDIF
 ;       Name: TTX66K
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: Clear the top part of the screen and draw a border box
+;    Summary: Clear the whole screen or just the space view (as appropiate),
+;             draw a border box, and if required, show the dashboard
 ;
 ; ------------------------------------------------------------------------------
 ;
@@ -49831,7 +49841,7 @@ IF _GMA_RELEASE
 
  INCBIN "1-source-files/music/gma/C.COMUDAT.bin"
 
-ELIF _SOURCE_DISK_FILES OR _SOURCE_DISK_BUILD
+ELIF _SOURCE_DISK
 
  INCBIN "1-source-files/music/source-disk/C.COMUDAT.bin"
 
