@@ -42304,6 +42304,9 @@ ENDIF
                         ; So we want to calculate:
                         ;
                         ;   Y = (SPRITELOC% - SCBASE) / 64
+                        ;
+                        ; to give us the offset for the first sprite definition
+                        ; at SPRITELOC%
 
 IF _GMA_RELEASE
 
@@ -48043,7 +48046,7 @@ ENDIF
                         ; We now set the colour of the top row of the screen to
                         ; yellow on black, for the border box
 
- LDY #31                ; The box border is 32 characters wide, so set a column
+ LDY #31                ; The border box is 32 characters wide, so set a column
                         ; counter in Y
 
  LDA #$70               ; Set A to a colour data byte that sets colour 7
@@ -48088,7 +48091,7 @@ ENDIF
                         ;
                         ; The address breaks down as follows:
                         ;
-                        ;   $6054 = $6000 + 40 * 2 + 4
+                        ;   $6054 = $6000 + 2 * 40 + 4
                         ;
                         ; as each row on-screen contains 40 characters, and we
                         ; want to skip the first two rows, and indent to skip
@@ -48296,7 +48299,7 @@ ENDIF
 
 .wantdials
 
- JSR BOX2               ; Draw a box border around the space view
+ JSR BOX2               ; Draw a border box around the space view
 
  LDA #$91               ; Set abraxas = $91, so the colour of the lower part of
  STA abraxas            ; the screen is determined by screen RAM at $6400
@@ -48483,13 +48486,15 @@ ENDIF
                         ;
                         ; Colour 1 is mapped to black, so this blanks the sides
                         ; of the screen, and because it is a non-zero colour, it
-                        ; will cover over any sprites in the border (such as the
-                        ; Trumbles or explosion sprites)
+                        ; will cover over any sprites in the border that are set
+                        ; to appear behind the screen contents
                         ;
-                        ; As this process is only done when we change views,
-                        ; it means sprites that spill over into the borders
-                        ; don't get cut in half when the main part of the
-                        ; screen changes
+                        ; The explosion sprite is the only sprite to be
+                        ; configured this way
+                        ;
+                        ; As this process is only done when we change views, it
+                        ; means changing the screen won't leave any remnants of
+                        ; the explosion sprite behind in the screen border area
 
  STA (SC),Y             ; Store the pixel byte in the Y-th byte of SC(1 0)
 
@@ -48523,7 +48528,7 @@ ENDIF
 ;       Name: TT66simp
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: Clear the whole screen inside the box border, and move the text
+;    Summary: Clear the whole screen inside the border box, and move the text
 ;             cursor to the top-left corner
 ;
 ; ******************************************************************************
