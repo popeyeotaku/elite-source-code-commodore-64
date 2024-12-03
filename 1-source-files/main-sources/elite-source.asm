@@ -1078,75 +1078,114 @@ ENDIF
 
  SKIP 1                 ; This byte appears to be unused
 
-; Data pointers
-
 .BDdataptr1
 
- SKIP 1                 ; ???
+ SKIP 1                 ; The low byte of the address of the music data pointer
+                        ; in BDdataptr1(1 0), which points to the end of the
+                        ; music data currently being processed
 
 .BDdataptr2
 
- SKIP 1                 ; ???
+ SKIP 1                 ; The high byte of the address of the music data pointer
+                        ; in BDdataptr1(1 0), which points to the end of the
+                        ; music data currently being processed
 
 .BDdataptr3
 
- SKIP 1                 ; ???
+ SKIP 1                 ; The low byte of the address of the music data pointer
+                        ; in BDdataptr3(1 0), which is a backup of the initial
+                        ; value of the BDdataptr1(1 0) pointer, so music can be
+                        ; repeated
 
 .BDdataptr4
 
- SKIP 1                 ; ???
+ SKIP 1                 ; The high byte of the address of the music data pointer
+                        ; in BDdataptr3(1 0), which is a backup of the initial
+                        ; value of the BDdataptr1(1 0) pointer, so music can be
+                        ; repeated
 
 .counter
 
- SKIP 1                 ; main counter ???
-
-; Vibrato
+ SKIP 1                 ; The rest counter when playing music, for implementing
+                        ; music commands #8 and #15
 
 .vibrato2
 
- SKIP 1                 ; ???
+ SKIP 1                 ; The vibrato counter for voice 2
 
 .vibrato3
 
- SKIP 1                 ; ???
-
-; voice notes
+ SKIP 1                 ; The vibrato counter for voice 3
 
 .voice2lo1
 
- SKIP 1                 ; ???
+ SKIP 1                 ; The high byte of the first vibrato frequency for
+                        ; voice 2, which contains the lower frequency
+                        ;
+                        ; Note that the vibrato labels have hi and lo the wrong
+                        ; way around
 
 .voice2hi1
 
- SKIP 1                 ; ???
+ SKIP 1                 ; The low byte of the first vibrato frequency for
+                        ; voice 2, which contains the lower frequency
+                        ;
+                        ; Note that the vibrato labels have hi and lo the wrong
+                        ; way around
 
 .voice2lo2
 
- SKIP 1                 ; ???
+ SKIP 1                 ; The high byte of the second vibrato frequency for
+                        ; voice 2, which contains the higher frequency
+                        ;
+                        ; Note that the vibrato labels have hi and lo the wrong
+                        ; way around
 
 .voice2hi2
 
- SKIP 1                 ; ???
+ SKIP 1                 ; The low byte of the second vibrato frequency for
+                        ; voice 2, which contains the higher frequency
+                        ;
+                        ; Note that the vibrato labels have hi and lo the wrong
+                        ; way around
 
 .voice3lo1
 
- SKIP 1                 ; ???
+ SKIP 1                 ; The high byte of the first vibrato frequency for
+                        ; voice 3, which contains the lower frequency
+                        ;
+                        ; Note that the vibrato labels have hi and lo the wrong
+                        ; way around
 
 .voice3hi1
 
- SKIP 1                 ; ???
+ SKIP 1                 ; The low byte of the first vibrato frequency for
+                        ; voice 3, which contains the lower frequency
+                        ;
+                        ; Note that the vibrato labels have hi and lo the wrong
+                        ; way around
 
 .voice3lo2
 
- SKIP 1                 ; ???
+ SKIP 1                 ; The high byte of the second vibrato frequency for
+                        ; voice 3, which contains the higher frequency
+                        ;
+                        ; Note that the vibrato labels have hi and lo the wrong
+                        ; way around
 
 .voice3hi2
 
- SKIP 1                 ; ???
+ SKIP 1                 ; The low byte of the second vibrato frequency for
+                        ; voice 3, which contains the higher frequency
+                        ;
+                        ; Note that the vibrato labels have hi and lo the wrong
+                        ; way around
 
 .BDBUFF
 
- SKIP 1                 ; ???
+ SKIP 1                 ; The music data byte that is currently being processed,
+                        ; with the low nibble being processed first, and then
+                        ; the high nibble
 
  PRINT "ZP workspace from ", ~ZP, "to ", ~P%-1, "inclusive"
 
@@ -2690,8 +2729,8 @@ ENDIF
 ;JSR HALL               ; This instruction is commented out in the original
                         ; source
 
- LDY #44                ; Wait for 44/50 of a second (0.88 seconds)
- JSR DELAY
+ LDY #44                ; Wait for 44/50 of a second (0.88 seconds) on PAL
+ JSR DELAY              ; systems, or 44/60 of a second (0.73 seconds) on NTSC
 
  LDA TP                 ; Fetch bits 0 and 1 of TP, and if they are non-zero
  AND #%00000011         ; (i.e. mission 1 is either in progress or has been
@@ -16931,8 +16970,9 @@ ENDIF
  JSR DETOK              ; to row 10, white, lower case}{white}{all caps}INCOMING
                         ; MESSAGE"
 
- LDY #100               ; Delay for 100 vertical syncs (100/50 = 2 seconds) and
- JMP DELAY              ; return from the subroutine using a tail call
+ LDY #100               ; Wait for 100/50 of a second (2 seconds) on PAL
+ JMP DELAY              ; systems, or 100/60 of a second (1.67 seconds) on NTSC,
+                        ; and return from the subroutine using a tail call
 
 ; ******************************************************************************
 ;
@@ -17166,12 +17206,15 @@ ENDIF
 ;       Name: DELAY
 ;       Type: Subroutine
 ;   Category: Utility routines
-;    Summary: Wait for a specified time, in 1/50s of a second
+;    Summary: Wait for a specified time, in either 1/50s of a second (on PAL
+;             systems) or 1/60s of a second (on NTSC systems)
 ;
 ; ------------------------------------------------------------------------------
 ;
 ; Wait for the number of vertical syncs given in Y, so this effectively waits
-; for Y/50 of a second (as the vertical sync occurs 50 times a second).
+; for Y/50 of a second on PAL systems (as the PAL vertical sync occurs 50 times
+; a second) or Y/60 of a second on NTSC systems (as the NTSC vertical sync
+; occurs 60 times a second).
 ;
 ; ------------------------------------------------------------------------------
 ;
@@ -22315,8 +22358,9 @@ ENDIF
 
  JSR BEEP               ; Call the BEEP subroutine to make a short, high beep
 
- LDY #50                ; Delay for 50 vertical syncs (50/50 = 1 second) and
- JMP DELAY              ; return from the subroutine using a tail call
+ LDY #50                ; Wait for 50/50 of a second (1 second) on PAL systems,
+ JMP DELAY              ; or 50/60 of a second (0.83 seconds) on NTSC, and
+                        ; return from the subroutine using a tail call
 
 ; ******************************************************************************
 ;
@@ -30278,8 +30322,9 @@ ENDIF
  LSR A                  ; and bit 0 of QQ11 is 1 (the current view is type 1),
  BCS plus13             ; then skip the following two instructions
 
- LDY #2                 ; Wait for 2/50 of a second (0.04 seconds), to slow the
- JSR DELAY              ; main loop down a bit
+ LDY #2                 ; Wait for 2/50 of a second (0.04 seconds) on PAL
+ JSR DELAY              ; systems, or 2/60 of a second (0.03 seconds) on NTSC,
+                        ; to slow the main loop down a bit
 
 .plus13
 
@@ -32005,8 +32050,8 @@ ENDIF
  LDA #MAG2              ; Switch the text colour to purple
  STA COL2
 
- LDY #8                 ; Wait for 8/50 of a second (0.16 seconds)
- JSR DELAY
+ LDY #8                 ; Wait for 8/50 of a second (0.16 seconds) on PAL
+ JSR DELAY              ; systems, or 8/60 of a second (0.13 seconds) on NTSC
 
  JSR FLKB               ; Call FLKB to flush the keyboard buffer
 
@@ -34674,8 +34719,8 @@ ENDIF
  TYA                    ; Store Y and A on the stack so we can retrieve them
  PHA                    ; below
 
- LDY #20                ; Wait for 20 vertical syncs (20/50 = 0.4 seconds)
- JSR DELAY
+ LDY #20                ; Wait for 20/50 of a second (0.4 seconds) on PAL
+ JSR DELAY              ; systems, or 20/60 of a second (0.33 seconds) on NTSC
 
  PLA                    ; Restore A and Y from the stack
  TAY
@@ -35199,8 +35244,10 @@ ENDIF
 
 .t
 
- LDY #2                 ; Delay for 2 vertical syncs (2/50 = 0.04 seconds) so we
- JSR DELAY              ; don't take up too much CPU time while looping round
+ LDY #2                 ; Wait for 2/50 of a second (0.04 seconds) on PAL
+ JSR DELAY              ; systems, or 2/60 of a second (0.33 seconds) on NTSC,
+                        ; to implement a simple keyboard debounce and prevent
+                        ; multiple key presses being recorded
 
  JSR RDKEY              ; Scan the keyboard for a key press and return the
                         ; internal key number in A and X (or 0 for no key press)
@@ -43076,8 +43123,8 @@ ENDIF
  LDY #sfxwhosh          ; Call the NOISE routine with Y = sfxwhosh to make the
  JSR NOISE              ; sound of the ship launching
 
- LDY #1                 ; Wait for 1 vertical sync (1/50 = 0.02 seconds)
- JSR DELAY
+ LDY #1                 ; Wait for 1/50 of a second (0.02 seconds) on PAL
+ JSR DELAY              ; systems, or 1/60 of a second (0.017 seconds) on NTSC
 
  LDY #(sfxhyp1+128)     ; Call the NOISE routine with Y = sfxhyp1 + 128, which
  BNE NOISE              ; makes the sfxhyp1 hyperspace effect, but without first
@@ -43867,8 +43914,8 @@ ENDIF
  LDX SEVENS,Y           ; Use the lookup table at SEVENS to set X = 7 * Y, so it
                         ; can be used as an index into the SID registers for
                         ; voice Y (as each of the three voices has seven
-                        ; associated register bytes, starting at to SID, SID+7
-                        ; and SID+14 for voices 1, 2 and 3 respectively)
+                        ; associated register bytes, starting at to SID, SID+$7
+                        ; and SID+$E for voices 1, 2 and 3 respectively)
 
  LDA SOFRCH,Y           ; If the SOFRCH value for voice Y is zero, then there is
  BEQ SOUL5              ; no frequency change to apply, so jump to SOUL5 to skip
@@ -43915,7 +43962,7 @@ ENDIF
                         ; voice Y
 
  LDA SOCR,Y             ; Set SID register $4 (the voice control register) for
- STA SID+4,X            ; voice Y to the value from SOPR for voice Y, to control
+ STA SID+$4,X           ; voice Y to the value from SOPR for voice Y, to control
                         ; the sound as follows:
                         ;
                         ;   * Bit 0: 0 = voice off, release cycle
@@ -43938,7 +43985,7 @@ ENDIF
                         ; These values come from the SFXCR table
 
  LDA SOATK,Y            ; Set SID register $5 (the attack and decay length) for
- STA SID+5,X            ; voice Y to the value from SOATK for voice Y, to
+ STA SID+$5,X           ; voice Y to the value from SOATK for voice Y, to
                         ; control the sound as follows:
                         ;
                         ;   * Bits 0-3 = decay length
@@ -43948,7 +43995,7 @@ ENDIF
                         ; These values come from the SFXATK table
 
  LDA SOSUS,Y            ; Set SID register $6 (the release length and sustain
- STA SID+6,X            ; volume) for voice Y to the value from SOSUS for voice
+ STA SID+$6,X           ; volume) for voice Y to the value from SOSUS for voice
                         ; Y, to control the sound as follows:
                         ;
                         ;   * Bits 0-3 = release length
@@ -43988,7 +44035,7 @@ ENDIF
 
  LSR A                  ; Set SID register $1 (high byte of the frequency) for
  LSR A                  ; voice Y to bits 2-7 of A
- STA SID+1,X
+ STA SID+$1,X
 
  PLA                    ; Set SID register $0 (low byte of the frequency) for
  ASL A                  ; voice Y so that bits 0-1 of A are in bits 6-7
@@ -44003,7 +44050,7 @@ ENDIF
                         ; SOFRQ << 6, or SOFR * 64
 
  LDA PULSEW             ; Set SID register $3 (pulse width) for voice Y to the
- STA SID+3,X            ; value of PULSEW, which oscillates between 2 and 6
+ STA SID+$3,X           ; value of PULSEW, which oscillates between 2 and 6
                         ; for each frame
 
 .SOUL5
@@ -44053,7 +44100,7 @@ ENDIF
                         ; can be used as an index into the SID registers for
                         ; voice Y
 
- STA SID+6,X            ; Update SID register $6 (release length and sustain
+ STA SID+$6,X           ; Update SID register $6 (release length and sustain
                         ; volume) with the new value to reduce the volume of
                         ; the sound by 1
 
@@ -44071,7 +44118,7 @@ ENDIF
 
  LDA SOCR,Y             ; Set SID register $4 (the voice control register) for
  AND #%11111110         ; voice Y to the value from SOPR for voice Y, but with
- STA SID+4,X            ; bit 0 clear
+ STA SID+$4,X           ; bit 0 clear
                         ;
                         ; Bit 0 controls the sound as follows:
                         ;
@@ -44357,7 +44404,7 @@ ENDIF
 ;       Name: SFXFQ
 ;       Type: Variable
 ;   Category: Sound
-;    Summary: The frequency (SID+5) for each sound effect
+;    Summary: The frequency (SID+$5) for each sound effect
 ;
 ; ******************************************************************************
 
@@ -44385,7 +44432,7 @@ ENDIF
 ;       Name: SFXCR
 ;       Type: Variable
 ;   Category: Sound
-;    Summary: The voice control register (SID+4) for each sound effect
+;    Summary: The voice control register (SID+$4) for each sound effect
 ;
 ; ------------------------------------------------------------------------------
 ;
@@ -44434,7 +44481,7 @@ ENDIF
 ;       Name: SFXATK
 ;       Type: Variable
 ;   Category: Sound
-;    Summary: The attack and decay length (SID+5) for each sound effect
+;    Summary: The attack and decay length (SID+$5) for each sound effect
 ;
 ; ------------------------------------------------------------------------------
 ;
@@ -44470,7 +44517,7 @@ ENDIF
 ;       Name: SFXSUS
 ;       Type: Variable
 ;   Category: Sound
-;    Summary: The release length and sustain volume (SID+6) for each sound
+;    Summary: The release length and sustain volume (SID+$6) for each sound
 ;             effect
 ;
 ; ------------------------------------------------------------------------------
@@ -45546,7 +45593,8 @@ ENDIF
 
 .LI82
 
- LDA #%01000000         ; Set a mask in A to the second pixel in the 8-pixel byte
+ LDA #%01000000         ; Set a mask in A to the second pixel in the 8-pixel
+                        ; byte
 
  EOR (SC),Y             ; Store A into screen memory at SC(1 0), using EOR
  STA (SC),Y             ; logic so it merges with whatever is already on-screen
@@ -46023,7 +46071,8 @@ ENDIF
 
 .LI22
 
- LDA #%01000000         ; Set a mask in A to the second pixel in the 8-pixel byte
+ LDA #%01000000         ; Set a mask in A to the second pixel in the 8-pixel
+                        ; byte
 
  EOR (SC),Y             ; Store A into screen memory at SC(1 0), using EOR
  STA (SC),Y             ; logic so it merges with whatever is already on-screen
@@ -49288,83 +49337,42 @@ ENDIF
 
 ; ******************************************************************************
 ;
-;       Name: value0
-;       Type: Subroutine
-;   Category: Sound
-;    Summary: ???
+;       Name: Music variables
+;       Type: Workspace
+;    Address: $B4CB to $B4D1
+;   Category: Workspaces
+;    Summary: Variables that are used by the music player
 ;
 ; ******************************************************************************
 
 .value0
 
- EQUB 0
-
-; ******************************************************************************
-;
-;       Name: value1
-;       Type: Subroutine
-;   Category: Sound
-;    Summary: ???
-;
-; ******************************************************************************
+ EQUB 0                 ; An unused counter that increments every time we
+                        ; process music command <#6>
 
 .value1
 
- EQUB 0
-
-; ******************************************************************************
-;
-;       Name: value2
-;       Type: Subroutine
-;   Category: Sound
-;    Summary: ???
-;
-; ******************************************************************************
+ EQUB 0                 ; Stores the voice control register for voice 1
 
 .value2
 
- EQUB 0
-
-; ******************************************************************************
-;
-;       Name: value3
-;       Type: Subroutine
-;   Category: Sound
-;    Summary: ???
-;
-; ******************************************************************************
+ EQUB 0                 ; Stores the voice control register for voice 2
 
 .value3
 
- EQUB 0
-
-; ******************************************************************************
-;
-;       Name: value4
-;       Type: Subroutine
-;   Category: Sound
-;    Summary: ???
-;
-; ******************************************************************************
+ EQUB 0                 ; Stores the voice control register for voice 3
 
 .value4
 
- EQUB 0
-
-; ******************************************************************************
-;
-;       Name: value5
-;       Type: Subroutine
-;   Category: Sound
-;    Summary: ???
-;
-; ******************************************************************************
+ EQUB 0                 ; Stores the rest length for commands #8 and #15
 
 IF _GMA_RELEASE
 
 .value5
 
- EQUW $8888
+ EQUW $8888             ; The address before the start of the music data for the
+                        ; tune that is configured to play for docking, so this
+                        ; can be changed to alter the docking music
 
 ENDIF
 
@@ -49397,8 +49405,7 @@ ENDIF
 ;
 ; Other entry points:
 ;
-;   BDskip1             Process the next byte of music data, even if we are
-;                       currently processing a wait command (i.e. counter > 0)
+;   BDskip1             Process the next nibble of music data in BDBUFF
 ;
 ; ******************************************************************************
 
@@ -49408,8 +49415,9 @@ ENDIF
  CPY counter            ; processing a wait command, so jump to BDskip1 to
  BEQ BDskip1            ; process the current byte of music data in BDBUFF
 
- DEC counter            ; Otherwise we are processing a wait command, so
-                        ; decrement the music counter while we continue to wait
+ DEC counter            ; Otherwise we are processing a rest command, so
+                        ; decrement the music counter while we continue to pause
+                        ; the music
 
  JMP BDlab1             ; And jump to BDlab1 to update the vibrato and control
                         ; registers before returning from the subroutine
@@ -49417,6 +49425,10 @@ ENDIF
 .BDskip1
 
                         ; When we get here, Y is set to 0
+                        ;
+                        ; This value is retained throughout the entire music
+                        ; interrupt routine, so whenever you see Y in these
+                        ; routines, it has a value of 0
 
  LDA BDBUFF             ; Set A to the current byte of music data in BDBUFF
 
@@ -49466,9 +49478,9 @@ ENDIF
  STA BDJMP+1            ; address in the BDJMPTBL table, to process the music
  LDA BDJMPTBH-1,X       ; command in X
  STA BDJMP+2            ;
-                        ; This means that command #1 jumps to BDRO1, command #2
-                        ; jumps to BDRO2, and so on up to command #15, which
-                        ; jumps to BDR15
+                        ; This means that command <#1> jumps to BDRO1, command
+                        ; <#2> jumps to BDRO2, and so on up to command <#15>,
+                        ; which jumps to BDR15
 
 .BDJMP
 
@@ -49480,15 +49492,17 @@ ENDIF
 ;       Name: BDRO1
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: Process music command #1
+;    Summary: Process music command <#1 fh1 fl1> to set the frequency for voice
+;             1 to (fh1 fl1) and the control register for voice 1 to value1
 ;
 ; ******************************************************************************
 
 .BDRO1
 
- JSR BDlab3             ; ???
+ JSR BDlab3             ; Fetch the next two music data bytes and set the
+                        ; frequency of voice 1 (high byte then low byte)
 
- JSR BDlab4
+ JSR BDlab4             ; Set the voice control register for voice 1 to value1
 
  JMP BDskip1            ; Jump to BDskip1 to process the next nibble of music
                         ; data
@@ -49498,15 +49512,18 @@ ENDIF
 ;       Name: BDRO2
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: Process music command #2
+;    Summary: Process music command <#2 fh1 fl1> to set the frequency for voice
+;             2 to (fh2 fl2) and the control register for voice 2 to value2
 ;
 ; ******************************************************************************
 
 .BDRO2
 
- JSR BDlab5             ; ???
+ JSR BDlab5             ; Fetch the next two music data bytes and set the
+                        ; frequency of voice 2 (high byte then low byte) and the
+                        ; vibrato variables for voice 2
 
- JSR BDlab6
+ JSR BDlab6             ; Set the voice control register for voice 2 to value2
 
  JMP BDskip1            ; Jump to BDskip1 to process the next nibble of music
                         ; data
@@ -49516,15 +49533,18 @@ ENDIF
 ;       Name: BDRO3
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: Process music command #3
+;    Summary: Process music command <#3 fh1 fl1> to set the frequency for voice
+;             3 to (fh3 fl3) and the control register for voice 3 to value3
 ;
 ; ******************************************************************************
 
 .BDRO3
 
- JSR BDlab7             ; ???
+ JSR BDlab7             ; Fetch the next two music data bytes and set the
+                        ; frequency of voice 3 (high byte then low byte) and the
+                        ; vibrato variables for voice 3
 
- JSR BDlab8
+ JSR BDlab8             ; Set the voice control register for voice 3 to value3
 
  JMP BDskip1            ; Jump to BDskip1 to process the next nibble of music
                         ; data
@@ -49534,19 +49554,23 @@ ENDIF
 ;       Name: BDRO4
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: Process music command #4
+;    Summary: Process music command <#4 fh1 fl1 fh2 fl2> to set the frequencies
+;             and voice control registers for voices 1 and 2
 ;
 ; ******************************************************************************
 
 .BDRO4
 
- JSR BDlab3             ; ???
+ JSR BDlab3             ; Fetch the next two music data bytes and set the
+                        ; frequency of voice 1 (high byte then low byte)
 
- JSR BDlab5
+ JSR BDlab5             ; Fetch the next two music data bytes and set the
+                        ; frequency of voice 2 (high byte then low byte) and the
+                        ; vibrato variables for voice 2
 
- JSR BDlab4
+ JSR BDlab4             ; Set the voice control register for voice 1 to value1
 
- JSR BDlab6
+ JSR BDlab6             ; Set the voice control register for voice 2 to value2
 
  JMP BDskip1            ; Jump to BDskip1 to process the next nibble of music
                         ; data
@@ -49556,23 +49580,29 @@ ENDIF
 ;       Name: BDRO5
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: Process music command #5
+;    Summary: Process music command <#5 fh1 fl1 fh2 fl2 fh3 fl3> to set the
+;             frequencies and voice control registers for voices 1, 2 and 3
 ;
 ; ******************************************************************************
 
 .BDRO5
 
- JSR BDlab3             ; ???
+ JSR BDlab3             ; Fetch the next two music data bytes and set the
+                        ; frequency of voice 1 (high byte then low byte)
 
- JSR BDlab5
+ JSR BDlab5             ; Fetch the next two music data bytes and set the
+                        ; frequency of voice 2 (high byte then low byte) and the
+                        ; vibrato variables for voice 2
 
- JSR BDlab7
+ JSR BDlab7             ; Fetch the next two music data bytes and set the
+                        ; frequency of voice 3 (high byte then low byte) and the
+                        ; vibrato variables for voice 3
 
- JSR BDlab4
+ JSR BDlab4             ; Set the voice control register for voice 1 to value1
 
- JSR BDlab6
+ JSR BDlab6             ; Set the voice control register for voice 2 to value2
 
- JSR BDlab8
+ JSR BDlab8             ; Set the voice control register for voice 3 to value3
 
  JMP BDskip1            ; Jump to BDskip1 to process the next nibble of music
                         ; data
@@ -49582,13 +49612,18 @@ ENDIF
 ;       Name: BDRO6
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: Process music command #6
+;    Summary: Process music command <#6> to increment value0 and move on to the
+;             next nibble of music data
 ;
 ; ******************************************************************************
 
 .BDRO6
 
- INC value0             ; ???
+ INC value0             ; Increment the counter in value0
+                        ;
+                        ; This value is never read, so it could be a debugging
+                        ; command of some kind, or a counter that is not used
+                        ; by the music in Elite
 
  JMP BDskip1            ; Jump to BDskip1 to process the next nibble of music
                         ; data
@@ -49598,41 +49633,52 @@ ENDIF
 ;       Name: BDRO15
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: Process music command #15
+;    Summary: Process music command <#15> to rest for 2 * value4 interrupts
 ;
 ; ******************************************************************************
 
 .BDRO15
 
- LDA BDBUFF             ; ???
- SEC
- ROL A
- ASL A
- ASL A
- ASL A
- STA BDBUFF
+ LDA BDBUFF             ; Slide the value %1000 (8) into the low nibble of
+ SEC                    ; BDBUFF while shifting the original low nibble into
+ ROL A                  ; the high nibble
+ ASL A                  ;
+ ASL A                  ; Because we process the low nibble first in each music
+ ASL A                  ; data byte, this inserts command <#8> into the queue as
+ STA BDBUFF             ; the next command to be processed, after we fall
+                        ; through into BDRO8 to process another command <#8>
+                        ; first
+                        ;
+                        ; In other words, this processes two command <#8>s in a
+                        ; row, which implements a double-length rest
+
+                        ; Fall into BDRO8 to rest for value4 interrupts
 
 ; ******************************************************************************
 ;
 ;       Name: BDRO8
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: Process music command #8
+;    Summary: Process music command <#8> to rest for value4 interrupts
 ;
 ; ******************************************************************************
 
 .BDRO8
 
- LDA value4             ; ???
- STA counter
- JMP BDirqhere
+ LDA value4             ; Set the music counter to value4, so we introduce a
+ STA counter            ; rest of value4 interrupts (i.e. a pause where we play
+                        ; no music)
+
+ JMP BDirqhere          ; Jump back to the start of the interrupt routine so the
+                        ; counter starts to count down
 
 ; ******************************************************************************
 ;
 ;       Name: BDRO7
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: Process music command #7
+;    Summary: Process music command <#7 ad1 ad2 ad3 sr1 sr2 sr3> to set three
+;             voices' attack and decay length, sustain volume and release length
 ;
 ; ******************************************************************************
 
@@ -49641,32 +49687,68 @@ ENDIF
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$5             ; ???
+ STA SID+$5             ; Set SID register $5 to the music data byte we just
+                        ; fetched, which sets the attack and decay length for
+                        ; voice 1 as follows:
+                        ;
+                        ;   * Bits 0-3 = decay length
+                        ;
+                        ;   * Bits 4-7 = attack length
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$C             ; ???
+ STA SID+$C             ; Set SID register $C to the music data byte we just
+                        ; fetched, which sets the attack and decay length for
+                        ; voice 2 as follows:
+                        ;
+                        ;   * Bits 0-3 = decay length
+                        ;
+                        ;   * Bits 4-7 = attack length
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$13            ; ???
+ STA SID+$13            ; Set SID register $12 to the music data byte we just
+                        ; fetched, which sets the attack and decay length for
+                        ; voice 3 as follows:
+                        ;
+                        ;   * Bits 0-3 = decay length
+                        ;
+                        ;   * Bits 4-7 = attack length
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$6             ; ???
+ STA SID+$6             ; Set SID register $6 to the music data byte we just
+                        ; fetched, which sets the release length and sustain
+                        ; volume for voice 1 as follows:
+                        ;
+                        ;   * Bits 0-3 = release length
+                        ;
+                        ;   * Bits 4-7 = sustain volume
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$D             ; ???
+ STA SID+$D             ; Set SID register $D to the music data byte we just
+                        ; fetched, which sets the release length and sustain
+                        ; volume for voice 2 as follows:
+                        ;
+                        ;   * Bits 0-3 = release length
+                        ;
+                        ;   * Bits 4-7 = sustain volume
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$14             ; ???
+ STA SID+$14            ; Set SID register $14 to the music data byte we just
+                        ; fetched, which sets the release length and sustain
+                        ; volume for voice 4 as follows:
+                        ;
+                        ;   * Bits 0-3 = release length
+                        ;
+                        ;   * Bits 4-7 = sustain volume
 
  JMP BDskip1            ; Jump to BDskip1 to process the next nibble of music
                         ; data
@@ -49676,18 +49758,24 @@ ENDIF
 ;       Name: BDRO9
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: Process music command #9
+;    Summary: Process music command <#9> to restart the current tune
 ;
 ; ******************************************************************************
 
 .BDRO9
 
- LDA #0                 ; ???
- STA BDBUFF
- LDA BDdataptr3   ;Repeat
- STA BDdataptr1
- LDA BDdataptr4
- STA BDdataptr2
+ LDA #0                 ; Clear the current music data byte, which discards the
+ STA BDBUFF             ; next nibble if there is one (so this flushes any data
+                        ; from the current pipeline)
+
+ LDA BDdataptr3         ; Set BDdataptr1(1 0) = BDdataptr3(1 0)
+ STA BDdataptr1         ;
+ LDA BDdataptr4         ; So this sets the data pointer in BDdataptr1(1 0) back
+ STA BDdataptr2         ; to the original value that we gave it at the start of
+                        ; the BDENTRY routine when we started playing this tune,
+                        ; which we stored in BDdataptr3(1 0)
+                        ;
+                        ; In other words, this restarts the current tune
 
  JMP BDskip1            ; Jump to BDskip1 to process the next nibble of music
                         ; data
@@ -49697,7 +49785,8 @@ ENDIF
 ;       Name: BDRO10
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: Process music command #10
+;    Summary: Process music command <#10 h1 l1 h2 l2 h3 l3> to set the pulse
+;             width to all three voices
 ;
 ; ******************************************************************************
 
@@ -49706,32 +49795,44 @@ ENDIF
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$2             ; ???
+ STA SID+$2             ; Set SID register $2 to the music data byte we just
+                        ; fetched, which sets the high byte of the pulse width
+                        ; for voice 1
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$3             ; ???
+ STA SID+$3             ; Set SID register $3 to the music data byte we just
+                        ; fetched, which sets the low byte of the pulse width
+                        ; for voice 1
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$9             ; ???
+ STA SID+$9             ; Set SID register $9 to the music data byte we just
+                        ; fetched, which sets the high byte of the pulse width
+                        ; for voice 2
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$A             ; ???
+ STA SID+$A             ; Set SID register $A to the music data byte we just
+                        ; fetched, which sets the low byte of the pulse width
+                        ; for voice 2
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$10            ; ???
+ STA SID+$10            ; Set SID register $10 to the music data byte we just
+                        ; fetched, which sets the high byte of the pulse width
+                        ; for voice 3
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$11            ; ???
+ STA SID+$11            ; Set SID register $11 to the music data byte we just
+                        ; fetched, which sets the low byte of the pulse width
+                        ; for voice 3
 
  JMP BDskip1            ; Jump to BDskip1 to process the next nibble of music
                         ; data
@@ -49741,20 +49842,24 @@ ENDIF
 ;       Name: BDRO11
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: Process music command #11
+;    Summary: Process music command <#11>, which does the same as command <#9>
+;             and restarts the current tune
 ;
 ; ******************************************************************************
 
 .BDRO11
 
- JMP BDRO9              ; ???
+ JMP BDRO9              ; Jump to BDRO9 to process command <#9> (so command
+                        ; <#11> is the same as command <#9> and restarts the
+                        ; current tune)
 
 ; ******************************************************************************
 ;
 ;       Name: BDRO12
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: Process music command #12
+;    Summary: Process music command <#12 n> to set value4 = n, which sets the
+;             rest length for commands #8 and #15
 ;
 ; ******************************************************************************
 
@@ -49763,7 +49868,8 @@ ENDIF
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA value4             ; ???
+ STA value4             ; Set value4 to the value of the byte we just fetched,
+                        ; which sets the rest length used in commands #8 and #15
 
  JMP BDskip1            ; Jump to BDskip1 to process the next nibble of music
                         ; data
@@ -49773,7 +49879,8 @@ ENDIF
 ;       Name: BDRO13
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: Process music command #13
+;    Summary: Process music command <#13 v1 v2 v3> to set value1, value2, value3
+;             to the voice control register valuesm for commands <#1> to <#3>
 ;
 ; ******************************************************************************
 
@@ -49782,17 +49889,23 @@ ENDIF
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA value1             ; ???
+ STA value1             ; Set value1 to the value of the byte we just fetched,
+                        ; which is used to set the voice control register for
+                        ; voice 1 in command <#1>
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA value2             ; ???
+ STA value2             ; Set value2 to the value of the byte we just fetched,
+                        ; which is used to set the voice control register for
+                        ; voice 2 in command <#2>
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA value3             ; ???
+ STA value3             ; Set value3 to the value of the byte we just fetched,
+                        ; which is used to set the voice control register for
+                        ; voice 3 in command <#3>
 
  JMP BDskip1            ; Jump to BDskip1 to process the next nibble of music
                         ; data
@@ -49802,7 +49915,8 @@ ENDIF
 ;       Name: BDRO14
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: Process music command #14
+;    Summary: Process music command <#14 vf fc cf> to set the volume and filter
+;             modes, filter control and filter cut-off frequency
 ;
 ; ******************************************************************************
 
@@ -49811,17 +49925,42 @@ ENDIF
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$18            ; ???
+ STA SID+$18            ; Set SID register $18 to the music data byte we just
+                        ; fetched, which sets the volume and filter modes as
+                        ; follows:
+                        ;
+                        ;   * Bits 0-3: volume (0 to 15)
+                        ;
+                        ;   * Bit 4 set: enable the low-pass filter
+                        ;
+                        ;   * Bit 5 set: enable the bandpass filter
+                        ;
+                        ;   * Bit 6 set: enable the high-pass filter
+                        ;
+                        ;   * Bit 7 set: disable voice 1
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$17            ; ???
+ STA SID+$17            ; Set SID register $17 to the music data byte we just
+                        ; fetched, which sets the filter control as follows:
+                        ;
+                        ;   * Bit 0 set: voice 1 filtered
+                        ;
+                        ;   * Bit 1 set: voice 2 filtered
+                        ;
+                        ;   * Bit 2 set: voice 3 filtered
+                        ;
+                        ;   * Bit 3 set: external voice filtered
+                        ;
+                        ;   * Bits 4-7: filter resonance
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$16            ; ???
+ STA SID+$16            ; Set SID register $16 to the music data byte we just
+                        ; fetched, which sets bits 3 to 10 of the filter cut-off
+                        ; frequency
 
  JMP BDskip1            ; Jump to BDskip1 to process the next nibble of music
                         ; data
@@ -49831,48 +49970,120 @@ ENDIF
 ;       Name: BDlab4
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: ???
+;    Summary: Set the voice control register for voice 1 to value1
 ;
 ; ******************************************************************************
 
 .BDlab4
 
- LDA value1             ; ???
- STY SID+$4
- STA SID+$4
- RTS
+ LDA value1             ; Set A to value1, to use as the new value of the voice
+                        ; control register for voice 1
+
+ STY SID+$4             ; Zero SID register $4 (the voice control register for
+                        ; voice 1), to reset the voice control
+
+ STA SID+$4             ; Set SID register $4 (the voice control register for
+                        ; voice 1) to the music data byte that we just fetched
+                        ; in A, so control the voice as follows:
+                        ;
+                        ;   * Bit 0: 0 = voice off, release cycle
+                        ;            1 = voice on, attack-decay-sustain cycle
+                        ;
+                        ;   * Bit 1 set = synchronization enabled
+                        ;
+                        ;   * Bit 2 set = ring modulation enabled
+                        ;
+                        ;   * Bit 3 set = disable voice, reset noise generator
+                        ;
+                        ;   * Bit 4 set = triangle waveform enabled
+                        ;
+                        ;   * Bit 5 set = saw waveform enabled
+                        ;
+                        ;   * Bit 6 set = square waveform enabled
+                        ;
+                        ;   * Bit 7 set = noise waveform enabled
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
 ;       Name: BDlab6
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: ???
+;    Summary: Set the voice control register for voice 2 to value2
 ;
 ; ******************************************************************************
 
 .BDlab6
 
- LDA value2             ; ???
- STY SID+$B
- STA SID+$B
- RTS
+ LDA value2             ; Set A to value2, to use as the new value of the voice
+                        ; control register for voice 2
+
+ STY SID+$B             ; Zero SID register $B (the voice control register for
+                        ; voice 2), to reset the voice control
+
+ STA SID+$B             ; Set SID register $B (the voice control register for
+                        ; voice 2) to the music data byte that we just fetched
+                        ; in A, so control the voice as follows:
+                        ;
+                        ;   * Bit 0: 0 = voice off, release cycle
+                        ;            1 = voice on, attack-decay-sustain cycle
+                        ;
+                        ;   * Bit 1 set = synchronization enabled
+                        ;
+                        ;   * Bit 2 set = ring modulation enabled
+                        ;
+                        ;   * Bit 3 set = disable voice, reset noise generator
+                        ;
+                        ;   * Bit 4 set = triangle waveform enabled
+                        ;
+                        ;   * Bit 5 set = saw waveform enabled
+                        ;
+                        ;   * Bit 6 set = square waveform enabled
+                        ;
+                        ;   * Bit 7 set = noise waveform enabled
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
 ;       Name: BDlab8
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: ???
+;    Summary: Set the voice control register for voice 3 to value3
 ;
 ; ******************************************************************************
 
 .BDlab8
 
- LDA value3             ; ???
- STY SID+$12
- STA SID+$12
- RTS
+ LDA value3             ; Set A to value3, to use as the new value of the voice
+                        ; control register for voice 3
+
+ STY SID+$12            ; Zero SID register $12 (the voice control register for
+                        ; voice 3), to reset the voice control
+
+ STA SID+$12            ; Set SID register $12 (the voice control register for
+                        ; voice 3) to the music data byte that we just fetched
+                        ; in A, so control the voice as follows:
+                        ;
+                        ;   * Bit 0: 0 = voice off, release cycle
+                        ;            1 = voice on, attack-decay-sustain cycle
+                        ;
+                        ;   * Bit 1 set = synchronization enabled
+                        ;
+                        ;   * Bit 2 set = ring modulation enabled
+                        ;
+                        ;   * Bit 3 set = disable voice, reset noise generator
+                        ;
+                        ;   * Bit 4 set = triangle waveform enabled
+                        ;
+                        ;   * Bit 5 set = saw waveform enabled
+                        ;
+                        ;   * Bit 6 set = square waveform enabled
+                        ;
+                        ;   * Bit 7 set = noise waveform enabled
+
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
@@ -49906,7 +50117,11 @@ ENDIF
 
 .BDskipme1
 
- LDA (BDdataptr1),Y     ; Set A to the Y-th byte of BDdataptr1(1 0)
+ LDA (BDdataptr1),Y     ; Y is zero, so this sets A to the next byte of music 
+                        ; data from BDdataptr1(1 0)
+                        ;
+                        ; We have to include an index of Y as the 6502 doesn't
+                        ; have an instruction of the form LDA (BDdataptr1)
 
  RTS                    ; Return from the subroutine
 
@@ -49915,7 +50130,8 @@ ENDIF
 ;       Name: BDlab3
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: ???
+;    Summary: Fetch the next two music data bytes and set the frequency of
+;             voice 1 (high byte then low byte)
 ;
 ; ******************************************************************************
 
@@ -49924,12 +50140,16 @@ ENDIF
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$1             ; ???
+ STA SID+$1             ; Set SID register $1 to the music data byte we just
+                        ; fetched, which sets the high byte of the frequency
+                        ; for voice 1
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$0             ; ???
+ STA SID+$0             ; Set SID register $0 to the music data byte we just
+                        ; fetched, which sets the low byte of the frequency
+                        ; for voice 1
 
  RTS                    ; Return from the subroutine
 
@@ -49938,7 +50158,8 @@ ENDIF
 ;       Name: BDlab5
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: ???
+;    Summary: Fetch the next two music data bytes and set the frequency of
+;             voice 2 (high byte then low byte) and the vibrato variables
 ;
 ; ******************************************************************************
 
@@ -49947,34 +50168,59 @@ ENDIF
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$8             ; ???
- STA voice2lo1
+ STA SID+$8             ; Set SID register $8 to the music data byte we just
+                        ; fetched, which sets the high byte of the frequency
+                        ; for voice 2
+
+ STA voice2lo1          ; Store the high byte in the voice2lo variables
  STA voice2lo2
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$7             ; ???
- STA voice2hi1
+ STA SID+$7             ; Set SID register $7 to the music data byte we just
+                        ; fetched, which sets the low byte of the frequency
+                        ; for voice 2
+
+ STA voice2hi1          ; Store the low byte in the voice2hi variables
  STA voice2hi2
- CLC
- CLD
- LDA #$20
- ADC voice2hi2
- STA voice2hi2
- BCC BDruts1
- INC voice2lo2
+
+                        ; So by this point we have the following:
+                        ;
+                        ;   (voice2lo1 voice2hi1) = frequency
+                        ;
+                        ;   (voice2lo2 voice2hi2) = frequency
+                        ;
+                        ; Note that the variable naming here is a bit odd, as
+                        ; the high bytes are in the voice2lo variables, and the
+                        ; low bytes are in the voice2hi variables
+                        ;
+                        ; These are the names from the original source code, so
+                        ; let's roll with it
+
+ CLC                    ; Clear the C flag for the addition below
+
+ CLD                    ; Clear the D flag to make sure we are in binary mode,
+                        ; as we are in an interrupt handler and can't be sure of
+                        ; the flag state on entry
+
+ LDA #32                ; Set (voice2lo2 voice2hi2) = (voice2lo2 voice2hi2) + 32
+ ADC voice2hi2          ;
+ STA voice2hi2          ; So the second frequency in (voice2lo2 voice2hi2) is
+ BCC BDruts1            ; now a bit higher than the first frequency, which we
+ INC voice2lo2          ; can use to add vibrato to voice 2
 
 .BDruts1
 
- RTS
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
 ;       Name: BDlab7
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: ???
+;    Summary: Fetch the next two music data bytes and set the frequency of
+;             voice 3 (high byte then low byte) and the vibrato variables
 ;
 ; ******************************************************************************
 
@@ -49983,37 +50229,66 @@ ENDIF
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$F             ; ???
- STA voice3lo1
+ STA SID+$F             ; Set SID register $F to the music data byte we just
+                        ; fetched, which sets the high byte of the frequency
+                        ; for voice 3
+
+ STA voice3lo1          ; Store the high byte in the voice3lo variables
  STA voice3lo2
 
  JSR BDlab19            ; Increment the music data pointer in BDdataptr1(1 0)
                         ; and fetch the next music data byte into A
 
- STA SID+$E             ; ???
- STA voice3hi1
+ STA SID+$E             ; Set SID register $E to the music data byte we just
+                        ; fetched, which sets the low byte of the frequency
+                        ; for voice 3
+
+ STA voice3hi1          ; Store the low byte in the voice3hi variables
  STA voice3hi2
- CLC
- CLD
+
+                        ; So by this point we have the following:
+                        ;
+                        ;   (voice3lo1 voice3hi1) = frequency
+                        ;
+                        ;   (voice3lo2 voice3hi2) = frequency
+                        ;
+                        ; Note that the variable naming here is a bit odd, as
+                        ; the high bytes are in the voice3lo variables, and the
+                        ; low bytes are in the voice3hi variables
+                        ;
+                        ; These are the names from the original source code, so
+                        ; let's roll with it
+
+ CLC                    ; Clear the C flag for the addition below
+
+ CLD                    ; Clear the D flag to make sure we are in binary mode,
+                        ; as we are in an interrupt handler and can't be sure of
+                        ; the flag state on entry
 
 IF _GMA_RELEASE
 
- LDA #$25
+ LDA #37                ; Set A to the frequency change used when applying
+                        ; vibrato to voice 3 (voice 2 applies a vibrato of 32,
+                        ; so this sets a bigger vibrato frequency change for
+                        ; voice 3)
 
 ELIF _SOURCE_DISK
 
- LDA #$20
+ LDA #32                ; Set A to the frequency change used when applying
+                        ; vibrato to voice 3 (this is the same value as for
+                        ; voice 2)
 
 ENDIF
 
- ADC voice3hi2
- STA voice3hi2
- BCC BDruts2
- INC voice3lo2
+ ADC voice3hi2          ; Set (voice3lo2 voice3hi2) = (voice3lo2 voice3hi2) + A
+ STA voice3hi2          ;
+ BCC BDruts2            ; So the second frequency in (voice3lo2 voice3hi2) is
+ INC voice3lo2          ; now a bit higher than the first frequency, which we
+                        ; can use to add vibrato to voice 3
 
 .BDruts2
 
- RTS
+ RTS                    ; Return from the subroutine
 
 ; ******************************************************************************
 ;
@@ -50029,11 +50304,13 @@ ENDIF
  LDA #0                 ; Set BDBUFF = 0 to reset the current music data byte in
  STA BDBUFF             ; BDBUFF
 
- STA counter            ; Set counter = 0 to reset the wait counter
+ STA counter            ; Set counter = 0 to reset the rest counter
 
- STA vibrato2           ; Set vibrato2 = 0 to reset the vibrato counter ???
+ STA vibrato2           ; Set vibrato2 = 0 to reset the vibrato counter for
+                        ; voice 2
 
- STA vibrato3           ; Set vibrato3 = 0 to reset the vibrato counter ???
+ STA vibrato3           ; Set vibrato3 = 0 to reset the vibrato counter for
+                        ; voice 3
 
                         ; We now zero all the SID registers from $01 to $18 to
                         ; reset the sound chip (though it doesn't zero the first
@@ -50114,151 +50391,216 @@ ENDIF
 ;BRK
 ;re enter monitor!
 
- LDA #0                 ; These instructions are never reached
- STA vibrato2
- LDA #$AE
- STA BDbeqmod1+1
- LDA voice2lo2
- STA SID+$8
- LDA voice2hi2
- STA SID+$7
- JMP BDlab21
-
 ; ******************************************************************************
 ;
 ;       Name: BDlab24
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: ???
+;    Summary: Apply a vibrato frequency change to voice 2
 ;
 ; ******************************************************************************
 
+ LDA #0                 ; Reset the vibrato counter for voice 2 so it starts to
+ STA vibrato2           ; count up towards the next vibrato change once again
+
+ LDA #$AE               ; Modify the BEQ instruction at BDbeqmod1 so next time
+ STA BDbeqmod1+1        ; it jumps to the second half of this routine
+
+ LDA voice2lo2          ; Set SID registers $7 and $8 to the vibrato frequency
+ STA SID+$8             ; in (voice2lo2 voice2hi2), which sets the frequency
+ LDA voice2hi2          ; for voice 2 to the second (i.e. the higher) frequency
+ STA SID+$7             ; that we set up for vibrato in BDlab5
+
+ JMP BDlab21            ; Jump to BDlab21 to clean up and return from the
+                        ; interrupt routine
+
 .BDlab24
 
- LDA #0
- STA vibrato2
- LDA #$98
- STA BDbeqmod1+1
- LDA voice2lo1
- STA SID+$8
- LDA voice2hi1
- STA SID+$7
- JMP BDlab21
- LDA #0
- STA vibrato3
- LDA #$E2
- STA BDbeqmod2+1
- LDA voice3lo2
- STA SID+$F
- LDA voice3hi2
- STA SID+$E
- JMP BDlab21
+ LDA #0                 ; Reset the vibrato counter for voice 2 so it starts to
+ STA vibrato2           ; count up towards the next vibrato change once again
+
+ LDA #$98               ; Modify the BEQ instruction at BDbeqmod1 so next time
+ STA BDbeqmod1+1        ; it jumps to the first half of this routine
+
+ LDA voice2lo1          ; Set SID registers $7 and $8 to the vibrato frequency
+ STA SID+$8             ; in (voice2lo1 voice2hi1), which sets the frequency
+ LDA voice2hi1          ; for voice 2 to the first (i.e. the lower) frequency
+ STA SID+$7             ; that we set up for vibrato in BDlab5
+
+ JMP BDlab21            ; Jump to BDlab21 to clean up and return from the
+                        ; interrupt routine
 
 ; ******************************************************************************
 ;
 ;       Name: BDlab23
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: ???
+;    Summary: Apply a vibrato frequency change to voice 3
 ;
 ; ******************************************************************************
 
+ LDA #0                 ; Reset the vibrato counter for voice 3 so it starts to
+ STA vibrato3           ; count up towards the next vibrato change once again
+
+ LDA #$E2               ; Modify the BEQ instruction at BDbeqmod2 so next time
+ STA BDbeqmod2+1        ; it jumps to the second half of this routine
+
+ LDA voice3lo2          ; Set SID registers $E and $F to the vibrato frequency
+ STA SID+$F             ; in (voice3lo2 voice3hi2), which sets the frequency
+ LDA voice3hi2          ; for voice 3 to the second (i.e. the higher) frequency
+ STA SID+$E             ; that we set up for vibrato in BDlab7
+
+ JMP BDlab21            ; Jump to BDlab21 to clean up and return from the
+                        ; interrupt routine
+
 .BDlab23
 
- LDA #0
- STA vibrato3
- LDA #$CC
- STA BDbeqmod2+1
- LDA voice3lo1
- STA SID+$F
- LDA voice3hi1
- STA SID+$E
- JMP BDlab21
+ LDA #0                 ; Reset the vibrato counter for voice 3 so it starts to
+ STA vibrato3           ; count up towards the next vibrato change once again
+
+ LDA #$CC               ; Modify the BEQ instruction at BDbeqmod2 so next time
+ STA BDbeqmod2+1        ; it jumps to the first half of this routine
+
+ LDA voice3lo1          ; Set SID registers $E and $F to the vibrato frequency
+ STA SID+$F             ; in (voice3lo1 voice3hi1), which sets the frequency
+ LDA voice3hi1          ; for voice 3 to the second (i.e. the higher) frequency
+ STA SID+$E             ; that we set up for vibrato in BDlab7
+
+ JMP BDlab21            ; Jump to BDlab21 to clean up and return from the
+                        ; interrupt routine
 
 ; ******************************************************************************
 ;
 ;       Name: BDlab1
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: ???
+;    Summary: Apply vibrato before cleaning up and returning from the interrupt
+;             routine
 ;
 ; ******************************************************************************
 
 .BDlab1
 
- INC vibrato3
+ INC vibrato3           ; Increment the vibrato counter for voice 3
 
 IF _GMA_RELEASE
 
- LDA #5
+ LDA #5                 ; Set A = 5 so the period of the vibrato for voice 3 is
+                        ; five interrupts
 
 ELIF _SOURCE_DISK
 
- LDA #6
+ LDA #6                 ; Set A = 6 so the period of the vibrato for voice 3 is
+                        ; six interrupts
 
 ENDIF
 
- CMP vibrato3
+ CMP vibrato3           ; If the vibrato counter for voice 3 has reached the
+                        ; the value in A, then it is time to change the voice 3
+                        ; frequency to implement vibrato, so jump to the address
+                        ; in the following BEQ instruction, which gets modified
+                        ; by the BDlab23 routine to oscillate between the two
+                        ; halves of the BDlab23 routine
+                        ;
+                        ; One half applies the lower vibrato frequency, and the
+                        ; other applies the higher vibrato frequency, so the
+                        ; effect is to flip between the two frequencies every A
+                        ; interrupts
 
 .BDbeqmod2
 
- BEQ BDlab23
- INC vibrato2
+ BEQ BDlab23            ; Jump to the BDlab23 routine to switch to the correct
+                        ; vibrato frequency and jump back to BDlab21 to clean up
+                        ; and return from the interrupt routine
+
+ INC vibrato2           ; Increment the vibrato counter for voice 2
 
 IF _GMA_RELEASE
 
- LDA #4
+ LDA #4                 ; Set A = 5 so the period of the vibrato for voice 2 is
+                        ; four interrupts
 
 ELIF _SOURCE_DISK
 
- LDA #5
+ LDA #5                 ; Set A = 5 so the period of the vibrato for voice 2 is
+                        ; five interrupts
 
 ENDIF
 
- CMP vibrato2
+ CMP vibrato2           ; If the vibrato counter for voice 2 has reached the
+                        ; the value in A, then it is time to change the voice 2
+                        ; frequency to implement vibrato, so jump to the address
+                        ; in the following BEQ instruction, which gets modified
+                        ; by the BDlab24 routine to oscillate between the two
+                        ; halves of the BDlab24 routine
+                        ;
+                        ; One half applies the lower vibrato frequency, and the
+                        ; other applies the higher vibrato frequency, so the
+                        ; effect is to flip between the two frequencies every A
+                        ; interrupts
 
 .BDbeqmod1
 
- BEQ BDlab24
+ BEQ BDlab24            ; Jump to the BDlab24 routine to switch to the correct
+                        ; vibrato frequency and jump back to BDlab21 to clean up
+                        ; and return from the interrupt routine
 
 ; ******************************************************************************
 ;
 ;       Name: BDlab21
 ;       Type: Subroutine
 ;   Category: Sound
-;    Summary: ???
+;    Summary: Clean up and return from the interrupt routine
 ;
 ; ******************************************************************************
 
 .BDlab21
 
- LDX counter
-
 IF _GMA_RELEASE
 
- CPX #0
+ LDX counter            ; If the rest counter is non-zero, jump to BDexitirq to
+ CPX #0                 ; return from the interrupt routine
+ BNE BDexitirq
 
 ELIF _SOURCE_DISK
 
- CPX #2
+ LDX counter            ; If the rest counter is not 2, jump to BDexitirq to
+ CPX #2                 ; return from the interrupt routine
+ BNE BDexitirq
 
 ENDIF
 
- BNE BDexitirq
- LDX value1
- DEX
- STX SID+$4
- LDX value2
- DEX
- STX SID+$B
- LDX value3
- DEX
- STX SID+$12
+                        ; The rest counter is ticking down, which means no new
+                        ; notes are being played for the time being, so we need
+                        ; to silence all three voices
+
+ LDX value1             ; Set SID register $4 (the voice control register for
+ DEX                    ; voice 1) to value1 - 1
+ STX SID+$4             ;
+                        ; This changes bit 0 from a 1 to a 0, which turns off
+                        ; voice 1 and starts the release cycle (so this
+                        ; effectively terminates any music on voice 1)
+
+ LDX value2             ; Set SID register $B (the voice control register for
+ DEX                    ; voice 1) to value2 - 1
+ STX SID+$B             ;
+                        ; This changes bit 0 from a 1 to a 0, which turns off
+                        ; voice 2 and starts the release cycle (so this
+                        ; effectively terminates any music on voice 2)
+
+ LDX value3             ; Set SID register $12 (the voice control register for
+ DEX                    ; voice 1) to value3 - 1
+ STX SID+$12            ;
+                        ; This changes bit 0 from a 1 to a 0, which turns off
+                        ; voice 3 and starts the release cycle (so this
+                        ; effectively terminates any music on voice 3)
 
 .BDexitirq
 
- RTS
- RTS  ;JMP $EA31
+ RTS                    ; Return from the subroutine
+
+ RTS                    ; This instruction has no effect as we have already
+                        ; returned from the subroutine
 
 ; ******************************************************************************
 ;
