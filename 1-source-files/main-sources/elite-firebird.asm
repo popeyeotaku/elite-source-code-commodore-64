@@ -106,7 +106,7 @@
 ;       Name: RelocateLoader
 ;       Type: Subroutine
 ;   Category: Loader
-;    Summary: Load and run the gma1 loader file
+;    Summary: Load and run the GMA1 loader file
 ;
 ; ******************************************************************************
 
@@ -146,13 +146,13 @@
 ;       Name: RelocateLoader
 ;       Type: Subroutine
 ;   Category: Loader
-;    Summary: Load and run the gma1 loader file
+;    Summary: Load and run the GMA1 loader file
 ;
 ; ******************************************************************************
 
 .RunGMA
 
- LDA #0                 ; Call the Kernal's SETMSG function to set the system
+ LDA #%00000000         ; Call the Kernal's SETMSG function to set the system
  JSR KERNALSETMSG       ; error display switch as follows:
                         ;
                         ;   * Bit 6 clear = do not display I/O error messages
@@ -182,7 +182,7 @@
                         ;
                         ; So this sets the filename to "GM*"
 
- LDA #$00               ; Call the Kernal's LOAD function to load the GMA* file
+ LDA #0                 ; Call the Kernal's LOAD function to load the GMA* file
  JSR KERNALLOAD         ; as follows:
                         ;
                         ;   * A = 0 to initiate a load operation
