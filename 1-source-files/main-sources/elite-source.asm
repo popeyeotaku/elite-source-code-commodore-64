@@ -336,7 +336,7 @@ ENDIF
 
  NMIV = $0318           ; The NMINV vector that we intercept with our custom NMI
                         ; handler, which just acknowledges NMI interrupts and
-                        ; ignores tham
+                        ; ignores them
 
  CHRV = $0326           ; The IBSOUT vector that we intercept with our custom
                         ; text printing routine
@@ -1034,7 +1034,7 @@ ENDIF
 
 .dontclip
 
- SKIP 1                 ; A flag that contols whether the LL145 routine clips
+ SKIP 1                 ; A flag that controls whether the LL145 routine clips
                         ; lines to the dimensions of the space view (which we
                         ; want to disable in the Short-range Chart, as there is
                         ; no dashboard and the chart needs to use the whole
@@ -2868,7 +2868,7 @@ ENDIF
 .EN4
 
  LDA CASH+2             ; If the third most significant byte of CASH(0 1 2 3)
- CMP #$C4               ; is lesss than $C4 then the cash amount is less than
+ CMP #$C4               ; is less than $C4 then the cash amount is less than
  BCC EN6                ; $C400 (5017.6 credits), so jump to EN6
 
  LDA TP                 ; If bit 4 of TP is set, then the Trumbles mission has
@@ -3032,7 +3032,7 @@ ENDIF
                         ; We can therefore move Trumble number A, and this will
                         ; ensure we work through the visible Trumble sprites,
                         ; updating one per iteration, with each sprite being
-                        ; moved every eight uterations around the main loop
+                        ; moved every eight iterations around the main loop
 
  ASL A                  ; Set Y = A * 2 so we can use it as an index into the
  TAY                    ; two-byte tables at TRIBVX, TRIBVXH and TRIBXH for the
@@ -3267,7 +3267,7 @@ ENDIF
 
  LDA TRIBCT             ; If TRIBCT is non-zero then we have some Trumbles in
  BEQ NOMVETR            ; the hold, so jump to MVTRIBS to move their sprites
- JMP MVTRIBS            ; around the screenm if applicable
+ JMP MVTRIBS            ; around the screen, if applicable
                         ;
                         ; The MVTRIBS routine jumps back to NOMVETR when it has
                         ; finished moving Trumbles around
@@ -3696,13 +3696,13 @@ ENDIF
  LDY #sfxmlas           ; Set Y to the sound of a mining laser firing
 
  BNE custard            ; Jump to custard to make the sound in Y, i.e. a pulse
-                        ; or minig laser (this BNE is effectively a JMP as
+                        ; or mining laser (this BNE is effectively a JMP as
                         ; either Y is never zero, or we jumped here with a BNE)
 
 .bmorarm
 
  CMP #Armlas            ; If this is a military laser, skip the following two
- BEQ P%+5               ; instructions to set Y to the sound of a mlitary laser
+ BEQ P%+5               ; instructions to set Y to the sound of a military laser
 
  LDY #sfxblas           ; This is not a military laser, so it must be a beam
                         ; laser, so set Y to the sound of a beam laser firing
@@ -19039,8 +19039,8 @@ ENDIF
 
  BCC OUT                ; If A < 0, jump to OUT to load the current number and
                         ; return from the subroutine, as the key pressed was
-                        ; RETURN (or some other ncharacter with a value less
-                        ; than ASCII "0")
+                        ; RETURN (or some other character with a value less than
+                        ; ASCII "0")
 
  CMP #10                ; If A >= 10, jump to BAY2 to display the Inventory
  BCS BAY2               ; screen, as the key pressed was a letter or other
@@ -23173,7 +23173,7 @@ ENDIF
                         ; and return from the subroutine using a tail call
 
  DEX                    ; If token = 4, this is control code 4 (commander
- BEQ cmn                ; name), so jump to cmm to print the commander name
+ BEQ cmn                ; name), so jump to cmn to print the commander name
                         ; and return from the subroutine using a tail call
 
  DEX                    ; If token = 5, this is control code 5 (fuel, newline,
@@ -24362,11 +24362,11 @@ ENDIF
 
  BMI yonk               ; If the high byte of the result in (A SC) is negative,
                         ; then the explosion is off the left edge of the screen,
-                        ; so jump to yonk to skip diplaying the sprite
+                        ; so jump to yonk to skip displaying the sprite
 
  CMP #2                 ; If A >= 2 then (A SC) >= $200 (i.e. 512), so the
  BCS yonk               ; explosion is way past the right edge of the screen, so
-                        ; jump to yonk to skip diplaying the sprite
+                        ; jump to yonk to skip displaying the sprite
 
  TAX                    ; Set (X SC) = (A SC)
                         ;
@@ -24382,14 +24382,14 @@ ENDIF
 
  BNE yonk               ; If the high byte of the result in (A Y) is non-zero,
                         ; then the explosion is either off the top of bottom
-                        ; edge of the screen, so jump to yonk to skip diplaying
+                        ; edge of the screen, so jump to yonk to skip displaying
                         ; the sprite
 
  CPY #2*Y+50            ; If the low byte of the result in (A Y) is greater than
  BCS yonk               ; the height of the space view (2 * #Y) plus 50, then
                         ; explosion is behind the dashboard  (as it is more than
                         ; 50 pixels below the top edge of the dashboard), so
-                        ; jump to yonk to skip diplaying the sprite
+                        ; jump to yonk to skip displaying the sprite
 
                         ; If we get here then the explosion is visible in the
                         ; space view, so we now draw sprite 1, which contains
@@ -31857,7 +31857,7 @@ ENDIF
 ;       Type: Subroutine
 ;   Category: Save and load
 ;    Summary: Calculate the third checksum for the last saved commander data
-;             block (Commodore 64 and Apple II versions onlt)
+;             block (Commodore 64 and Apple II versions only)
 ;
 ; ******************************************************************************
 
@@ -32588,7 +32588,7 @@ ENDIF
                         ;   * Bits 1-4 clear = do not change configuration of
                         ;                      other interrupts
                         ;
-                        ;   * Bit 7 clear = disable interupts whose
+                        ;   * Bit 7 clear = disable interrupts whose
                         ;                   corresponding bits are set
                         ;
                         ; So this disables interrupts that are generated by
@@ -32769,7 +32769,7 @@ ENDIF
                         ;   * Bits 1-4 clear = do not change configuration of
                         ;                      other interrupts
                         ;
-                        ;   * Bit 7 set = enable interupts whose corresponding
+                        ;   * Bit 7 set = enable interrupts whose corresponding
                         ;                 bits are set
                         ;
                         ; So this enables interrupts that are generated by timer
@@ -32938,7 +32938,7 @@ ENDIF
                         ;   * Bits 1-4 clear = do not change configuration of
                         ;                      other interrupts
                         ;
-                        ;   * Bit 7 clear = disable interupts whose
+                        ;   * Bit 7 clear = disable interrupts whose
                         ;                   corresponding bits are set
                         ;
                         ; So this disables interrupts that are generated by
@@ -34540,7 +34540,7 @@ ENDIF
 .CTRL
 
  LDX #6                 ; Set X to the internal key number for CTRL and fall
-                        ; through into DKS4 to fetch the relevent entry from
+                        ; through into DKS4 to fetch the relevant entry from
                         ; the key logger
 
 ; ******************************************************************************
@@ -34587,7 +34587,7 @@ ENDIF
 ; Arguments:
 ;
 ;   X                   The value to pass to $DC00 (i.e. set all bits apart from
-;                       one clear bit in the positon of the column that we want
+;                       one clear bit in the position of the column that we want
 ;                       to scan)
 ;
 ; ------------------------------------------------------------------------------
@@ -35206,7 +35206,7 @@ ENDIF
 
  CPY #(MUSILLY+1-DAMP)  ; Check to see whether we have reached the last toggle
                         ; key (i.e. MUSILLY, as the standard set of options run
-                        ; from DAMP to PLTOG, and the extende options run from
+                        ; from DAMP to PLTOG, and the extended options run from
                         ; MUFOR to MUSILLY)
 
  BNE DKL42              ; If not, loop back to check for the next toggle key
@@ -36239,7 +36239,7 @@ ENDIF
                         ; playing the docking music
 
                         ; Otherwise either the docking music has just been
-                        ; disabled and/or the docking computer is not runnning,
+                        ; disabled and/or the docking computer is not running,
                         ; so fall through into stopbd to stop playing the
                         ; docking music
 
@@ -36355,7 +36355,7 @@ ENDIF
 ;       Type: Variable
 ;   Category: Keyboard
 ;    Summary: An unused key logger buffer that's left over from the 6502 Second
-;             Procsessor version of Elite
+;             Processor version of Elite
 ;
 ; ******************************************************************************
 
@@ -42840,7 +42840,7 @@ ENDIF
  LDA #120               ; Print recursive token 120 ("INCOMING MISSILE") as an
  JSR MESS               ; in-flight message
 
- LDY #sfxwhosh          ; Call the NOISE routine with Y = solaun to make the
+ LDY #sfxwhosh          ; Call the NOISE routine with Y = sfxwhosh to make the
  JMP NOISE              ; sound of the missile being launched and return from
                         ; the subroutine using a tail call
 
@@ -42942,7 +42942,7 @@ ENDIF
                         ;
                         ;   * High nibble of A = sustain volume in the range 11
                         ;     to 15, so closer explosions have a higher sustain
-                        ;     volumne and are therefore louder
+                        ;     volume and are therefore louder
                         ;
                         ; The call to NOISE2 returns from the subroutine using a
                         ; tail call
@@ -43012,7 +43012,7 @@ ENDIF
                         ;
                         ;   * High nibble of A = sustain volume in the range 11
                         ;     to 15, so closer explosions have a higher sustain
-                        ;     volumne and are therefore louder
+                        ;     volume and are therefore louder
                         ;
                         ; The call to NOISE2 returns from the subroutine using a
                         ; tail call
@@ -43269,7 +43269,7 @@ ENDIF
  LDA SFXPR,Y            ; If bit 0 of SFXPR value for this sound effect is set,
  LSR A                  ; then we don't need to check the three voice channels
  BCS SOUX9              ; to see if any of them are already playing this sound
-                        ; effect, so jumo to SOUX9 to skip the following
+                        ; effect, so jump to SOUX9 to skip the following
                         ;
                         ; If NOISE was called with a sound effect of 128 + sound
                         ; effect number, this lookup will be fairly random, as
@@ -43302,7 +43302,7 @@ ENDIF
                         ; we find out which voice currently has the lowest
                         ; priority, which is stored in the SOPR table
 
- LDX #0                 ; Set X = 0 to denote voice voice 1
+ LDX #0                 ; Set X = 0 to denote voice 1
 
  LDA SOPR               ; If SOPR < SOPR+1, jump to SOUX1 as voice 1 currently
  CMP SOPR+1             ; has a lower priority than voice 2
@@ -43427,8 +43427,8 @@ ENDIF
  STA SOFRQ,X            ; Store the frequency in A into the SOFRQ entry for
                         ; voice X
 
- LDA SFXATK,Y           ; Store the attack attack and decay length for sound
- STA SOATK,X            ; effect Y in the SOATK entry for voice X
+ LDA SFXATK,Y           ; Store the attack and decay length for sound effect Y
+ STA SOATK,X            ; in the SOATK entry for voice X
 
  LDA SFXVCH,Y           ; Store the volume change rate for sound effect Y in the
  STA SOVCH,X            ; SOVCH entry for voice X
@@ -43601,7 +43601,7 @@ ENDIF
 ;       Type: Variable
 ;   Category: Drawing the screen
 ;    Summary: The background colour for the upper and lower parts of the screen,
-;             used by the energy bomd to flash the screen's background colour
+;             used by the energy bomb to flash the screen's background colour
 ;
 ; ******************************************************************************
 
@@ -43829,9 +43829,9 @@ ENDIF
                         ; interrupt to fire at line 51, which is at the top of
                         ; the visible screen
                         ;
-                        ; So this ensures that thet the interrupt routine will
-                        ; be called once the raster reaches the next line at
-                        ; which we need to reconfigure the VIC-II
+                        ; So this ensures that the interrupt routine will be
+                        ; called once the raster reaches the next line at which
+                        ; we need to reconfigure the VIC-II
 
  LDA santana,X          ; Set VIC register $12 to the X-th entry in santana,
  STA VIC+$1C            ; so it sets bit 1 of the register for the upper part of
@@ -43911,7 +43911,7 @@ ENDIF
                         ; effects that are in progress
 
  JMP coffee             ; Otherwise sounds are configured not to play during
-                        ; music, and we know that music is playins, so jmp to
+                        ; music, and we know that music is playing, so jmp to
                         ; coffee to return from the interrupt handler without
                         ; making the sound effect
 
@@ -43978,7 +43978,7 @@ ENDIF
                         ; correct block of seven SID registers for voice Y, so
                         ; we zero the SID registers for voice Y in the following
 
- LDA #0                 ; Set A = 0 to use for zeriong the SID registers
+ LDA #0                 ; Set A = 0 to use for zeroing the SID registers
 
  LDX #6                 ; There are seven bytes of SID registers for each voice,
                         ; so set a counter in X so we can zero them all
@@ -44080,7 +44080,7 @@ ENDIF
  ASL A                  ; voice Y so that bits 0-1 of A are in bits 6-7
  ASL A                  ;
  ASL A                  ; So if "f" represents the value from SOFRQ, this sets
- ASL A                  ; the 16-bit freqency as follows (with the high byte on
+ ASL A                  ; the 16-bit frequency as follows (with the high byte on
  ASL A                  ; the left):
  ASL A                  ;
  STA SID,X              ;   00ffffff ff000000
@@ -44103,7 +44103,7 @@ ENDIF
  TAX                    ; in the range 0 to 2, which we'll call voice Y
 
  DEC SOPR,X             ; Decrement the priority in SOPR for voice Y, keeping
- BNE P%+5               ; it above zero, so sounds dimish in priority as they
+ BNE P%+5               ; it above zero, so sounds diminish in priority as they
  INC SOPR,X             ; play out
 
  DEC SOCNT,X            ; Decrement the counter in SOCNT for voice Y
@@ -44132,8 +44132,8 @@ ENDIF
  SBC #16                ;
  STA SOSUS,Y            ; This actually subtracts 1 from the high nibble of the
                         ; release length and sustain volume, and the high nibble
-                        ; of the SOSUS value contains the sustain volumne, so
-                        ; this subtracts 1 from the sustain volumne
+                        ; of the SOSUS value contains the sustain volume, so
+                        ; this subtracts 1 from the sustain volume
 
  LDX SEVENS,Y           ; Use the lookup table at SEVENS to set X = 7 * Y, so it
                         ; can be used as an index into the SID registers for
@@ -44356,7 +44356,7 @@ ENDIF
 
  EQUB 0                 ; Sound buffer for the volume change rate
  EQUB 0                 ;
- EQUB 0                 ; SOVCH,Y contains the volumen change rate of the sound
+ EQUB 0                 ; SOVCH,Y contains the volume change rate of the sound
                         ; currently being made on voice Y
                         ;
                         ; The sound's volume gets reduced by one every SOVCH,Y
@@ -44770,7 +44770,7 @@ ENDIF
                         ;   * Bits 2-4 clear = do not change configuration of
                         ;                      other interrupts
                         ;
-                        ;   * Bit 7 clear = disable interupts whose
+                        ;   * Bit 7 clear = disable interrupts whose
                         ;                   corresponding bits are set
                         ;
                         ; So this disables interrupts that are generated by
@@ -44789,7 +44789,7 @@ ENDIF
                         ;   * Bits 2-4 clear = do not change configuration of
                         ;                      other interrupts
                         ;
-                        ;   * Bit 7 clear = disable interupts whose
+                        ;   * Bit 7 clear = disable interrupts whose
                         ;                   corresponding bits are set
                         ;
                         ; So this disables interrupts that are generated by
@@ -46400,7 +46400,7 @@ ENDIF
  STA SC
 
  BCC P%+4               ; If the addition didn't overflow, skip the following
-                        ; instuction
+                        ; instruction
 
  INC SC+1               ; Increment the high byte of SC(1 0), so SC now points
                         ; to the next character along to the right
@@ -47162,7 +47162,7 @@ ENDIF
 
  BPL CP1                ; The CTWOS table has an extra two rows at the end of it
                         ; that repeat the first two value, %11000000, so if we
-                        ; have notfetched that value, then the right pixel of
+                        ; have not fetched that value, then the right pixel of
                         ; the dash is in the same character block as the left
                         ; pixel, so jump to CP1 to draw it
 
@@ -47810,7 +47810,7 @@ ENDIF
                         ;           = YC * 64 + $20 + YC * 256
                         ;           = YC * 320 + 32
 
- ADC #HI(SCBASE)        ; The low byte of the screen bitmap addreas in SCBASE is
+ ADC #HI(SCBASE)        ; The low byte of the screen bitmap address in SCBASE is
  STA SC+1               ; always zero, so this does the following:
                         ;
                         ;   SC(1 0) = SCBASE + (A SC)
@@ -47947,7 +47947,7 @@ ENDIF
 ;       Name: TTX66K
 ;       Type: Subroutine
 ;   Category: Drawing the screen
-;    Summary: Clear the whole screen or just the space view (as appropiate),
+;    Summary: Clear the whole screen or just the space view (as appropriate),
 ;             draw a border box, and if required, show the dashboard
 ;
 ; ------------------------------------------------------------------------------
@@ -48007,7 +48007,7 @@ ENDIF
 
  DEX                    ; Decrement the row counter
 
- BNE BOL3               ; Loop back untli we have set colour bytes for all 24
+ BNE BOL3               ; Loop back until we have set colour bytes for all 24
                         ; rows, by which time we will have reset the colour
                         ; data for the whole text view
 
@@ -48107,7 +48107,7 @@ ENDIF
  STX COMC               ; colour, so no compass dot gets drawn
 
  STX DFLAG              ; Set DFLAG to 0 to indicate that there is no dashboard
-                        ; bwing shown on-screen
+                        ; being shown on-screen
 
  INX                    ; Move the text cursor to column 1 (though we already
  STX XC                 ; did this, so this isn't strictly necessary)
@@ -49911,7 +49911,7 @@ ENDIF
 ;       Type: Subroutine
 ;   Category: Sound
 ;    Summary: Process music command <#13 v1 v2 v3> to set value1, value2, value3
-;             to the voice control register valuesm for commands <#1> to <#3>
+;             to the voice control register values for commands <#1> to <#3>
 ;
 ; ******************************************************************************
 
