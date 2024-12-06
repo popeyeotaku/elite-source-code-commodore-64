@@ -147,7 +147,7 @@
 
 ; ******************************************************************************
 ;
-;       Name: RelocateLoader
+;       Name: RunGMA
 ;       Type: Subroutine
 ;   Category: Loader
 ;    Summary: Load and run the GMA1 loader file
