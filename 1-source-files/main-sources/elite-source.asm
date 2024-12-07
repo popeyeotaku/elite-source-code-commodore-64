@@ -3010,7 +3010,7 @@ ENDIF
 ; ******************************************************************************
 ;
 ;       Name: MVTRIBS
-;       Type: Variable
+;       Type: Subroutine
 ;   Category: Missions
 ;    Summary: Move the Trumble sprites around on-screen
 ;
@@ -3263,6 +3263,9 @@ ENDIF
 ; Other entry points:
 ;
 ;   M%                  The entry point for the main flight loop
+;
+;   NOMVETR             The re-entry point in the main game loop for when there
+;                       are no sprites to move
 ;
 ; ******************************************************************************
 
@@ -23781,6 +23784,12 @@ ENDIF
 ;  Deep dive: Drawing explosion clouds
 ;             Generating random numbers
 ;
+; ------------------------------------------------------------------------------
+;
+; Other entry points:
+;
+;   EXS1                Set (A X) = (A R) +/- random * cloud size
+;
 ; ******************************************************************************
 
 .EX2
@@ -28511,7 +28520,7 @@ ENDIF
 
 ; ******************************************************************************
 ;
-;       Name: SWAPPZERO
+;       Name: SWAPPZERO (source disk variant)
 ;       Type: Subroutine
 ;   Category: Utility routines
 ;    Summary: A routine that swaps zero page with the page at $CE00, so that
@@ -43947,6 +43956,12 @@ ENDIF
 ;    Summary: Process the contents of the sound buffer and send it to the sound
 ;             chip, to make sound effects as part of the interrupt routine
 ;
+; ------------------------------------------------------------------------------
+;
+; Other entry points:
+;
+;   SOUL8               Process the sound buffer from voice Y to 0
+;
 ; ******************************************************************************
 
 .SOINT
@@ -44756,7 +44771,7 @@ IF NOT(USA%)
  LDA #PALCK             ; Set A = PALCK, which contains the bottom byte of the
                         ; the raster line that we want to wait for
 
-.UKCHK2
+.UKCHK
 
  BIT VIC+$11            ; Loop back to UKCHK until bit 7 of VIC-II register $11
  BPL UKCHK              ; (control register 1) is set
@@ -45303,6 +45318,19 @@ ENDIF
 ;   X2                  The screen x-coordinate of the end of the line
 ;
 ;   Y2                  The screen y-coordinate of the end of the line
+;
+; ------------------------------------------------------------------------------
+;
+; Returns:
+;
+;   Y                   Y is preserved
+;
+; ------------------------------------------------------------------------------
+;
+; Other entry points:
+;
+;   LL30                LL30 is a synonym for LOIN and draws a line from
+;                       (X1, Y1) to (X2, Y2)
 ;
 ; ******************************************************************************
 
@@ -47629,6 +47657,8 @@ ENDIF
 ;
 ;   RR4                 Restore the registers and return from the subroutine
 ;
+;   RRafter             A re-entry point from the clss routine to print the
+;                       character in A
 ; ******************************************************************************
 
 .CHPR
