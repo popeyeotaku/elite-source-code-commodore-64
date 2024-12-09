@@ -33423,6 +33423,7 @@ ENDIF
 ;
 ;       Name: KEYLOOK
 ;       Type: Workspace
+;    Address: $8D0C to $8D52
 ;   Category: Keyboard
 ;    Summary: The key logger
 ;
@@ -44281,6 +44282,7 @@ ENDIF
 ;
 ;       Name: Sound variables
 ;       Type: Workspace
+;    Address: $AA13 to $1461
 ;   Category: Sound
 ;    Summary: The sound buffer where the data to be sent to the sound chip is
 ;             processed
@@ -49419,7 +49421,7 @@ ENDIF
 ;       Name: Music variables
 ;       Type: Workspace
 ;    Address: $B4CB to $B4D1
-;   Category: Workspaces
+;   Category: Sound
 ;    Summary: Variables that are used by the music player
 ;
 ; ******************************************************************************
