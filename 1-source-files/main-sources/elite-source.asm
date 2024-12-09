@@ -440,6 +440,13 @@ ELIF _SOURCE_DISK
 
 ENDIF
 
+ SPOFF% = (SPRITELOC% - SCBASE) / 64    ; Sprite pointers are defined as the
+                                        ; offset from the start of the VIC-II
+                                        ; screen bank to start of the sprite
+                                        ; definitions, divided by 64, so SPOFF%
+                                        ; is the offset for the first sprite
+                                        ; definition at SPRITELOC%
+
  LS% = $FFC0            ; The start of the descending ship line heap
 
  KERNALSVE = $FFD8      ; The Kernal function to save a file to a device
@@ -42411,44 +42418,13 @@ ENDIF
                         ; points to the correct sprite definition for the
                         ; current laser type, so we can display sprite 0 in the
                         ; middle of the space view to show the laser sights
-                        ;
-                        ; The first sprite definition at SPRITELOC% contains the
-                        ; sights for the pulse laser, so we start by setting Y
-                        ; to the sprite pointer for this sprite (the sprites
-                        ; are defined in elite-sprite.asm)
-                        ;
-                        ; Sprite pointers are defined as the offset from the
-                        ; start of the VIC-II screen bank to start of the sprite
-                        ; definitions, divided by 64
-                        ;
-                        ; So we want to calculate:
-                        ;
-                        ;   Y = (SPRITELOC% - SCBASE) / 64
-                        ;
-                        ; to give us the offset for the first sprite definition
-                        ; at SPRITELOC%
 
-IF _GMA_RELEASE
+ LDY #SPOFF%            ; The first sprite definition at offset SPOFF% contains
+                        ; the sights for the pulse laser, so we start by setting
+                        ; Y to the sprite pointer for the first sprite, which is
+                        ; for the pulse laser (the sprites are defined in
+                        ; elite-sprite.asm)
 
- LDY #$A0               ; For the GMA variants, we have:
-                        ;
-                        ;   SPRITELOC% = SCBASE + $2800
-                        ;
-                        ; So we need to set Y to $2800 / 64 = $A0
-
-ELIF _SOURCE_DISK
-
- LDY #$C4               ; For the GMA variants, we have:
-                        ;
-                        ;   SPRITELOC% = SCBASE + $3100
-                        ;
-                        ; So we need to set Y to $3100 / 64 = $C4
-
-ENDIF
-
-                        ; Y now contains the sprite pointer for the first sprite
-                        ; definition, which is for the pulse laser
-                        ;
                         ; The second sprite definition is the beam laser sight,
                         ; the third is the military laser sight and the fourth
                         ; is the mining laser sprite, so we now increment Y (if
@@ -42494,19 +42470,10 @@ ENDIF
                         ; live in the last eight bytes of screen RAM, so that's
                         ; from $67F8 to $67FF for sprites 0 to 7
 
-IF _GMA_RELEASE
-
- LDA sightcol-$A0,Y     ; Fetch the colour from the sightcol table, subtracting
-                        ; $A0 from Y so we have Y = 0 for pulse lasers through
-                        ; to Y = 3 for mining lasers
-
-ELIF _SOURCE_DISK
-
- LDA sightcol-$C4,Y     ; Fetch the colour from the sightcol table, subtracting
-                        ; $C4 from Y so we have Y = 0 for pulse lasers through
-                        ; to Y = 3 for mining lasers
-
-ENDIF
+ LDA sightcol-SPOFF%,Y  ; Fetch the colour from the sightcol table, subtracting
+                        ; SPOFF% from Y so we have Y = 0 for pulse lasers
+                        ; through to Y = 3 for mining lasers (as we set Y to
+                        ; SPOFF% + laser number above)
 
  STA VIC+$27            ; Set VIC register $27 to set the colour for sprite 0 to
                         ; the value in A, so the laser sights are shown in the
