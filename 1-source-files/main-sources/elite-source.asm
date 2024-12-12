@@ -2496,13 +2496,20 @@ IF _GMA_RELEASE
 
 .MULIE
 
- SKIP 1                 ; A flag to record whether the RESET routine is
-                        ; currently being run, in which case the music
-                        ; configuration variables may be in a state of flux
+ SKIP 1                 ; A flag to record whether the RESET routine is being
+                        ; being called from within the TITLE routine, when the
+                        ; title screen is being displayed, as we don't want to
+                        ; stop the title music from playing when this is the
+                        ; case
                         ;
-                        ;   * 0 = the RESET routine is not being run
+                        ;   * 0 = the RESET routine is not currently being run
+                        ;         from the call in the TITLE routine, so the
+                        ;         RESET, RES2 and stopbd routines should stop
+                        ;         any music that is playing
                         ;
-                        ;   * $FF = the RESET routine is in-progress
+                        ;   * $FF = the RESET routine is currently being run
+                        ;           from the call in the TITLE routine, so
+                        ;           prevent it from stopping the title music
 
 ENDIF
 
@@ -31626,11 +31633,8 @@ ENDIF
 
 IF _GMA_RELEASE
 
- LDA #$FF               ; Set MULIE to $FF to indicate that the RESET routine is
- STA MULIE              ; in-progress, so we don't try to stop any music that
-                        ; may be playing (as RESET updates the music variables,
-                        ; so trying to update the music variables will lead to
-                        ; unpredictable behaviour)
+ LDA #$FF               ; Set MULIE to $FF to prevent the RESET routine from
+ STA MULIE              ; stopping the title music that is currently playing
 
 ENDIF
 
@@ -31639,9 +31643,9 @@ ENDIF
 
 IF _GMA_RELEASE
 
- LDA #0                 ; Set MULIE to 0 to indicate that the RESET routine is
- STA MULIE              ; no longer being run, so the stopbd routine can work
-                        ; again
+ LDA #0                 ; Set MULIE back to 0 so the RESET routine goes back to
+ STA MULIE              ; its normal behaviour of stopping any music that is
+                        ; playing
 
 ENDIF
 
@@ -36306,13 +36310,13 @@ ENDIF
 
 IF _GMA_RELEASE
 
- BIT MULIE              ; If bit 7 of MULIE is set then the RESET routine is
- BMI itsoff             ; currently being run
+ BIT MULIE              ; If bit 7 of MULIE is set then we got here via the call
+ BMI itsoff             ; to the RESET routine from the TITLE routine
                         ;
-                        ; This means the music configuration variables may be in
-                        ; a state of flux as they are updated by the RESET
-                        ; routine, so if this is the case, jump to itsoff to
-                        ; return from the subroutine (as itsoff contains an RTS)
+                        ; When this is the case, we do not want to stop the
+                        ; title music from playing, so jump to itsoff to return
+                        ; from the subroutine without doing anything (as itsoff
+                        ; contains an RTS)
 
 ENDIF
 
