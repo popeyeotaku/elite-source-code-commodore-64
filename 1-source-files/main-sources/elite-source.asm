@@ -2130,7 +2130,7 @@ ENDIF
 ;
 ;       Name: WP
 ;       Type: Workspace
-;    Address: $0580 to $6FB
+;    Address: $0580 to $06FB
 ;   Category: Workspaces
 ;    Summary: Variables
 ;
@@ -2744,8 +2744,7 @@ ENDIF
 ;       Name: DOENTRY
 ;       Type: Subroutine
 ;   Category: Flight
-;    Summary: Dock at the space station, show the ship hangar and work out any
-;             mission progression
+;    Summary: Dock at the space station and work out any mission progression
 ;  Deep dive: The Constrictor mission
 ;             The Thargoid Plans mission
 ;             The Trumbles mission
@@ -4197,7 +4196,8 @@ ENDIF
 
  JSR stopbd             ; Stop playing the docking music (if it is playing)
 
- JMP DOENTRY            ; Go to the docking bay (i.e. show the ship hangar)
+ JMP DOENTRY            ; Go to the docking bay (i.e. show the Status Mode
+                        ; screen)
 
 .MA62
 
@@ -11165,7 +11165,7 @@ ENDIF
  STA QQ14               ; fuel, so set the current fuel level in QQ14 to 70, or
                         ; 7.0 light years
 
- JMP GOIN               ; Go to the docking bay (i.e. show the ship hangar
+ JMP GOIN               ; Go to the docking bay (i.e. show the Status Mode
                         ; screen) and return from the subroutine with a tail
                         ; call
 
@@ -48414,9 +48414,9 @@ ENDIF
  BNE nearlyxmas         ; being shown on-screen, so jump to nearlyxmas to skip
                         ; displaying the dashboard on-screen
 
-                        ; We now copy the dashboard bitmap the copy at DSTORE%
-                        ; into the screen bitmap, so the dashboard appears
-                        ; on-screen
+                        ; We now copy the dashboard bitmap from the copy at
+                        ; DSTORE% into the screen bitmap, so the dashboard
+                        ; appears on-screen
                         ;
                         ; The bitmap is seven character rows in size, which is
                         ; 7 * 40 * 7 = $8C0 bytes, so we need to copy this many
