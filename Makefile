@@ -24,6 +24,11 @@ C1541?=c1541
 #
 #   verify=no           Disable crc32 verification of the game binaries
 #
+#   fixdisk=yes         Fix the disk saving routines so that it defaults to
+#                       overwriting existing files instead of erroring out if
+#                       you save a commander with the same name as an existing
+#                       one.
+#
 # So, for example:
 #
 #   make variant=gma86-pal commander=max encrypt=no match=no verify=no
@@ -78,6 +83,12 @@ else
   match-original-binaries=TRUE
 endif
 
+ifeq ($(fixdisk), yes)
+  fix-disk=TRUE
+else
+  fix-disk=FALSE
+endif
+
 ifeq ($(variant), source-disk-build)
   variant-number=3
   folder=source-disk-build
@@ -105,6 +116,7 @@ c64-build:
 	echo _REMOVE_CHECKSUMS=$(remove-checksums) >> 1-source-files/main-sources/elite-build-options.asm
 	echo _MATCH_ORIGINAL_BINARIES=$(match-original-binaries) >> 1-source-files/main-sources/elite-build-options.asm
 	echo _MAX_COMMANDER=$(max-commander) >> 1-source-files/main-sources/elite-build-options.asm
+	echo _FIX_DISK=$(fix-disk) >> 1-source-files/main-sources/elite-build-options.asm
 	$(BEEBASM) -i 1-source-files/main-sources/elite-data.asm -v > 3-assembled-output/compile.txt
 	$(BEEBASM) -i 1-source-files/main-sources/elite-sprites.asm -v >> 3-assembled-output/compile.txt
 ifeq ($(variant-number), 1)

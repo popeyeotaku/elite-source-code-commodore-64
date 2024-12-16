@@ -6266,6 +6266,19 @@ ENDIF
 ;
 ; ******************************************************************************
 
+IF _FIX_DISK
+ EQUS "  @0:"           ; We ignore the BBC Micro directory string below,
+                        ; which the C64 port simply skips over, and instead
+                        ; use this C64 format string: which indicates to use
+                        ; drive 0 (a historical contrivance due to the PET's
+                        ; floppy drive having two disk slots inside; the C64's
+                        ; 1541 drive firmware was buggy, and it's generally
+                        ; recommended to place the `0:` indicator when
+                        ; possible). The `@` indicates the file should be
+                        ; overwritten when saving; by default, the C64 disk
+                        ; drives will simply error out if you save a commander
+                        ; with the same name as one already existing.
+ELSE
  EQUS ":0.E."           ; The drive part of this string (the "0") is updated
                         ; with the chosen drive in the GTNMEW routine, but the
                         ; directory part (the "E") is fixed. The variable is
@@ -6273,6 +6286,7 @@ ENDIF
                         ; starts with the commander name, so the full string at
                         ; NA%-5 is in the format ":0.E.jameson", which gives the
                         ; full filename of the commander file
+ENDIF
 
 .NA%
 
@@ -32851,6 +32865,14 @@ ENDIF
 
  LDA thislong           ; Call SETNAM to set the filename parameters as
  LDX #(INWK+5)          ; follows:
+IF _FIX_DISK
+ BIT DISK
+ BPL POPEYE
+ LDX #(INWK+2)
+ CLC
+ ADC #3
+.POPEYE
+ENDIF
  LDY #0                 ;
  JMP KERNALSETNAM       ;   * A = filename length
                         ;
